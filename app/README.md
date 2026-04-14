@@ -50,11 +50,15 @@ It does not create or deploy any AWS resources.
 
 Styling for the index route lives in `src/styles/index.css`.
 
+Styling for the transcript reader route lives in `src/styles/transcript-reader.css`.
+
 # Data Fetching
 
 TanStack Query is integrated with TanStack Router through the router context and SSR hydration.
 
 This lets route loaders use a shared `queryClient` for server-side prefetching and client hydration.
+
+Transcript reader query definitions and route helpers live in `src/queries/queries.ts`.
 
 # Tooling
 
@@ -106,5 +110,8 @@ npm run test
 - `src/routes/__root.tsx` defines the typed router context.
 - `src/routes/index.tsx` includes a minimal RSC example rendered through a TanStack Start server function.
 - `src/styles/index.css` contains the index route's lightweight plain CSS styles.
+- `src/routes/transcript-reader.tsx` server-renders the latest transcript or a selected `?t=` transcript and redirects invalid hashes to the canonical route.
+- `src/queries/queries.ts` contains transcript query options plus hash-resolution helpers used by the route.
+- `src/styles/transcript-reader.css` contains the transcript reader route styles extracted from the original standalone page.
 - `.oxlintrc.json` enables type-aware linting for the project.
 - `scripts/package-lambda.mjs` packages the Nitro output into a zip file for later deployment.

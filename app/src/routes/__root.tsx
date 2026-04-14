@@ -22,8 +22,21 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       },
     ],
   }),
+  notFoundComponent: NotFound,
   shellComponent: RootDocument,
 });
+
+function NotFound() {
+  return (
+    <main className="page-wrap page-section">
+      <section className="section">
+        <p className="eyebrow">Not Found</p>
+        <h1 className="page-title">This page does not exist.</h1>
+        <p className="lead muted">Check the URL or return to a valid route.</p>
+      </section>
+    </main>
+  );
+}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (

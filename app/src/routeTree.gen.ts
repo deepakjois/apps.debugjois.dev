@@ -9,8 +9,14 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TranscriptReaderRouteImport } from './routes/transcript-reader'
 import { Route as IndexRouteImport } from './routes/index'
 
+const TranscriptReaderRoute = TranscriptReaderRouteImport.update({
+  id: '/transcript-reader',
+  path: '/transcript-reader',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +25,39 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/transcript-reader': typeof TranscriptReaderRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/transcript-reader': typeof TranscriptReaderRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/transcript-reader': typeof TranscriptReaderRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/transcript-reader'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/transcript-reader'
+  id: '__root__' | '/' | '/transcript-reader'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  TranscriptReaderRoute: typeof TranscriptReaderRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/transcript-reader': {
+      id: '/transcript-reader'
+      path: '/transcript-reader'
+      fullPath: '/transcript-reader'
+      preLoaderRoute: typeof TranscriptReaderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,6 +70,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  TranscriptReaderRoute: TranscriptReaderRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
