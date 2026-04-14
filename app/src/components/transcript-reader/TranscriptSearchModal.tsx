@@ -56,6 +56,7 @@ export default function TranscriptSearchModal({
 }: TranscriptSearchModalProps) {
   const navigate = useNavigate({ from: "/transcript-reader" });
   const [isOpen, setIsOpen] = useState(false);
+  const [isKeyboardNavigating, setIsKeyboardNavigating] = useState(false);
   const [query, setQuery] = useState("");
   const [activeResultIndex, setActiveResultIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -143,6 +144,7 @@ export default function TranscriptSearchModal({
       return;
     }
 
+    setIsKeyboardNavigating(false);
     setQuery("");
     setActiveResultIndex(0);
     setIsOpen(true);
@@ -171,6 +173,7 @@ export default function TranscriptSearchModal({
   function handleSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
     if (event.key === "ArrowDown") {
       event.preventDefault();
+      setIsKeyboardNavigating(true);
 
       if (visibleResults.length) {
         setActiveResultIndex((currentIndex) => (currentIndex + 1) % visibleResults.length);
@@ -181,6 +184,7 @@ export default function TranscriptSearchModal({
 
     if (event.key === "ArrowUp") {
       event.preventDefault();
+      setIsKeyboardNavigating(true);
 
       if (visibleResults.length) {
         setActiveResultIndex(
@@ -259,7 +263,7 @@ export default function TranscriptSearchModal({
             value={query}
           />
 
-          <ul className="modal-results">
+          <ul className={`modal-results${isKeyboardNavigating ? " is-keyboard-nav" : ""}`}>
             {visibleResults.length === 0 ? (
               <li className="modal-empty">No transcripts match your search.</li>
             ) : (
@@ -274,6 +278,8 @@ export default function TranscriptSearchModal({
                         navigateToTranscript(item);
                       }}
                       onMouseMove={() => {
+                        setIsKeyboardNavigating(false);
+
                         if (index !== activeResultIndex) {
                           setActiveResultIndex(index);
                         }

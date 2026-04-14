@@ -152,6 +152,14 @@
   background: var(--tr-accent-dim);
 }
 
+.modal-results.is-keyboard-nav .modal-result:hover {
+  background: transparent;
+}
+
+.modal-results.is-keyboard-nav .modal-result.is-active:hover {
+  background: var(--tr-accent-dim);
+}
+
 .modal-result:focus {
   outline: none;
 }
