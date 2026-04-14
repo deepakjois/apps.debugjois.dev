@@ -48,7 +48,13 @@ It does not create or deploy any AWS resources.
 
 # Styling
 
-Styling is plain CSS in `src/styles.css`.
+Styling for the index route lives in `src/styles/index.css`.
+
+# Data Fetching
+
+TanStack Query is integrated with TanStack Router through the router context and SSR hydration.
+
+This lets route loaders use a shared `queryClient` for server-side prefetching and client hydration.
 
 # Tooling
 
@@ -96,7 +102,9 @@ npm run test
 
 - `vite.config.ts` enables TanStack Start, Vite React, and `@vitejs/plugin-rsc`.
 - `nitro.config.ts` sets the Nitro preset to `aws_lambda` with streaming enabled.
+- `src/router.tsx` integrates TanStack Query with router-managed SSR hydration.
+- `src/routes/__root.tsx` defines the typed router context.
 - `src/routes/index.tsx` includes a minimal RSC example rendered through a TanStack Start server function.
-- `src/styles.css` contains the app's lightweight plain CSS styles.
+- `src/styles/index.css` contains the index route's lightweight plain CSS styles.
 - `.oxlintrc.json` enables type-aware linting for the project.
 - `scripts/package-lambda.mjs` packages the Nitro output into a zip file for later deployment.

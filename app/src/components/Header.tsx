@@ -1,5 +1,3 @@
-import ThemeToggle from "./ThemeToggle";
-
 export default function Header() {
   return (
     <header className="site-header">
@@ -17,7 +15,6 @@ export default function Header() {
           >
             Docs
           </a>
-          <ThemeToggle />
         </div>
       </div>
     </header>
