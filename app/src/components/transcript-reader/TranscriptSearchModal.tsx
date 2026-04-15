@@ -155,6 +155,12 @@ export default function TranscriptSearchModal({
     searchTriggerRef.current?.focus();
   }
 
+  function handleOverlayClick(event: React.MouseEvent<HTMLButtonElement>) {
+    if (event.target === event.currentTarget) {
+      closeModal();
+    }
+  }
+
   function navigateToTranscript(item: TranscriptIndexItem) {
     const canonicalHash = canonicalHashForTranscript(item);
 
@@ -237,14 +243,11 @@ export default function TranscriptSearchModal({
         </button>
       </div>
 
-      <div
+      <button
         aria-hidden={isOpen ? "false" : "true"}
         className={`modal-root${isOpen ? " is-open" : ""}`}
-        onClick={(event) => {
-          if (event.target === event.currentTarget) {
-            closeModal();
-          }
-        }}
+        onClick={handleOverlayClick}
+        type="button"
       >
         <div aria-labelledby="modal-search" aria-modal="true" className="modal-panel" role="dialog">
           <input
@@ -297,7 +300,7 @@ export default function TranscriptSearchModal({
             )}
           </ul>
         </div>
-      </div>
+      </button>
     </>
   );
 }

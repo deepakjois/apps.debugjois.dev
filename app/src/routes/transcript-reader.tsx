@@ -124,6 +124,21 @@ function TranscriptReaderRouteContent({
     );
   }
 
+  return (
+    <TranscriptReaderSelectedContent
+      selectedLocation={selectedLocation}
+      transcriptList={transcriptList}
+    />
+  );
+}
+
+function TranscriptReaderSelectedContent({
+  selectedLocation,
+  transcriptList,
+}: {
+  selectedLocation: string;
+  transcriptList: TranscriptIndexItem[];
+}) {
   const transcript = useSuspenseQuery(transcriptQueryOptions(selectedLocation)).data;
 
   return (
