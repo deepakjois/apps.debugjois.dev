@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# CDK
+cdk.out/
+cdk.context.json
+.cdk.staging/
+
+# TypeScript
+*.tsbuildinfo
+
+# Package manager caches
+.npm
+.pnpm-store
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Misc
+.DS_Store

@@ -105,7 +105,7 @@ npm run test
 # Project Notes
 
 - `vite.config.ts` enables TanStack Start, Vite React, and `@vitejs/plugin-rsc`.
-- `nitro.config.ts` sets the Nitro preset to `aws_lambda` with streaming enabled.
+- `nitro.config.ts` sets the Nitro preset to `aws_lambda` with streaming disabled for API Gateway HTTP API compatibility.
 - `src/router.tsx` integrates TanStack Query with router-managed SSR hydration.
 - `src/routes/__root.tsx` defines the typed router context.
 - `src/routes/index.tsx` includes a minimal RSC example rendered through a TanStack Start server function.
