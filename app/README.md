@@ -31,20 +31,17 @@ To run the built server locally:
 npm run preview
 ```
 
-# Lambda Packaging
+# Deployment Packaging
 
-Create a Lambda deployment artifact only:
+Deployment packaging is handled by `../infra/deploy.sh --with-artifact`.
 
-```bash
-npm run package:lambda
-```
-
-This command:
+That flow:
 
 - builds the app with Nitro's `aws_lambda` preset
 - packages the generated `.output/` directory into `artifacts/lambda-package.zip`
+- uploads the zip to the artifact bucket before the site stack is deployed
 
-It does not create or deploy any AWS resources.
+Regular local development only needs `npm run build` or `npm run dev`.
 
 # Styling
 
@@ -114,4 +111,4 @@ npm run test
 - `src/queries/queries.ts` contains transcript query options plus hash-resolution helpers used by the route.
 - `src/styles/transcript-reader.css` contains the transcript reader route styles extracted from the original standalone page.
 - `.oxlintrc.json` enables type-aware linting for the project.
-- `scripts/package-lambda.mjs` packages the Nitro output into a zip file for later deployment.
+- `../infra/deploy.sh --with-artifact` packages and uploads the Nitro output for deployment.

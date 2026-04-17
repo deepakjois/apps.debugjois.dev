@@ -9,7 +9,6 @@
     "dev": "vite dev --port 3000",
     "build": "vite build",
     "preview": "node .output/server/index.mjs",
-    "package:lambda": "npm run build && node ./scripts/package-lambda.mjs",
     "test": "vitest run",
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
