@@ -229,24 +229,6 @@ export function getTranscriptPageTitle(transcript: TranscriptPayload | null | un
   return title === "Transcript Reader" ? title : `${title} | Transcript Reader`;
 }
 
-export function getTranscriptModelName(
-  transcript: TranscriptPayload | null | undefined,
-): string | undefined {
-  const modelInfo = transcript?.deepgram?.metadata?.model_info;
-
-  if (!modelInfo) {
-    return undefined;
-  }
-
-  for (const modelDetails of Object.values(modelInfo)) {
-    if (modelDetails?.name) {
-      return modelDetails.name;
-    }
-  }
-
-  return undefined;
-}
-
 export function getTranscriptParagraphs(
   transcript: TranscriptPayload | null | undefined,
 ): TranscriptParagraph[] {

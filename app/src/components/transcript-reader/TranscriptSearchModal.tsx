@@ -2,15 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { canonicalHashForTranscript, formatTranscriptDate } from "../../queries/queries";
+import { formatTranscriptDate } from "../../queries/queries";
 import type { TranscriptIndexItem } from "../../queries/queries";
 
 const MAX_VISIBLE_RESULTS = 5;
 
 type TranscriptSearchModalProps = {
   transcriptList: TranscriptIndexItem[];
-  currentTranscriptLocation: string | null;
+  onSelectTranscript: (item: TranscriptIndexItem) => void;
 };
 
 function fuzzyScore(title: string, query: string): number {
@@ -52,9 +51,8 @@ function fuzzyScore(title: string, query: string): number {
 
 export default function TranscriptSearchModal({
   transcriptList,
-  currentTranscriptLocation,
+  onSelectTranscript,
 }: TranscriptSearchModalProps) {
-  const navigate = useNavigate({ from: "/transcript-reader" });
   const [isOpen, setIsOpen] = useState(false);
   const [isKeyboardNavigating, setIsKeyboardNavigating] = useState(false);
   const [query, setQuery] = useState("");
@@ -155,19 +153,9 @@ export default function TranscriptSearchModal({
     searchTriggerRef.current?.focus();
   }
 
-  function navigateToTranscript(item: TranscriptIndexItem) {
-    const canonicalHash = canonicalHashForTranscript(item);
-
-    if (!canonicalHash) {
-      return;
-    }
-
+  function selectTranscript(item: TranscriptIndexItem) {
     closeModal();
-    void navigate({
-      to: "/transcript-reader",
-      search: { t: canonicalHash },
-      replace: item.location === currentTranscriptLocation,
-    });
+    onSelectTranscript(item);
   }
 
   function handleSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
@@ -200,7 +188,7 @@ export default function TranscriptSearchModal({
       const selectedItem = visibleResults[activeResultIndex];
 
       if (selectedItem) {
-        navigateToTranscript(selectedItem);
+        selectTranscript(selectedItem);
       }
 
       return;
@@ -279,7 +267,7 @@ export default function TranscriptSearchModal({
                       <button
                         className={`modal-result${isActive ? " is-active" : ""}`}
                         onClick={() => {
-                          navigateToTranscript(item);
+                          selectTranscript(item);
                         }}
                         onMouseMove={() => {
                           setIsKeyboardNavigating(false);

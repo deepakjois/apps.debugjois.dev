@@ -1,6 +1,5 @@
 import {
   formatTranscriptDate,
-  getTranscriptModelName,
   getTranscriptParagraphs,
   getTranscriptTitle,
 } from "../../queries/queries";
@@ -14,7 +13,6 @@ export default function TranscriptArticle({ transcript }: TranscriptArticleProps
   const podcastName = transcript.podcast?.podcast?.title;
   const episode = transcript.podcast?.episode;
   const formattedDate = formatTranscriptDate(episode?.published_date);
-  const modelName = getTranscriptModelName(transcript);
   const descriptionHtml = episode?.description_html;
   const episodeUrl = transcript.podcast?.source?.episode_url;
   const title = getTranscriptTitle(transcript);
@@ -31,7 +29,6 @@ export default function TranscriptArticle({ transcript }: TranscriptArticleProps
         <div className="episode-meta">
           {formattedDate ? <span>{formattedDate}</span> : null}
           {episode?.duration ? <span>{episode.duration}</span> : null}
-          {modelName ? <span>Transcribed with {modelName}</span> : null}
         </div>
 
         {descriptionHtml ? (
