@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { formatTranscriptDate } from "../../queries/queries";
 import type { TranscriptIndexItem } from "../../queries/queries";
 
 const MAX_VISIBLE_RESULTS = 5;
+const SEARCH_DIALOG_TITLE_ID = "transcript-search-title";
+const SEARCH_INPUT_ID = "transcript-search-input";
+const SEARCH_RESULTS_ID = "transcript-search-results";
 
 type TranscriptSearchModalProps = {
   transcriptList: TranscriptIndexItem[];
@@ -49,6 +52,57 @@ function fuzzyScore(title: string, query: string): number {
   return score;
 }
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
+  );
+}
+
+function getFocusableElements(container: HTMLDivElement | null): HTMLElement[] {
+  const focusableElements = container?.querySelectorAll<HTMLElement>(
+    'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+  );
+
+  if (!focusableElements) {
+    return [];
+  }
+
+  return Array.from(focusableElements).filter(
+    (element) => !element.hasAttribute("disabled") && element.tabIndex !== -1,
+  );
+}
+
+function trapModalFocus(event: KeyboardEvent, container: HTMLDivElement | null) {
+  if (event.key !== "Tab") {
+    return;
+  }
+
+  const focusable = getFocusableElements(container);
+
+  if (focusable.length === 0) {
+    return;
+  }
+
+  const firstElement = focusable[0];
+  const lastElement = focusable[focusable.length - 1];
+  const activeElement = document.activeElement;
+
+  if (event.shiftKey) {
+    if (activeElement === firstElement) {
+      event.preventDefault();
+      lastElement.focus();
+    }
+
+    return;
+  }
+
+  if (activeElement === lastElement) {
+    event.preventDefault();
+    firstElement.focus();
+  }
+}
+
 export default function TranscriptSearchModal({
   transcriptList,
   onSelectTranscript,
@@ -59,6 +113,7 @@ export default function TranscriptSearchModal({
   const [activeResultIndex, setActiveResultIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const searchTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const modalPanelRef = useRef<HTMLDivElement | null>(null);
 
   const visibleResults = useMemo(() => {
     if (!query.trim()) {
@@ -107,37 +162,7 @@ export default function TranscriptSearchModal({
     };
   }, [isOpen]);
 
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setIsOpen((currentValue) => !currentValue);
-        return;
-      }
-
-      if (event.key === "/" && !isOpen) {
-        const target = event.target;
-
-        if (
-          target instanceof HTMLElement &&
-          (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
-        ) {
-          return;
-        }
-
-        event.preventDefault();
-        setIsOpen(true);
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen]);
-
-  function openModal() {
+  const openModal = useCallback(() => {
     if (transcriptList.length === 0) {
       return;
     }
@@ -146,12 +171,60 @@ export default function TranscriptSearchModal({
     setQuery("");
     setActiveResultIndex(0);
     setIsOpen(true);
-  }
+  }, [transcriptList.length]);
 
-  function closeModal() {
+  const closeModal = useCallback(() => {
     setIsOpen(false);
     searchTriggerRef.current?.focus();
-  }
+  }, []);
+
+  useEffect(() => {
+    // Keep the global shortcuts aligned with the trigger button behavior.
+    function handleKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+
+        if (isOpen) {
+          closeModal();
+        } else {
+          openModal();
+        }
+
+        return;
+      }
+
+      if (event.key === "/" && !isOpen) {
+        if (isEditableTarget(event.target)) {
+          return;
+        }
+
+        event.preventDefault();
+        openModal();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [closeModal, isOpen, openModal]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
+    function handleFocusTrap(event: KeyboardEvent) {
+      trapModalFocus(event, modalPanelRef.current);
+    }
+
+    document.addEventListener("keydown", handleFocusTrap);
+
+    return () => {
+      document.removeEventListener("keydown", handleFocusTrap);
+    };
+  }, [isOpen]);
 
   function selectTranscript(item: TranscriptIndexItem) {
     closeModal();
@@ -159,6 +232,7 @@ export default function TranscriptSearchModal({
   }
 
   function handleSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
+    // Keep focus on the input while arrow keys move the active result.
     if (event.key === "ArrowDown") {
       event.preventDefault();
       setIsKeyboardNavigating(true);
@@ -200,6 +274,10 @@ export default function TranscriptSearchModal({
     }
   }
 
+  const activeResultId = visibleResults[activeResultIndex]
+    ? `transcript-search-result-${activeResultIndex}`
+    : undefined;
+
   return (
     <>
       <div className="toolbar">
@@ -234,15 +312,24 @@ export default function TranscriptSearchModal({
             type="button"
           />
           <div
-            aria-labelledby="modal-search"
+            aria-labelledby={SEARCH_DIALOG_TITLE_ID}
             aria-modal="true"
             className="modal-panel"
+            ref={modalPanelRef}
             role="dialog"
           >
+            <h2 className="modal-title sr-only" id={SEARCH_DIALOG_TITLE_ID}>
+              Search transcripts
+            </h2>
             <input
+              aria-activedescendant={activeResultId}
+              aria-autocomplete="list"
+              aria-controls={SEARCH_RESULTS_ID}
+              aria-expanded="true"
+              aria-label="Search transcripts"
               autoComplete="off"
               className="modal-search"
-              id="modal-search"
+              id={SEARCH_INPUT_ID}
               onChange={(event) => {
                 setQuery(event.target.value);
                 setActiveResultIndex(0);
@@ -250,12 +337,17 @@ export default function TranscriptSearchModal({
               onKeyDown={handleSearchKeyDown}
               placeholder="Search transcripts"
               ref={searchInputRef}
+              role="combobox"
               spellCheck={false}
               type="search"
               value={query}
             />
 
-            <ul className={`modal-results${isKeyboardNavigating ? " is-keyboard-nav" : ""}`}>
+            <ul
+              className={`modal-results${isKeyboardNavigating ? " is-keyboard-nav" : ""}`}
+              id={SEARCH_RESULTS_ID}
+              role="listbox"
+            >
               {visibleResults.length === 0 ? (
                 <li className="modal-empty">No transcripts match your search.</li>
               ) : (
@@ -265,7 +357,9 @@ export default function TranscriptSearchModal({
                   return (
                     <li key={item.location}>
                       <button
+                        aria-selected={isActive}
                         className={`modal-result${isActive ? " is-active" : ""}`}
+                        id={`transcript-search-result-${index}`}
                         onClick={() => {
                           selectTranscript(item);
                         }}
@@ -276,6 +370,7 @@ export default function TranscriptSearchModal({
                             setActiveResultIndex(index);
                           }
                         }}
+                        role="option"
                         type="button"
                       >
                         <span className="modal-result-title">{item.title ?? "Untitled"}</span>

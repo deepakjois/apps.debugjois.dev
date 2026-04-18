@@ -152,6 +152,10 @@ body {
   outline: none;
 }
 
+.modal-search:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--tr-accent-soft);
+}
+
 .modal-results {
   list-style: none;
   padding: 10px;
@@ -185,6 +189,23 @@ body {
 
 .modal-result:focus {
   outline: none;
+}
+
+.modal-result:focus-visible {
+  background: var(--tr-accent-dim);
+  box-shadow: inset 0 0 0 1px var(--tr-accent-soft);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .modal-result-title {
