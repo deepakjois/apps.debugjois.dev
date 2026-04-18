@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -euxo pipefail
 
 WITH_ARTIFACT=0
 if [[ "${1-}" == "--with-artifact" ]]; then
@@ -69,7 +69,9 @@ cd "$INFRA_DIR"
 npm run synth
 
 # Keep the shared artifact bucket and certificate stacks up to date.
+printf '==> Deploying ArtifactStack (artifact bucket, us-west-2)\n'
 deploy_stack "$ARTIFACT_REGION" "$ARTIFACT_STACK" "cdk.out/${ARTIFACT_STACK}.template.json"
+printf '==> Deploying CertificateStack (ACM cert, us-east-1)\n'
 deploy_stack "$CERTIFICATE_REGION" "$CERTIFICATE_STACK" "cdk.out/${CERTIFICATE_STACK}.template.json"
 
 # Resolve the shared stack outputs needed by the site deploy.
@@ -78,10 +80,12 @@ CERTIFICATE_ARN="$(stack_output "$CERTIFICATE_REGION" "$CERTIFICATE_STACK" "Cert
 
 if [[ "$WITH_ARTIFACT" == "1" ]]; then
   # Build a fresh app bundle before packaging a new Lambda artifact.
+  printf '==> Building app bundle\n'
   cd "$APP_DIR"
   npm run build
 
   # Package the Nitro output directory into a Lambda deployment zip.
+  printf '==> Packaging Lambda zip -> %s\n' "$LAMBDA_ZIP_PATH"
   rm -f "$LAMBDA_ZIP_PATH"
   (
     cd "$APP_OUTPUT_DIR"
@@ -91,6 +95,7 @@ if [[ "$WITH_ARTIFACT" == "1" ]]; then
   # Use the zip hash to derive a stable, content-addressed artifact key.
   ARTIFACT_HASH="$(shasum -a 256 "$LAMBDA_ZIP_PATH" | cut -d' ' -f1 | cut -c1-16)"
   ARTIFACT_OBJECT_KEY="lambda/app-debugjois-dev-${ARTIFACT_HASH}.zip"
+  printf '==> Lambda artifact key: %s\n' "$ARTIFACT_OBJECT_KEY"
 
   # Reuse an existing uploaded object when the content hash already exists.
   EXISTING_VERSION="$(aws s3api list-object-versions \
@@ -102,6 +107,7 @@ if [[ "$WITH_ARTIFACT" == "1" ]]; then
 
   if [[ "$EXISTING_VERSION" == "None" ]]; then
     # Upload the new artifact and capture the exact S3 version for Lambda.
+    printf '==> Uploading Lambda artifact to s3://%s/%s\n' "$ARTIFACT_BUCKET_NAME" "$ARTIFACT_OBJECT_KEY"
     ARTIFACT_OBJECT_VERSION="$(aws s3api put-object \
       --region "$ARTIFACT_REGION" \
       --bucket "$ARTIFACT_BUCKET_NAME" \
@@ -110,8 +116,10 @@ if [[ "$WITH_ARTIFACT" == "1" ]]; then
       --query VersionId \
       --output text)"
   else
+    printf '==> Lambda artifact already uploaded; reusing version %s\n' "$EXISTING_VERSION"
     ARTIFACT_OBJECT_VERSION="$EXISTING_VERSION"
   fi
+  printf '==> Lambda artifact version: %s\n' "$ARTIFACT_OBJECT_VERSION"
 else
   # Reuse the currently deployed artifact parameters for infra-only deploys.
   ARTIFACT_OBJECT_KEY="$(stack_parameter "$ARTIFACT_REGION" "$SITE_STACK" "ArtifactObjectKey")"
@@ -123,6 +131,7 @@ cd "$INFRA_DIR"
 npm run synth
 
 # Deploy the site stack with the resolved certificate and artifact inputs.
+printf '==> Deploying SiteStack (updates Lambda code + CloudFront config)\n'
 aws cloudformation deploy \
   --region "$ARTIFACT_REGION" \
   --stack-name "$SITE_STACK" \
@@ -142,7 +151,9 @@ if [[ "$WITH_ARTIFACT" == "1" ]]; then
   CLOUDFRONT_DISTRIBUTION_ID="$(stack_output "$ARTIFACT_REGION" "$SITE_STACK" "CloudFrontDistributionId")"
 
   # Publish the static frontend files and clear the CloudFront cache.
+  printf '==> Syncing static assets -> s3://%s\n' "$STATIC_ASSETS_BUCKET_NAME"
   aws s3 sync "$APP_PUBLIC_DIR" "s3://$STATIC_ASSETS_BUCKET_NAME" --delete
+  printf '==> Creating CloudFront invalidation (/*)\n'
   aws cloudfront create-invalidation \
     --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
     --paths '/*' >/dev/null
