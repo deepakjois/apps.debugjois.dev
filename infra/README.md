@@ -1,8 +1,8 @@
 # infra
 
-Bootstrap-free AWS infrastructure for `apps.debugjois.dev`.
+Bootstrap-free AWS infrastructure for `apps.debugjois.dev` with no dependency on the `CdkToolkit` stack.
 
-This CDK app is used only to synthesize CloudFormation templates. Deployments are handled by `infra/deploy.sh`, which uses `aws cloudformation deploy`, `aws s3 sync`, and `aws cloudfront create-invalidation` directly.
+This CDK app is used only to synthesize CloudFormation templates. It uses `LegacyStackSynthesizer` so the generated cloud assembly does not assume the existence of CDK bootstrap roles, bootstrap buckets, or the `CdkToolkit` stack. Deployments are handled by `infra/deploy.sh`, which uses `aws cloudformation deploy`, `aws s3 sync`, and `aws cloudfront create-invalidation` directly.
 
 # Stacks
 
@@ -76,3 +76,4 @@ All behaviors use CloudFront's native `redirect-to-https` policy.
 - The app domain is `apps.debugjois.dev`.
 - Lambda artifacts are stored in a versioned S3 bucket and the site stack is deployed with both the object key and object version.
 - Static frontend assets are uploaded outside CloudFormation by `infra/deploy.sh --with-artifact`.
+- CDK-managed assets are intentionally not used in this app. Lambda artifacts and static assets are published explicitly by `infra/deploy.sh`.

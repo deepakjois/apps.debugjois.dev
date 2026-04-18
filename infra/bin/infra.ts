@@ -6,7 +6,7 @@ import { AppsDebugJoisDevSiteStack } from "../lib/site-stack";
 
 const app = new cdk.App();
 const account = process.env.CDK_DEFAULT_ACCOUNT ?? "654654546088";
-const synthesizer = new cdk.BootstraplessSynthesizer();
+const synthesizer = new cdk.LegacyStackSynthesizer();
 
 // Shared deployment settings for the apps.debugjois.dev stack family.
 const appConfig = {
