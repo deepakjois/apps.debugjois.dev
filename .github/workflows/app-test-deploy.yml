@@ -1,0 +1,48 @@
+name: App Test and Deploy
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'app/**'
+      - '.github/workflows/app-test-deploy.yml'
+      - '.github/actions/app-lint-test-build/**'
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            infra/package-lock.json
+
+      - name: Lint, test, build app
+        uses: ./.github/actions/app-lint-test-build
+        with:
+          # deploy.sh --with-artifact rebuilds the app itself
+          build: 'false'
+
+      - name: Install infra dependencies
+        working-directory: infra
+        run: npm ci
+
+      - name: Install AWS CDK CLI
+        run: npm install -g aws-cdk
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-west-2
+
+      - name: Deploy app with new artifact
+        run: ./infra/deploy.sh --with-artifact

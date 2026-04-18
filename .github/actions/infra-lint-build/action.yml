@@ -1,0 +1,30 @@
+name: Infra Lint and Build
+description: Run TypeScript build and CDK synth for the infra project (checkout and Node setup must happen before calling this action)
+
+inputs:
+  install:
+    description: Whether to run npm ci
+    default: 'true'
+  build:
+    description: Whether to run the tsc build step
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Install dependencies
+      if: inputs.install == 'true'
+      shell: bash
+      working-directory: infra
+      run: npm ci
+
+    - name: Build infra
+      if: inputs.build == 'true'
+      shell: bash
+      working-directory: infra
+      run: npm run build
+
+    - name: CDK synth
+      shell: bash
+      working-directory: infra
+      run: npm run synth

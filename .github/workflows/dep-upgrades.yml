@@ -1,0 +1,58 @@
+name: Dependency Upgrades
+
+on:
+  schedule:
+    - cron: '22 10 * * 1'
+  workflow_dispatch:
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            infra/package-lock.json
+
+      - name: Install app dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Install infra dependencies
+        working-directory: infra
+        run: npm ci
+
+      - name: Check for upgrades and apply across projects
+        id: upgrades
+        run: ./.github/scripts/dep-upgrades.sh
+
+      - name: Validate app
+        if: steps.upgrades.outputs.app_updated == 'true'
+        uses: ./.github/actions/app-lint-test-build
+        with:
+          install: 'false'
+
+      - name: Validate infra
+        if: steps.upgrades.outputs.infra_updated == 'true'
+        uses: ./.github/actions/infra-lint-build
+        with:
+          install: 'false'
+
+      - name: Create Pull Request
+        if: steps.upgrades.outputs.has_updates == 'true'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          branch: deps/upgrades
+          title: "deps: upgrade npm dependencies"
+          body: ${{ steps.upgrades.outputs.body }}
+          commit-message: "deps: upgrade npm dependencies"
+          labels: dependencies
+          delete-branch: true
