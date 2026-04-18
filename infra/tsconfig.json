@@ -9,7 +9,12 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "moduleResolution": "node",
-    "outDir": "dist"
+    "outDir": "dist",
+    // CDK's `cdk init` template uses the legacy "node" module resolution,
+    // which TypeScript 6 flags as deprecated (TS5107). Acknowledge the
+    // deprecation here; will need to migrate to Node16/NodeNext when TS 7
+    // removes "node10" entirely.
+    "ignoreDeprecations": "6.0"
   },
   "include": ["bin/**/*.ts", "lib/**/*.ts"]
 }

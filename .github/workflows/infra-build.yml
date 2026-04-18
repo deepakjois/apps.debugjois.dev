@@ -22,5 +22,10 @@ jobs:
           cache: npm
           cache-dependency-path: infra/package-lock.json
 
+      # Node 22 ships npm 10, but our lockfiles were generated with npm 11.
+      # Match the local npm version so `npm ci` accepts the lockfile as-is.
+      - name: Pin npm version
+        run: npm install -g npm@11
+
       - name: Build and synth infra
         uses: ./.github/actions/infra-lint-build

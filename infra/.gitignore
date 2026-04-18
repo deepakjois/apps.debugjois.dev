@@ -8,6 +8,7 @@ cdk.context.json
 
 # TypeScript
 *.tsbuildinfo
+dist/
 
 # Package manager caches
 .npm
