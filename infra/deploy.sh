@@ -16,6 +16,7 @@ APP_PUBLIC_DIR="$APP_OUTPUT_DIR/public"
 APP_ARTIFACTS_DIR="$APP_DIR/artifacts"
 LAMBDA_ZIP_PATH="$APP_ARTIFACTS_DIR/lambda-package.zip"
 
+ACCESS_STACK="AppsDebugJoisDevAccessStack"
 ARTIFACT_STACK="AppsDebugJoisDevArtifactStack"
 CERTIFICATE_STACK="AppsDebugJoisDevCertificateStack"
 SITE_STACK="AppsDebugJoisDevSiteStack"
@@ -71,9 +72,21 @@ mkdir -p "$APP_ARTIFACTS_DIR"
 cd "$INFRA_DIR"
 npm run synth
 
+# Keep the shared access stack up to date before any role-dependent deploys.
+printf '==> Deploying AccessStack (deployment IAM, us-west-2)\n'
+deploy_stack "$ARTIFACT_REGION" "$ACCESS_STACK" "cdk.out/${ACCESS_STACK}.template.json"
+
+# Resolve the CloudFormation service role used for ArtifactStack updates.
+CLOUDFORMATION_SERVICE_ROLE_ARN="$(stack_output "$ARTIFACT_REGION" "$ACCESS_STACK" "CloudFormationServiceRoleArn")"
+
 # Keep the shared artifact bucket and certificate stacks up to date.
 printf '==> Deploying ArtifactStack (artifact bucket, us-west-2)\n'
-deploy_stack "$ARTIFACT_REGION" "$ARTIFACT_STACK" "cdk.out/${ARTIFACT_STACK}.template.json"
+aws cloudformation deploy \
+  --region "$ARTIFACT_REGION" \
+  --stack-name "$ARTIFACT_STACK" \
+  --template-file "cdk.out/${ARTIFACT_STACK}.template.json" \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --role-arn "$CLOUDFORMATION_SERVICE_ROLE_ARN"
 printf '==> Deploying CertificateStack (ACM cert, us-east-1)\n'
 deploy_stack "$CERTIFICATE_REGION" "$CERTIFICATE_STACK" "cdk.out/${CERTIFICATE_STACK}.template.json"
 

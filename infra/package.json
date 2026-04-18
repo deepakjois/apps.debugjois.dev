@@ -4,6 +4,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "synth": "cdk synth",
+    "synth:access": "cdk synth AppsDebugJoisDevAccessStack",
     "synth:artifact": "cdk synth AppsDebugJoisDevArtifactStack",
     "synth:certificate": "cdk synth AppsDebugJoisDevCertificateStack",
     "synth:site": "cdk synth AppsDebugJoisDevSiteStack"

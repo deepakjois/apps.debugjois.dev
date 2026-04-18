@@ -6,6 +6,7 @@ This CDK app is used only to synthesize CloudFormation templates. It uses `Legac
 
 # Stacks
 
+- `AppsDebugJoisDevAccessStack` in `us-west-2` manages the dedicated CloudFormation service role and the GitHub Actions OIDC role used by this repo.
 - `AppsDebugJoisDevArtifactStack` in `us-west-2` creates the versioned S3 bucket for Lambda artifacts.
 - `AppsDebugJoisDevCertificateStack` in `us-east-1` creates the ACM certificate for `apps.debugjois.dev`.
 - `AppsDebugJoisDevSiteStack` in `us-west-2` creates the static asset bucket, Lambda, API Gateway, CloudFront distribution, and Route53 records.
@@ -41,7 +42,7 @@ To build, package, upload, and deploy a new Lambda artifact as part of the deplo
 The script always:
 
 1. synthesizes the CDK templates
-2. deploys the artifact bucket and certificate stacks
+2. deploys the access, artifact bucket, and certificate stacks
 3. deploys the site stack
 
 When `--with-artifact` is passed, the script also:
@@ -77,3 +78,4 @@ All behaviors use CloudFront's native `redirect-to-https` policy.
 - Lambda artifacts are stored in a versioned S3 bucket and the site stack is deployed with both the object key and object version.
 - Static frontend assets are uploaded outside CloudFormation by `infra/deploy.sh --with-artifact`.
 - CDK-managed assets are intentionally not used in this app. Lambda artifacts and static assets are published explicitly by `infra/deploy.sh`.
+- ArtifactStack updates explicitly use the CloudFormation service role exported by `AppsDebugJoisDevAccessStack` so they do not depend on bootstrap execution roles.
