@@ -19,16 +19,11 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
           cache-dependency-path: |
             app/package-lock.json
             infra/package-lock.json
-
-      # Node 22 ships npm 10, but our lockfiles were generated with npm 11.
-      # Match the local npm version so `npm ci` accepts the lockfile as-is.
-      - name: Pin npm version
-        run: npm install -g npm@11
 
       - name: Lint, test, build app
         uses: ./.github/actions/app-lint-test-build
