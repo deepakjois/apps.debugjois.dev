@@ -24,6 +24,8 @@ ARTIFACT_REGION="us-west-2"
 CERTIFICATE_REGION="us-east-1"
 
 # Deploys a synthesized CloudFormation template into the target region.
+# Always passes CAPABILITY_NAMED_IAM: required for ArtifactStack's named
+# GitHub Actions role, and a harmless no-op for stacks without IAM resources.
 deploy_stack() {
   local region="$1"
   local stack_name="$2"
@@ -32,7 +34,8 @@ deploy_stack() {
   aws cloudformation deploy \
     --region "$region" \
     --stack-name "$stack_name" \
-    --template-file "$template_path"
+    --template-file "$template_path" \
+    --capabilities CAPABILITY_NAMED_IAM
 }
 
 # Reads a named CloudFormation output value from a stack.
