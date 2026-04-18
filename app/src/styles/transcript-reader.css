@@ -14,6 +14,18 @@
   --tr-max-w: 660px;
 }
 
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+  background: var(--tr-bg);
+}
+
+body {
+  color: var(--tr-text-bright);
+  overscroll-behavior-x: auto;
+}
+
 .toolbar {
   max-width: var(--tr-max-w);
   margin: 0 auto;
@@ -92,8 +104,6 @@
   align-items: flex-start;
   justify-content: center;
   padding: 72px 20px 24px;
-  background: var(--tr-bg-overlay);
-  backdrop-filter: blur(8px);
   z-index: 10;
 }
 
@@ -101,7 +111,17 @@
   display: flex;
 }
 
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: var(--tr-bg-overlay);
+  backdrop-filter: blur(8px);
+}
+
 .modal-panel {
+  position: relative;
+  z-index: 1;
   width: min(560px, 100%);
   border: 1px solid var(--tr-border);
   border-radius: 22px;

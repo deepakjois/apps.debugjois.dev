@@ -155,12 +155,6 @@ export default function TranscriptSearchModal({
     searchTriggerRef.current?.focus();
   }
 
-  function handleOverlayClick(event: React.MouseEvent<HTMLButtonElement>) {
-    if (event.target === event.currentTarget) {
-      closeModal();
-    }
-  }
-
   function navigateToTranscript(item: TranscriptIndexItem) {
     const canonicalHash = canonicalHashForTranscript(item);
 
@@ -243,64 +237,67 @@ export default function TranscriptSearchModal({
         </button>
       </div>
 
-      <button
-        aria-hidden={isOpen ? "false" : "true"}
-        className={`modal-root${isOpen ? " is-open" : ""}`}
-        onClick={handleOverlayClick}
-        type="button"
-      >
-        <div aria-labelledby="modal-search" aria-modal="true" className="modal-panel" role="dialog">
-          <input
-            autoComplete="off"
-            className="modal-search"
-            id="modal-search"
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setActiveResultIndex(0);
-            }}
-            onKeyDown={handleSearchKeyDown}
-            placeholder="Search transcripts"
-            ref={searchInputRef}
-            spellCheck={false}
-            type="search"
-            value={query}
+      {isOpen ? (
+        <div aria-hidden="false" className="modal-root is-open">
+          <button
+            aria-label="Close transcript search"
+            className="modal-backdrop"
+            onClick={closeModal}
+            type="button"
           />
+          <div aria-labelledby="modal-search" aria-modal="true" className="modal-panel" role="dialog">
+            <input
+              autoComplete="off"
+              className="modal-search"
+              id="modal-search"
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setActiveResultIndex(0);
+              }}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Search transcripts"
+              ref={searchInputRef}
+              spellCheck={false}
+              type="search"
+              value={query}
+            />
 
-          <ul className={`modal-results${isKeyboardNavigating ? " is-keyboard-nav" : ""}`}>
-            {visibleResults.length === 0 ? (
-              <li className="modal-empty">No transcripts match your search.</li>
-            ) : (
-              visibleResults.map((item, index) => {
-                const isActive = index === activeResultIndex;
+            <ul className={`modal-results${isKeyboardNavigating ? " is-keyboard-nav" : ""}`}>
+              {visibleResults.length === 0 ? (
+                <li className="modal-empty">No transcripts match your search.</li>
+              ) : (
+                visibleResults.map((item, index) => {
+                  const isActive = index === activeResultIndex;
 
-                return (
-                  <li key={item.location}>
-                    <button
-                      className={`modal-result${isActive ? " is-active" : ""}`}
-                      onClick={() => {
-                        navigateToTranscript(item);
-                      }}
-                      onMouseMove={() => {
-                        setIsKeyboardNavigating(false);
+                  return (
+                    <li key={item.location}>
+                      <button
+                        className={`modal-result${isActive ? " is-active" : ""}`}
+                        onClick={() => {
+                          navigateToTranscript(item);
+                        }}
+                        onMouseMove={() => {
+                          setIsKeyboardNavigating(false);
 
-                        if (index !== activeResultIndex) {
-                          setActiveResultIndex(index);
-                        }
-                      }}
-                      type="button"
-                    >
-                      <span className="modal-result-title">{item.title ?? "Untitled"}</span>
-                      <span className="modal-result-date">
-                        {formatTranscriptDate(item.date) ?? "Undated"}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })
-            )}
-          </ul>
+                          if (index !== activeResultIndex) {
+                            setActiveResultIndex(index);
+                          }
+                        }}
+                        type="button"
+                      >
+                        <span className="modal-result-title">{item.title ?? "Untitled"}</span>
+                        <span className="modal-result-date">
+                          {formatTranscriptDate(item.date) ?? "Undated"}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          </div>
         </div>
-      </button>
+      ) : null}
     </>
   );
 }
