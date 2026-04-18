@@ -245,7 +245,12 @@ export default function TranscriptSearchModal({
             onClick={closeModal}
             type="button"
           />
-          <div aria-labelledby="modal-search" aria-modal="true" className="modal-panel" role="dialog">
+          <div
+            aria-labelledby="modal-search"
+            aria-modal="true"
+            className="modal-panel"
+            role="dialog"
+          >
             <input
               autoComplete="off"
               className="modal-search"

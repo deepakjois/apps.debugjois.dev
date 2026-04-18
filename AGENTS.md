@@ -15,6 +15,9 @@ Always read the READMEs before reading the code when trying to figure out someth
 ## Code comments
 Whenever writing code, add terse comments around data structures to indicate what they are for. Whenever a piece of code has complicated or intricate logic, comment clearly to explain the behavior.
 
+## Code changes
+After every code change, make sure you format, lint and build the code.
+
 ## AWS
 Use the aws CLI tool to check the resources in AWS and monitor logs. Ensure you are logged and if not prompt the user to login separately and return.
 
