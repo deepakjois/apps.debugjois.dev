@@ -9,7 +9,7 @@
     "dev": "vite dev --port 3000",
     "build": "vite build",
     "preview": "node .output/server/index.mjs",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
     "format": "oxfmt .",

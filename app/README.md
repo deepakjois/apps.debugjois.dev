@@ -45,8 +45,6 @@ Regular local development only needs `npm run build` or `npm run dev`.
 
 # Styling
 
-Styling for the index route lives in `src/styles/index.css`.
-
 Styling for the transcript reader route lives in `src/styles/transcript-reader.css`.
 
 # Data Fetching
@@ -105,8 +103,7 @@ npm run test
 - `nitro.config.ts` sets the Nitro preset to `aws_lambda` with streaming disabled for API Gateway HTTP API compatibility.
 - `src/router.tsx` integrates TanStack Query with router-managed SSR hydration.
 - `src/routes/__root.tsx` defines the typed router context.
-- `src/routes/index.tsx` includes a minimal RSC example rendered through a TanStack Start server function.
-- `src/styles/index.css` contains the index route's lightweight plain CSS styles.
+- `src/routes/index.tsx` redirects `/` to `/transcript-reader`.
 - `src/routes/transcript-reader.tsx` server-renders the latest transcript or a selected `?t=` transcript and redirects invalid hashes to the canonical route.
 - `src/queries/queries.ts` contains transcript query options plus hash-resolution helpers used by the route.
 - `src/styles/transcript-reader.css` contains the transcript reader route styles extracted from the original standalone page.
