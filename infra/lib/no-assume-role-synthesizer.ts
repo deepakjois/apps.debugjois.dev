@@ -7,9 +7,25 @@ export interface NoAssumeRoleSynthesizerProps {
 }
 
 /**
- * Custom synthesizer that behaves like BootstraplessSynthesizer for assets
- * (i.e. no asset support), but omits assumeRoleArn from the synthesized
- * manifest so deploys use the caller's current credentials directly.
+ * Maintainer note:
+ *
+ * We use this custom synthesizer so `cdk deploy` uses the caller's current
+ * credentials directly instead of emitting a default bootstrap-style
+ * `assumeRoleArn` in the cloud assembly manifest. For app stacks, we can still
+ * optionally emit `cloudFormationExecutionRoleArn` so CloudFormation executes
+ * changes with the dedicated service role.
+ *
+ * This intentionally subclasses `BootstraplessSynthesizer` and overrides only
+ * `synthesize()` to customize the artifact metadata emitted via
+ * `StackSynthesizer.emitArtifact()`.
+ *
+ * Relevant AWS docs:
+ * - StackSynthesizer:
+ *   https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.StackSynthesizer.html
+ * - BootstraplessSynthesizer:
+ *   https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.BootstraplessSynthesizer.html
+ * - DefaultStackSynthesizer:
+ *   https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.DefaultStackSynthesizer.html
  */
 export class NoAssumeRoleSynthesizer extends cdk.BootstraplessSynthesizer {
   private readonly explicitCloudFormationExecutionRoleArn?: string;
