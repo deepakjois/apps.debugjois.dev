@@ -1,4 +1,10 @@
 import * as cdk from "aws-cdk-lib";
+import type { ISynthesisSession } from "aws-cdk-lib";
+
+export interface NoAssumeRoleSynthesizerProps {
+  qualifier?: string;
+  cloudFormationExecutionRoleArn?: string;
+}
 
 /**
  * Custom synthesizer that behaves like BootstraplessSynthesizer for assets
@@ -6,10 +12,27 @@ import * as cdk from "aws-cdk-lib";
  * manifest so deploys use the caller's current credentials directly.
  */
 export class NoAssumeRoleSynthesizer extends cdk.BootstraplessSynthesizer {
-  override synthesize(session: any): void {
-    this.synthesizeStackTemplate(this.boundStack, session);
-    this.emitArtifact(session, {
-      cloudFormationExecutionRoleArn: this.cloudFormationExecutionRoleArn,
+  private readonly explicitCloudFormationExecutionRoleArn?: string;
+
+  constructor(props: NoAssumeRoleSynthesizerProps = {}) {
+    super({
+      qualifier: props.qualifier,
+      cloudFormationExecutionRoleArn: props.cloudFormationExecutionRoleArn,
     });
+    this.explicitCloudFormationExecutionRoleArn =
+      props.cloudFormationExecutionRoleArn;
+  }
+
+  override synthesize(session: ISynthesisSession): void {
+    this.synthesizeStackTemplate(this.boundStack, session);
+    this.emitArtifact(
+      session,
+      this.explicitCloudFormationExecutionRoleArn
+        ? {
+            cloudFormationExecutionRoleArn:
+              this.explicitCloudFormationExecutionRoleArn,
+          }
+        : {},
+    );
   }
 }

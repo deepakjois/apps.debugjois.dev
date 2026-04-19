@@ -8,7 +8,8 @@ import { AppsDebugJoisDevSiteStack } from "../lib/site-stack";
 
 const app = new cdk.App({ analyticsReporting: false });
 const account = process.env.CDK_DEFAULT_ACCOUNT ?? "654654546088";
-const synthesizer = new NoAssumeRoleSynthesizer({
+const accessSynthesizer = new NoAssumeRoleSynthesizer();
+const appSynthesizer = new NoAssumeRoleSynthesizer({
   cloudFormationExecutionRoleArn:
     "arn:aws:iam::654654546088:role/apps-debugjois-dev-cloudformation-role",
 });
@@ -26,7 +27,7 @@ new AppsDebugJoisDevArtifactStack(app, "AppsDebugJoisDevArtifactStack", {
     account,
     region: "us-west-2",
   },
-  synthesizer,
+  synthesizer: appSynthesizer,
 });
 
 new AppsDebugJoisDevAccessStack(app, "AppsDebugJoisDevAccessStack", {
@@ -35,7 +36,7 @@ new AppsDebugJoisDevAccessStack(app, "AppsDebugJoisDevAccessStack", {
     account,
     region: "us-west-2",
   },
-  synthesizer,
+  synthesizer: accessSynthesizer,
 });
 
 new AppsDebugJoisDevCertificateStack(app, "AppsDebugJoisDevCertificateStack", {
@@ -44,7 +45,7 @@ new AppsDebugJoisDevCertificateStack(app, "AppsDebugJoisDevCertificateStack", {
     account,
     region: "us-east-1",
   },
-  synthesizer,
+  synthesizer: appSynthesizer,
   ...appConfig,
 });
 
@@ -54,6 +55,6 @@ new AppsDebugJoisDevSiteStack(app, "AppsDebugJoisDevSiteStack", {
     account,
     region: "us-west-2",
   },
-  synthesizer,
+  synthesizer: appSynthesizer,
   ...appConfig,
 });

@@ -24,19 +24,15 @@ SITE_STACK="AppsDebugJoisDevSiteStack"
 ARTIFACT_REGION="us-west-2"
 CERTIFICATE_REGION="us-east-1"
 
-# Deploys a synthesized CloudFormation template into the target region.
-# Always passes CAPABILITY_NAMED_IAM: required for ArtifactStack's named
-# GitHub Actions role, and a harmless no-op for stacks without IAM resources.
-deploy_stack() {
-  local region="$1"
-  local stack_name="$2"
-  local template_path="$3"
+# Deploys a single CDK stack using the current caller credentials.
+# Stack-specific execution roles are encoded by the custom synthesizer.
+cdk_deploy_stack() {
+  local stack_name="$1"
+  shift
 
-  aws cloudformation deploy \
-    --region "$region" \
-    --stack-name "$stack_name" \
-    --template-file "$template_path" \
-    --capabilities CAPABILITY_NAMED_IAM
+  npx cdk deploy "$stack_name" \
+    --require-approval never \
+    "$@"
 }
 
 # Reads a named CloudFormation output value from a stack.
@@ -68,27 +64,14 @@ stack_parameter() {
 # Ensure the local artifact directory exists before packaging.
 mkdir -p "$APP_ARTIFACTS_DIR"
 
-# Synthesize the latest templates before deploying any stacks.
+# Deploy the shared prerequisite stacks first.
 cd "$INFRA_DIR"
-npm run synth
-
-# Keep the shared access stack up to date before any role-dependent deploys.
 printf '==> Deploying AccessStack (deployment IAM, us-west-2)\n'
-deploy_stack "$ARTIFACT_REGION" "$ACCESS_STACK" "cdk.out/${ACCESS_STACK}.template.json"
-
-# Resolve the CloudFormation service role used for ArtifactStack updates.
-CLOUDFORMATION_SERVICE_ROLE_ARN="$(stack_output "$ARTIFACT_REGION" "$ACCESS_STACK" "CloudFormationServiceRoleArn")"
-
-# Keep the shared artifact bucket and certificate stacks up to date.
+cdk_deploy_stack "$ACCESS_STACK"
 printf '==> Deploying ArtifactStack (artifact bucket, us-west-2)\n'
-aws cloudformation deploy \
-  --region "$ARTIFACT_REGION" \
-  --stack-name "$ARTIFACT_STACK" \
-  --template-file "cdk.out/${ARTIFACT_STACK}.template.json" \
-  --capabilities CAPABILITY_NAMED_IAM \
-  --role-arn "$CLOUDFORMATION_SERVICE_ROLE_ARN"
+cdk_deploy_stack "$ARTIFACT_STACK"
 printf '==> Deploying CertificateStack (ACM cert, us-east-1)\n'
-deploy_stack "$CERTIFICATE_REGION" "$CERTIFICATE_STACK" "cdk.out/${CERTIFICATE_STACK}.template.json"
+cdk_deploy_stack "$CERTIFICATE_STACK"
 
 # Resolve the shared stack outputs needed by the site deploy.
 ARTIFACT_BUCKET_NAME="$(stack_output "$ARTIFACT_REGION" "$ARTIFACT_STACK" "ArtifactBucketName")"
@@ -137,27 +120,19 @@ if [[ "$WITH_ARTIFACT" == "1" ]]; then
   fi
   printf '==> Lambda artifact version: %s\n' "$ARTIFACT_OBJECT_VERSION"
 else
-  # Reuse the currently deployed artifact parameters for infra-only deploys.
+  # Reuse the currently deployed Lambda artifact for infra-only deploys.
   ARTIFACT_OBJECT_KEY="$(stack_parameter "$ARTIFACT_REGION" "$SITE_STACK" "ArtifactObjectKey")"
   ARTIFACT_OBJECT_VERSION="$(stack_parameter "$ARTIFACT_REGION" "$SITE_STACK" "ArtifactObjectVersion")"
 fi
 
-# Re-synthesize after the app build so the site template is current.
+# Deploy the site stack with the resolved certificate and Lambda artifact inputs.
 cd "$INFRA_DIR"
-npm run synth
-
-# Deploy the site stack with the resolved certificate and artifact inputs.
 printf '==> Deploying SiteStack (updates Lambda code + CloudFront config)\n'
-aws cloudformation deploy \
-  --region "$ARTIFACT_REGION" \
-  --stack-name "$SITE_STACK" \
-  --template-file "cdk.out/${SITE_STACK}.template.json" \
-  --capabilities CAPABILITY_IAM \
-  --parameter-overrides \
-    CertificateArn="$CERTIFICATE_ARN" \
-    ArtifactBucketName="$ARTIFACT_BUCKET_NAME" \
-    ArtifactObjectKey="$ARTIFACT_OBJECT_KEY" \
-    ArtifactObjectVersion="$ARTIFACT_OBJECT_VERSION"
+cdk_deploy_stack "$SITE_STACK" \
+  --parameters "$SITE_STACK:CertificateArn=$CERTIFICATE_ARN" \
+  --parameters "$SITE_STACK:ArtifactBucketName=$ARTIFACT_BUCKET_NAME" \
+  --parameters "$SITE_STACK:ArtifactObjectKey=$ARTIFACT_OBJECT_KEY" \
+  --parameters "$SITE_STACK:ArtifactObjectVersion=$ARTIFACT_OBJECT_VERSION"
 
 SITE_URL="$(stack_output "$ARTIFACT_REGION" "$SITE_STACK" "SiteUrl")"
 
@@ -175,7 +150,7 @@ if [[ "$WITH_ARTIFACT" == "1" ]]; then
     --paths '/*' >/dev/null
 fi
 
-# Print the deploy summary for the chosen artifact version.
+# Print a concise deploy summary.
 printf 'Deployed %s\n' "$SITE_URL"
 printf 'Artifact key: %s\n' "$ARTIFACT_OBJECT_KEY"
 printf 'Artifact version: %s\n' "$ARTIFACT_OBJECT_VERSION"
