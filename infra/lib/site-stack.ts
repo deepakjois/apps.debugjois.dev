@@ -116,6 +116,25 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
 
     const staticOrigin = origins.S3BucketOrigin.withOriginAccessControl(siteBucket);
 
+    // Custom cache policy for the API Gateway → Lambda origin. Honors the
+    // origin's Cache-Control header (set per-route by Nitro) and keys the
+    // cache by path + query string so ?t=<hash> routes don't collide.
+    // Crucially, it forwards no headers — the managed
+    // UseOriginCacheControlHeaders-QueryStrings policy whitelists `host`,
+    // which causes API Gateway to 403 the CloudFront-forwarded request.
+    const apiCachePolicy = new cloudfront.CachePolicy(this, "ApiCachePolicy", {
+      cachePolicyName: "apps-debugjois-dev-api",
+      comment: "Honor origin Cache-Control; cache key includes query strings",
+      minTtl: cdk.Duration.seconds(0),
+      defaultTtl: cdk.Duration.seconds(0),
+      maxTtl: cdk.Duration.seconds(31536000),
+      queryStringBehavior: cloudfront.CacheQueryStringBehavior.all(),
+      headerBehavior: cloudfront.CacheHeaderBehavior.none(),
+      cookieBehavior: cloudfront.CacheCookieBehavior.none(),
+      enableAcceptEncodingGzip: true,
+      enableAcceptEncodingBrotli: true,
+    });
+
     // Static files that should be served directly from S3.
     const staticBehaviors: Record<string, cloudfront.BehaviorOptions> = {
       "/assets/*": createStaticBehavior(staticOrigin),
@@ -130,11 +149,7 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
       certificate,
       defaultBehavior: {
         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-        // Honor the origin's Cache-Control header (set per-route by the
-        // Nitro Lambda) and include the query string in the cache key so
-        // transcripts keyed by ?t=<hash> don't collide.
-        cachePolicy:
-          cloudfront.CachePolicy.USE_ORIGIN_CACHE_CONTROL_HEADERS_QUERY_STRINGS,
+        cachePolicy: apiCachePolicy,
         compress: true,
         origin: apiOrigin,
         originRequestPolicy:
