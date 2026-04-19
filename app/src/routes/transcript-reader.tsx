@@ -12,6 +12,7 @@ import {
   transcriptQueryOptions,
 } from "../queries/queries";
 import type { TranscriptIndexItem, TranscriptPayload } from "../queries/queries";
+import { setCacheControl } from "../server/cache-control";
 import "../styles/transcript-reader.css";
 
 type TranscriptReaderSearch = {
@@ -24,6 +25,15 @@ type TranscriptReaderLoaderData = {
   transcript: TranscriptPayload | null;
   pageTitle: string;
 };
+
+// Short TTL used for routes whose output depends on "latest" (redirects to
+// the newest transcript) — the CDN refreshes quickly when a new transcript
+// lands.
+const LATEST_CACHE_CONTROL = "public, max-age=0, s-maxage=60, stale-while-revalidate=300";
+// Long CDN TTL for hash-keyed transcript pages. The ?t=<hash> key is
+// content-addressed, so a given URL never changes meaning — the CDN can
+// hold it indefinitely. Browser TTL stays short so clients still revalidate.
+const HASH_CACHE_CONTROL = "public, max-age=60, s-maxage=31536000, stale-while-revalidate=86400";
 
 export async function loadTranscriptReaderData(
   queryClient: QueryClient,
@@ -38,6 +48,7 @@ export async function loadTranscriptReaderData(
       to: "/transcript-reader",
       search: { t: latestCanonicalHash },
       replace: true,
+      headers: { "Cache-Control": LATEST_CACHE_CONTROL },
     });
   }
 
@@ -48,10 +59,12 @@ export async function loadTranscriptReaderData(
       to: "/transcript-reader",
       search: latestCanonicalHash ? { t: latestCanonicalHash } : undefined,
       replace: true,
+      headers: { "Cache-Control": LATEST_CACHE_CONTROL },
     });
   }
 
   if (!resolvedTranscript.item) {
+    await setCacheControl(LATEST_CACHE_CONTROL);
     return {
       transcriptList,
       selectedLocation: null,
@@ -63,6 +76,8 @@ export async function loadTranscriptReaderData(
   const transcript = await queryClient.ensureQueryData(
     transcriptQueryOptions(resolvedTranscript.item.location),
   );
+
+  await setCacheControl(HASH_CACHE_CONTROL);
 
   return {
     transcriptList,

@@ -130,7 +130,11 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
       certificate,
       defaultBehavior: {
         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-        cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+        // Honor the origin's Cache-Control header (set per-route by the
+        // Nitro Lambda) and include the query string in the cache key so
+        // transcripts keyed by ?t=<hash> don't collide.
+        cachePolicy:
+          cloudfront.CachePolicy.USE_ORIGIN_CACHE_CONTROL_HEADERS_QUERY_STRINGS,
         compress: true,
         origin: apiOrigin,
         originRequestPolicy:

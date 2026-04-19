@@ -5,9 +5,11 @@ export const Route = createFileRoute("/")({
     meta: [{ title: "Transcript Reader" }],
   }),
   loader: () => {
+    // Static redirect — safe to cache at the CDN for a day.
     throw redirect({
       to: "/transcript-reader",
       replace: true,
+      headers: { "Cache-Control": "public, max-age=60, s-maxage=86400" },
     });
   },
 });
