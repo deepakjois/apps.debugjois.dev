@@ -3,11 +3,15 @@ import * as cdk from "aws-cdk-lib";
 import { AppsDebugJoisDevAccessStack } from "../lib/access-stack";
 import { AppsDebugJoisDevArtifactStack } from "../lib/artifact-stack";
 import { AppsDebugJoisDevCertificateStack } from "../lib/certificate-stack";
+import { NoAssumeRoleSynthesizer } from "../lib/no-assume-role-synthesizer";
 import { AppsDebugJoisDevSiteStack } from "../lib/site-stack";
 
 const app = new cdk.App({ analyticsReporting: false });
 const account = process.env.CDK_DEFAULT_ACCOUNT ?? "654654546088";
-const synthesizer = new cdk.LegacyStackSynthesizer();
+const synthesizer = new NoAssumeRoleSynthesizer({
+  cloudFormationExecutionRoleArn:
+    "arn:aws:iam::654654546088:role/apps-debugjois-dev-cloudformation-role",
+});
 
 // Shared deployment settings for the apps.debugjois.dev stack family.
 const appConfig = {
