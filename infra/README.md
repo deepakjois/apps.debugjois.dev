@@ -71,6 +71,10 @@ CloudFront is configured as follows:
 
 All behaviors use CloudFront's native `redirect-to-https` policy.
 
+# Podscriber Lambda invocation
+
+The site stack grants the Nitro Lambda generic `lambda:InvokeFunction` permission on `*` so `/admin/podscriber` can invoke the existing `debugjois.dev` backend Lambda. No backend Lambda or backend artifact is deployed from this repo in the current phase.
+
 # Notes
 
 - The hosted zone is `debugjois.dev`.

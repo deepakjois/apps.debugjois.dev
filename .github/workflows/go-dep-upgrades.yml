@@ -1,0 +1,45 @@
+name: Go Dependency Upgrades
+
+on:
+  schedule:
+    - cron: '22 10 * * 1'
+  workflow_dispatch:
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Install go-mod-upgrade
+        run: go install github.com/oligot/go-mod-upgrade@latest
+
+      - name: Check for upgrades and apply
+        id: upgrades
+        run: .github/scripts/go-dep-upgrades.sh
+
+      - name: Validate backend
+        if: steps.upgrades.outputs.has_updates == 'true'
+        uses: ./.github/actions/backend-go-lint-test-build
+        with:
+          setup-go: 'false'
+
+      - name: Create Pull Request
+        if: steps.upgrades.outputs.has_updates == 'true'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          branch: deps/go-upgrades
+          title: "go: upgrade module dependencies"
+          body: ${{ steps.upgrades.outputs.body }}
+          commit-message: "go: upgrade module dependencies"
+          labels: dependencies
+          delete-branch: true

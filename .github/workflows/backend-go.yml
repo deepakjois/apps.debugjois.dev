@@ -1,0 +1,23 @@
+name: Backend Go Lint, Test and Build
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/actions/backend-go-lint-test-build/**'
+      - '.github/workflows/backend-go.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - '.github/actions/backend-go-lint-test-build/**'
+      - '.github/workflows/backend-go.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/backend-go-lint-test-build

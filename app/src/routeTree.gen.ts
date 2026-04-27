@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TranscriptReaderRouteImport } from './routes/transcript-reader'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminPodscriberRouteImport } from './routes/admin.podscriber'
 import { Route as AdminPodcastTranscribeRouteImport } from './routes/admin.podcast-transcribe'
 
 const TranscriptReaderRoute = TranscriptReaderRouteImport.update({
@@ -29,6 +30,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminPodscriberRoute = AdminPodscriberRouteImport.update({
+  id: '/podscriber',
+  path: '/podscriber',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminPodcastTranscribeRoute = AdminPodcastTranscribeRouteImport.update({
   id: '/podcast-transcribe',
   path: '/podcast-transcribe',
@@ -40,12 +46,14 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/transcript-reader': typeof TranscriptReaderRoute
   '/admin/podcast-transcribe': typeof AdminPodcastTranscribeRoute
+  '/admin/podscriber': typeof AdminPodscriberRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/transcript-reader': typeof TranscriptReaderRoute
   '/admin/podcast-transcribe': typeof AdminPodcastTranscribeRoute
+  '/admin/podscriber': typeof AdminPodscriberRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,18 +61,30 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/transcript-reader': typeof TranscriptReaderRoute
   '/admin/podcast-transcribe': typeof AdminPodcastTranscribeRoute
+  '/admin/podscriber': typeof AdminPodscriberRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/transcript-reader' | '/admin/podcast-transcribe'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/transcript-reader'
+    | '/admin/podcast-transcribe'
+    | '/admin/podscriber'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/transcript-reader' | '/admin/podcast-transcribe'
+  to:
+    | '/'
+    | '/admin'
+    | '/transcript-reader'
+    | '/admin/podcast-transcribe'
+    | '/admin/podscriber'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/transcript-reader'
     | '/admin/podcast-transcribe'
+    | '/admin/podscriber'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -96,6 +116,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/podscriber': {
+      id: '/admin/podscriber'
+      path: '/podscriber'
+      fullPath: '/admin/podscriber'
+      preLoaderRoute: typeof AdminPodscriberRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/podcast-transcribe': {
       id: '/admin/podcast-transcribe'
       path: '/podcast-transcribe'
@@ -108,10 +135,12 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminPodcastTranscribeRoute: typeof AdminPodcastTranscribeRoute
+  AdminPodscriberRoute: typeof AdminPodscriberRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminPodcastTranscribeRoute: AdminPodcastTranscribeRoute,
+  AdminPodscriberRoute: AdminPodscriberRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)

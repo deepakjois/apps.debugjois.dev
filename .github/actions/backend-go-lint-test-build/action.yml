@@ -1,0 +1,33 @@
+name: Backend Go Lint, Test, and Build
+description: Run golangci-lint, tests, and build for the local backend Go module
+
+inputs:
+  setup-go:
+    description: Whether to set up Go from backend/go.mod
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-go@v6
+      if: inputs.setup-go == 'true'
+      with:
+        go-version-file: backend/go.mod
+        cache: true
+        cache-dependency-path: backend/go.sum
+
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@v9.2.0
+      with:
+        version: latest
+        working-directory: backend
+
+    - name: Run tests
+      shell: bash
+      working-directory: backend
+      run: go test ./...
+
+    - name: Build backend commands
+      shell: bash
+      working-directory: backend
+      run: go build ./...
