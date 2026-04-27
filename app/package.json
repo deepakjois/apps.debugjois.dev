@@ -24,8 +24,8 @@
     "@tanstack/react-router-ssr-query": "latest",
     "@tanstack/react-start": "latest",
     "@tanstack/router-plugin": "latest",
-    "@vitejs/plugin-rsc": "^0.5.24",
-    "lucide-react": "^1.8.0",
+    "@vitejs/plugin-rsc": "^0.5.25",
+    "lucide-react": "^1.11.0",
     "nitro": "npm:nitro-nightly@latest",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
@@ -38,13 +38,13 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
-    "jsdom": "^29.0.2",
-    "oxfmt": "^0.45.0",
-    "oxlint": "^1.60.0",
-    "oxlint-tsgolint": "^0.21.1",
+    "jsdom": "^29.1.0",
+    "oxfmt": "^0.47.0",
+    "oxlint": "^1.62.0",
+    "oxlint-tsgolint": "^0.22.0",
     "typescript": "^6.0.3",
-    "vite": "^8.0.9",
-    "vitest": "^4.1.4"
+    "vite": "^8.0.10",
+    "vitest": "^4.1.5"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
