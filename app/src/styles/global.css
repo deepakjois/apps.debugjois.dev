@@ -21,6 +21,13 @@ html {
   overscroll-behavior-x: auto;
 }
 
+html[data-admin-webtui],
+html[data-admin-webtui] .app-body {
+  /* Critical admin paint colors prevent FOUC before the route CSS link loads. */
+  background: #1e1e2e;
+  color: #cdd6f4;
+}
+
 .page-wrap {
   box-sizing: border-box;
   width: min(100%, 960px);

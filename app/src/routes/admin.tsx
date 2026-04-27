@@ -3,11 +3,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AdminAuthGate } from "../components/auth/AdminAuthGate";
 import { GOOGLE_CLIENT_ID } from "../lib/auth/config";
 import { getAdminSessionServerFn } from "../server/adminAuth";
-import "../styles/admin.css";
+import adminCss from "../styles/admin.css?inline";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [{ title: "Admin" }],
+    styles: [
+      // Route-owned stylesheet so WebTUI globals are present only on /admin/*.
+      { children: adminCss },
+    ],
   }),
   loader: async () => {
     return {

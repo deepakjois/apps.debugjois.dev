@@ -63,7 +63,7 @@ Regular local development only needs `npm run build` or `npm run dev`.
 
 Styling for the transcript reader route lives in `src/styles/transcript-reader.css`.
 
-Admin route styling lives in `src/styles/admin.css`, imports WebTUI styles directly, uses the Catppuccin theme, and is attached only while `/admin/*` is active.
+Admin route styling lives in `src/styles/admin.css`, imports WebTUI styles directly, uses the Catppuccin theme, and is attached only while `/admin/*` is active so WebTUI globals cannot bleed into non-admin routes.
 
 # Data Fetching
 
