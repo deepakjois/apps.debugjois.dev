@@ -1,0 +1,112 @@
+@layer base, utils, components;
+
+@import "@webtui/css/base.css";
+
+/* Utils */
+@import "@webtui/css/utils/box.css";
+
+/* Components */
+@import "@webtui/css/components/badge.css";
+@import "@webtui/css/components/button.css";
+@import "@webtui/css/components/typography.css";
+@import "@webtui/theme-catppuccin";
+
+@layer base {
+  html[data-admin-webtui],
+  html[data-admin-webtui] body {
+    background-color: var(--background0);
+    color: var(--foreground0);
+  }
+}
+
+@layer components {
+  /* Admin-only layout around the imported WebTUI primitives. */
+  .admin-webtui {
+    --box-border-color: var(--background1);
+    min-height: 100vh;
+    padding: 2lh 3ch 4lh;
+    background-color: var(--background0);
+    color: var(--foreground0);
+  }
+
+  .admin-screen {
+    display: grid;
+    place-items: start center;
+  }
+
+  .admin-shell,
+  .admin-auth-card,
+  .admin-shell-header,
+  .admin-page {
+    width: min(100%, 96ch);
+  }
+
+  .admin-shell {
+    display: grid;
+    gap: 2lh;
+  }
+
+  .admin-auth-card,
+  .admin-shell-header,
+  .admin-page,
+  .admin-copy {
+    display: grid;
+    gap: 1lh;
+  }
+
+  .admin-copy [is-~="badge"] {
+    width: max-content;
+  }
+
+  .admin-auth-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1lh 2ch;
+  }
+
+  .admin-google-button-wrap {
+    display: grid;
+    gap: 1lh;
+    width: max-content;
+  }
+
+  .admin-google-button-wrap > div:first-child {
+    min-height: 3lh;
+  }
+
+  .admin-logout-button {
+    --box-border-color: var(--background1);
+    justify-self: start;
+    cursor: pointer;
+  }
+
+  .admin-status-copy {
+    color: var(--foreground2);
+  }
+
+  .admin-auth-error {
+    color: #ff7a7a;
+  }
+
+  .admin-google-button-wrap,
+  .admin-todo {
+    --box-border-color: var(--background1);
+  }
+
+  .admin-todo {
+    width: max-content;
+    color: var(--foreground0);
+  }
+
+  @media (min-width: 720px) {
+    .admin-shell-header {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+      gap: 2ch;
+    }
+
+    .admin-logout-button {
+      justify-self: end;
+    }
+  }
+}

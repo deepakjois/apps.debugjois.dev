@@ -1,7 +1,13 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { HeadContent, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
+import {
+  HeadContent,
+  Scripts,
+  createRootRouteWithContext,
+  useRouterState,
+} from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
+import "../styles/global.css";
 
 export type RouterContext = {
   queryClient: QueryClient;
@@ -39,8 +45,16 @@ function NotFound() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const isAdminRoute = useRouterState({
+    select: (state) => state.location.pathname.startsWith("/admin"),
+  });
+
   return (
-    <html lang="en">
+    <html
+      data-admin-webtui={isAdminRoute ? "true" : undefined}
+      data-webtui-theme={isAdminRoute ? "catppuccin" : undefined}
+      lang="en"
+    >
       <head>
         <HeadContent />
       </head>

@@ -22,7 +22,12 @@
     "react/no-danger-with-children": "error",
     "react/void-dom-elements-no-children": "error",
     "react/button-has-type": "error",
-    "react/no-unknown-property": "error",
+    "react/no-unknown-property": [
+      "error",
+      {
+        "ignore": ["box-", "is-", "cap-", "variant-", "marker-"]
+      }
+    ],
     "react/jsx-no-script-url": "error",
     "react/style-prop-object": "error",
     "react/exhaustive-deps": "warn",

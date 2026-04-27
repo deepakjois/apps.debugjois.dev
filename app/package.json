@@ -17,6 +17,7 @@
     "check": "npm run lint && npm run format:check"
   },
   "dependencies": {
+    "@react-oauth/google": "^0.12.2",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-query": "latest",
     "@tanstack/react-router": "latest",
@@ -26,6 +27,9 @@
     "@tanstack/router-plugin": "latest",
     "@vitejs/plugin-rsc": "^0.5.25",
     "lucide-react": "^1.11.0",
+    "@webtui/css": "^0.1.7",
+    "@webtui/theme-catppuccin": "^0.0.4",
+    "jose": "^6.0.11",
     "nitro": "npm:nitro-nightly@latest",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"

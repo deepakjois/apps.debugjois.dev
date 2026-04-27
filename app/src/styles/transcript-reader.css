@@ -1,4 +1,5 @@
-:root {
+.transcript-reader-page {
+  /* Route-local palette and typography for the transcript reader UI. */
   --tr-bg: #101113;
   --tr-bg-raised: #18191d;
   --tr-bg-overlay: rgb(16 17 19 / 74%);
@@ -12,29 +13,29 @@
   --tr-serif: "Newsreader", Georgia, serif;
   --tr-sans: "DM Sans", system-ui, sans-serif;
   --tr-max-w: 660px;
-}
-
-html,
-body {
-  min-height: 100%;
-  margin: 0;
+  min-height: 100vh;
   background: var(--tr-bg);
+  color: var(--tr-text-bright);
 }
 
-body {
-  color: var(--tr-text-bright);
-  overscroll-behavior-x: auto;
+.transcript-reader-page,
+.transcript-reader-page *,
+.transcript-reader-page *::before,
+.transcript-reader-page *::after {
+  box-sizing: border-box;
+}
+
+.transcript-reader-page button,
+.transcript-reader-page input,
+.transcript-reader-page textarea,
+.transcript-reader-page select {
+  font: inherit;
 }
 
 .toolbar {
   max-width: var(--tr-max-w);
   margin: 0 auto;
   padding: 18px 24px 0;
-}
-
-.transcript-reader-page {
-  min-height: 100vh;
-  background: var(--tr-bg);
 }
 
 .search-trigger {
