@@ -110,3 +110,91 @@
     }
   }
 }
+
+@layer components {
+  /* Podscriber form controls use WebTUI shell colors with native form elements. */
+  .admin-podscriber-page,
+  .admin-podscriber-form,
+  .admin-podscriber-error,
+  .admin-podscriber-response {
+    display: grid;
+    gap: 1lh;
+  }
+
+  .admin-podscriber-label {
+    color: var(--foreground0);
+    font-weight: 700;
+  }
+
+  .admin-podscriber-textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 14lh;
+    padding: 1lh 2ch;
+    border: 1px solid var(--background1);
+    border-radius: 0;
+    background: var(--background0);
+    color: var(--foreground0);
+    font: inherit;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    line-height: 1.6;
+    resize: vertical;
+  }
+
+  .admin-podscriber-textarea:focus-visible,
+  .admin-podscriber-submit:focus-visible {
+    outline: 2px solid var(--foreground1);
+    outline-offset: 2px;
+  }
+
+  .admin-podscriber-textarea:disabled {
+    opacity: 0.72;
+  }
+
+  .admin-podscriber-actions {
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  .admin-podscriber-submit {
+    --box-border-color: var(--background1);
+    cursor: pointer;
+  }
+
+  .admin-podscriber-submit:disabled {
+    cursor: not-allowed;
+  }
+
+  .admin-podscriber-submit.is-success {
+    color: #a6e3a1;
+  }
+
+  .admin-podscriber-error {
+    --box-border-color: #ff7a7a;
+    color: #ffb4b4;
+  }
+
+  .admin-podscriber-response {
+    --box-border-color: var(--background1);
+  }
+
+  .admin-podscriber-response-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: start;
+    justify-content: space-between;
+    gap: 1lh 2ch;
+  }
+
+  .admin-podscriber-response-header code {
+    color: var(--foreground1);
+  }
+
+  .admin-podscriber-response pre {
+    overflow-x: auto;
+    margin: 0;
+    padding: 1lh 2ch;
+    background: var(--background0);
+    color: var(--foreground0);
+  }
+}

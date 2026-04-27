@@ -1,0 +1,28 @@
+name: Backend Go Vulnerability Check
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-govulncheck.yml'
+  schedule:
+    - cron: '22 10 * * *'
+  workflow_dispatch:
+
+jobs:
+  govulncheck:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      - name: Run govulncheck
+        working-directory: backend
+        run: govulncheck ./...

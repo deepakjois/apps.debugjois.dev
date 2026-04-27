@@ -2,6 +2,7 @@ import * as cdk from "aws-cdk-lib";
 
 import { AppsDebugJoisDevAccessStack } from "../lib/access-stack";
 import { AppsDebugJoisDevArtifactStack } from "../lib/artifact-stack";
+import { AppDebugJoisDevBackendStack } from "../lib/backend-stack";
 import { AppsDebugJoisDevCertificateStack } from "../lib/certificate-stack";
 import { NoAssumeRoleSynthesizer } from "../lib/no-assume-role-synthesizer";
 import { AppsDebugJoisDevSiteStack } from "../lib/site-stack";
@@ -47,6 +48,15 @@ new AppsDebugJoisDevCertificateStack(app, "AppsDebugJoisDevCertificateStack", {
   },
   synthesizer: appSynthesizer,
   ...appConfig,
+});
+
+new AppDebugJoisDevBackendStack(app, "AppDebugJoisDevBackendStack", {
+  analyticsReporting: false,
+  env: {
+    account,
+    region: "us-west-2",
+  },
+  synthesizer: appSynthesizer,
 });
 
 new AppsDebugJoisDevSiteStack(app, "AppsDebugJoisDevSiteStack", {

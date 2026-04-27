@@ -9,6 +9,10 @@ on:
       - '.github/workflows/app-test-deploy.yml'
       - '.github/actions/app-lint-test-build/**'
 
+concurrency:
+  group: apps-debugjois-dev-deploy
+  cancel-in-progress: false
+
 jobs:
   test-and-deploy:
     runs-on: ubuntu-latest

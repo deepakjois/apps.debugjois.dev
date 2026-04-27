@@ -17,6 +17,7 @@
     "check": "npm run lint && npm run format:check"
   },
   "dependencies": {
+    "@aws-sdk/client-lambda": "^3.1038.0",
     "@react-oauth/google": "^0.12.2",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-query": "latest",

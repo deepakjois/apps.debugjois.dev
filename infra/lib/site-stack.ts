@@ -4,6 +4,7 @@ import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cdk from "aws-cdk-lib";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
+import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
@@ -15,6 +16,9 @@ export interface AppsDebugJoisDevSiteStackProps extends cdk.StackProps {
   hostedZoneId: string;
   hostedZoneName: string;
 }
+
+const podscriberLambdaFunctionName =
+  "DebugjoisDevStack-DebugJoisDevLambda1E2510C0-FbQR7k6bgY9Q";
 
 export class AppsDebugJoisDevSiteStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: AppsDebugJoisDevSiteStackProps) {
@@ -77,11 +81,21 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
         artifactObjectVersion.valueAsString,
       ),
       description: "apps.debugjois.dev Nitro Lambda",
+      environment: {
+        PODSCRIBER_LAMBDA_FUNCTION_NAME: podscriberLambdaFunctionName,
+      },
       handler: "server/index.handler",
       memorySize: 1024,
       runtime: lambda.Runtime.NODEJS_22_X,
       timeout: cdk.Duration.seconds(30),
     });
+
+    siteLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["lambda:InvokeFunction"],
+        resources: ["*"],
+      }),
+    );
 
     const httpApi = new apigwv2.HttpApi(this, "HttpApi", {
       apiName: "apps-debugjois-dev-api",

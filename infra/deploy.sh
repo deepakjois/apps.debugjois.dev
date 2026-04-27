@@ -1,24 +1,60 @@
 #!/usr/bin/env bash
 
-set -euxo pipefail
+set -euo pipefail
 
 WITH_ARTIFACT=0
-if [[ "${1-}" == "--with-artifact" ]]; then
-  WITH_ARTIFACT=1
-fi
+WITH_BACKEND_IMAGE=0
+
+usage() {
+  cat <<'USAGE'
+Usage: ./deploy.sh [--with-artifact] [--with-backend-image]
+
+  --with-artifact       Build and deploy a fresh Nitro app Lambda zip artifact.
+  --with-backend-image  Build, push, and deploy a fresh backend Lambda image.
+  -h, --help            Show this help text.
+
+Without --with-backend-image, an existing backend stack reuses its currently
+deployed Lambda image. If the backend stack does not exist yet, it is skipped.
+USAGE
+}
+
+while (($# > 0)); do
+  case "$1" in
+    --with-artifact)
+      WITH_ARTIFACT=1
+      shift
+      ;;
+    --with-backend-image)
+      WITH_BACKEND_IMAGE=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 APP_DIR="$REPO_DIR/app"
+BACKEND_DIR="$REPO_DIR/backend"
 INFRA_DIR="$REPO_DIR/infra"
 APP_OUTPUT_DIR="$APP_DIR/.output"
 APP_PUBLIC_DIR="$APP_OUTPUT_DIR/public"
 APP_ARTIFACTS_DIR="$APP_DIR/artifacts"
 LAMBDA_ZIP_PATH="$APP_ARTIFACTS_DIR/lambda-package.zip"
+BACKEND_BUILD_SCRIPT="$BACKEND_DIR/build-and-push-image.sh"
 
 ACCESS_STACK="AppsDebugJoisDevAccessStack"
 ARTIFACT_STACK="AppsDebugJoisDevArtifactStack"
 CERTIFICATE_STACK="AppsDebugJoisDevCertificateStack"
+BACKEND_STACK="AppDebugJoisDevBackendStack"
 SITE_STACK="AppsDebugJoisDevSiteStack"
 
 ARTIFACT_REGION="us-west-2"
@@ -61,6 +97,28 @@ stack_parameter() {
     --output text
 }
 
+stack_exists() {
+  local region="$1"
+  local stack_name="$2"
+
+  aws cloudformation describe-stacks \
+    --region "$region" \
+    --stack-name "$stack_name" >/dev/null 2>&1
+}
+
+lambda_image_uri_for_stack() {
+  local region="$1"
+  local stack_name="$2"
+
+  local function_name
+  function_name="$(stack_output "$region" "$stack_name" "LambdaFunctionName")"
+  aws lambda get-function \
+    --region "$region" \
+    --function-name "$function_name" \
+    --query 'Code.ImageUri' \
+    --output text
+}
+
 # Ensure the local artifact directory exists before packaging.
 mkdir -p "$APP_ARTIFACTS_DIR"
 
@@ -68,14 +126,34 @@ mkdir -p "$APP_ARTIFACTS_DIR"
 cd "$INFRA_DIR"
 printf '==> Deploying AccessStack (deployment IAM, us-west-2)\n'
 cdk_deploy_stack "$ACCESS_STACK"
-printf '==> Deploying ArtifactStack (artifact bucket, us-west-2)\n'
+printf '==> Deploying ArtifactStack (artifact bucket + backend ECR, us-west-2)\n'
 cdk_deploy_stack "$ARTIFACT_STACK"
 printf '==> Deploying CertificateStack (ACM cert, us-east-1)\n'
 cdk_deploy_stack "$CERTIFICATE_STACK"
 
-# Resolve the shared stack outputs needed by the site deploy.
+# Resolve the shared stack outputs needed by later deploys.
 ARTIFACT_BUCKET_NAME="$(stack_output "$ARTIFACT_REGION" "$ARTIFACT_STACK" "ArtifactBucketName")"
 CERTIFICATE_ARN="$(stack_output "$CERTIFICATE_REGION" "$CERTIFICATE_STACK" "CertificateArn")"
+
+if [[ "$WITH_BACKEND_IMAGE" == "1" ]]; then
+  printf '==> Building and pushing backend Lambda image\n'
+  BACKEND_IMAGE_URI="$(AWS_REGION="$ARTIFACT_REGION" "$BACKEND_BUILD_SCRIPT")"
+  printf '==> Backend image URI: %s\n' "$BACKEND_IMAGE_URI"
+else
+  BACKEND_IMAGE_URI=""
+  if stack_exists "$ARTIFACT_REGION" "$BACKEND_STACK"; then
+    printf '==> Reusing currently deployed backend Lambda image\n'
+    BACKEND_IMAGE_URI="$(lambda_image_uri_for_stack "$ARTIFACT_REGION" "$BACKEND_STACK")"
+  else
+    printf '==> Backend stack does not exist yet; skipping backend deploy without --with-backend-image\n'
+  fi
+fi
+
+if [[ -n "$BACKEND_IMAGE_URI" ]]; then
+  printf '==> Deploying BackendStack (Go Lambda image)\n'
+  cdk_deploy_stack "$BACKEND_STACK" \
+    --parameters "$BACKEND_STACK:BackendImageUri=$BACKEND_IMAGE_URI"
+fi
 
 if [[ "$WITH_ARTIFACT" == "1" ]]; then
   # Build a fresh app bundle before packaging a new Lambda artifact.
@@ -154,3 +232,6 @@ fi
 printf 'Deployed %s\n' "$SITE_URL"
 printf 'Artifact key: %s\n' "$ARTIFACT_OBJECT_KEY"
 printf 'Artifact version: %s\n' "$ARTIFACT_OBJECT_VERSION"
+if [[ -n "$BACKEND_IMAGE_URI" ]]; then
+  printf 'Backend image: %s\n' "$BACKEND_IMAGE_URI"
+fi
