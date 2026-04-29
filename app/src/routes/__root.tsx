@@ -48,9 +48,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const routeChrome = useRouterState({
     select: (state) => ({
       isAdminRoute: state.location.pathname.startsWith("/admin"),
-      isLoggerRoute: state.location.pathname === "/admin/logger",
     }),
   });
+  // Keep debug UI local-only and out of admin screens.
+  const showDevtools = import.meta.env.DEV && !routeChrome.isAdminRoute;
 
   return (
     <html
@@ -63,7 +64,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="app-body">
         {children}
-        {routeChrome.isLoggerRoute ? null : (
+        {showDevtools ? (
           <TanStackDevtools
             config={{
               position: "bottom-right",
@@ -75,7 +76,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               },
             ]}
           />
-        )}
+        ) : null}
         <Scripts />
       </body>
     </html>
