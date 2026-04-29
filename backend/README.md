@@ -5,6 +5,7 @@ Go podcast transcription tools for `apps.debugjois.dev`. The module can run loca
 ## Requirements
 
 - Go 1.26+
+- `golangci-lint` on `PATH` for linting backend code
 - AWS credentials for S3 transcript writes or index generation with `--write`
 - `DEEPGRAM_API_KEY` in `backend/.env` for local transcription
 - Google Drive Application Default Credentials for local daily-log actions
@@ -120,12 +121,16 @@ Identity Federation credential config. In Lambda, `GOOGLE_APPLICATION_CREDENTIAL
 points at that file so daily-log actions can impersonate the Google Drive service
 account without storing GCP secrets in AWS.
 
-## Tests and build
+## Format, lint, test, and build
 
 Run from `backend/`:
 
 ```bash
+go fmt ./...
+golangci-lint run ./...
 go test ./...
-go vet ./...
 go build ./...
 ```
+
+`golangci-lint` includes `govet` in the current enabled linter set, so
+`go vet ./...` is not listed separately.

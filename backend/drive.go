@@ -119,7 +119,7 @@ func loadDailyLogContentFromDrive(ctx context.Context, date string) (string, err
 	if err != nil {
 		return "", fmt.Errorf("download %s from Drive: %w", filename, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	content, err := io.ReadAll(resp.Body)
 	if err != nil {
