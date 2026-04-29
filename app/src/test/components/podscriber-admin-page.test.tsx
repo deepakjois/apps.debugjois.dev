@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { PodscriberAdminPage } from "../../routes/admin.podscriber";
+import { PodscriberAdminPage } from "../../components/admin/PodscriberAdminPage";
 import { submitPodscriberServerFn } from "../../server/podscriber";
 
 vi.mock("../../server/podscriber", () => ({
