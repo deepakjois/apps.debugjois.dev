@@ -57,7 +57,7 @@ export class AppDebugJoisDevBackendStack extends cdk.Stack {
       code: {
         imageUri: backendImageUri.valueAsString,
       },
-      description: "apps.debugjois.dev backend podcast transcription Lambda",
+      description: "apps.debugjois.dev backend Lambda",
       environment: {
         variables: {
           DEEPGRAM_API_KEY_SECRET_ARN: deepgramAPIKeySecret.attrId,
