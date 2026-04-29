@@ -55,15 +55,32 @@ npm run preview
 { "action": "queue-podcast-transcription", "text": "..." }
 ```
 
-The target Lambda function name is read server-side from `PODSCRIBER_LAMBDA_FUNCTION_NAME`. Production deployments set it from the `AppDebugJoisDevBackendStack` backend Lambda output, and the deployed Nitro Lambda role must be able to call `lambda:InvokeFunction` on that backend Lambda.
+The target Lambda function name is read server-side from `BACKEND_LAMBDA_FUNCTION_NAME`. Production deployments set it from the `AppDebugJoisDevBackendStack` backend Lambda output, and the deployed Nitro Lambda role must be able to call `lambda:InvokeFunction` on that backend Lambda.
 
-For local `npm run preview` submissions, set `PODSCRIBER_LAMBDA_FUNCTION_NAME` to the deployed backend Lambda function name.
+For local `npm run preview` submissions, set `BACKEND_LAMBDA_FUNCTION_NAME` to the deployed backend Lambda function name.
+
+During `npm run dev`, if `BACKEND_LAMBDA_FUNCTION_NAME` is not set, server functions fall back to invoking the local Go backend with `go run . invoke` from `../backend`. Configure local Google Drive ADC first for logger testing:
+
+```bash
+gcloud auth application-default login \
+  --impersonate-service-account='gdrive-obsidian@daily-notes-obsidian-gdrive.iam.gserviceaccount.com' \
+  --scopes='https://www.googleapis.com/auth/drive'
+```
+
+If the app is launched from a nonstandard working directory, set `LOCAL_BACKEND_INVOKE_DIR` to the backend folder path.
 
 # Logger Admin
 
-`/admin/logger` is an authenticated full-screen Markdown editor for drafting logger notes.
+`/admin/logger` is an authenticated full-screen Markdown editor for today's daily log.
 
-The editor uses CodeMirror through `@uiw/react-codemirror` with Markdown syntax support, GitHub dark theme styling, and route-local CSS. It currently loads representative sample Markdown content and does not persist edits yet.
+The editor uses CodeMirror through `@uiw/react-codemirror` with Markdown syntax support, GitHub dark theme styling, and route-local CSS. It loads and saves the current daily note through TanStack server functions, which verify the admin session and invoke the backend Lambda directly:
+
+```json
+{ "action": "get-daily-log" }
+{ "action": "post-daily-log", "title": "YYYY-MM-DD.md", "contents": "..." }
+```
+
+`contents` is base64-encoded Markdown at the backend Lambda boundary; the React editor works with decoded Markdown text.
 
 # Deployment Packaging
 
@@ -142,8 +159,9 @@ npm run test
 - `src/routes/index.tsx` redirects `/` to `/transcript-reader`.
 - `src/routes/transcript-reader.tsx` server-renders the latest transcript or a selected `?t=` transcript and redirects invalid hashes to the canonical route.
 - `src/routes/admin.tsx` is the protected admin layout route, provides Google OAuth only to the admin subtree, and attaches the WebTUI admin stylesheet only for the admin subtree.
+- `src/routes/admin.logger.tsx` and `src/components/admin/LoggerAdminPage.tsx` contain the persisted daily-log editor.
 - `src/routes/admin.podscriber.tsx` contains the authenticated Podscriber form that invokes the backend Lambda.
-- `src/server/podscriber.ts` and `src/lib/podscriber/lambda.ts` contain the server-only Lambda invocation path.
+- `src/server/logger.ts`, `src/server/podscriber.ts`, and `src/lib/backend/lambda.ts` contain the server-only Lambda invocation paths.
 - `src/server/adminAuth.ts` and `src/lib/auth/server.ts` contain Google token verification, allowlist checks, and cookie-backed admin session helpers.
 - `src/queries/queries.ts` contains transcript query options plus hash-resolution helpers used by the route.
 - `src/styles/transcript-reader.css` contains the transcript reader route styles extracted from the original standalone page.

@@ -47,6 +47,7 @@ export class AppDebugJoisDevBackendStack extends cdk.Stack {
           "service-role/AWSLambdaBasicExecutionRole",
         ),
       ],
+      roleName: "apps-debugjois-dev-backend-lambda-role",
     });
 
     deepgramAPIKeySecretRef.grantRead(backendRole);
@@ -61,6 +62,7 @@ export class AppDebugJoisDevBackendStack extends cdk.Stack {
       environment: {
         variables: {
           DEEPGRAM_API_KEY_SECRET_ARN: deepgramAPIKeySecret.attrId,
+          GOOGLE_APPLICATION_CREDENTIALS: "/gcp-credentials.json",
         },
       },
       memorySize: 1024,
@@ -91,6 +93,10 @@ export class AppDebugJoisDevBackendStack extends cdk.Stack {
     new cdk.CfnOutput(this, "BackendDeployedImageUri", {
       value: backendImageUri.valueAsString,
       description: "Backend Lambda image URI",
+    });
+    new cdk.CfnOutput(this, "BackendLambdaRoleArn", {
+      value: backendRole.roleArn,
+      description: "Backend Lambda execution role ARN",
     });
     new cdk.CfnOutput(this, "DeepgramAPIKeySecretArn", {
       value: deepgramAPIKeySecret.attrId,

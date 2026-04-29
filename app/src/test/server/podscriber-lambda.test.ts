@@ -23,11 +23,11 @@ function encodedPayload(value: unknown): Uint8Array {
 describe("podscriber Lambda invoke helper", () => {
   test("requires a configured Lambda name", () => {
     expect(() => getPodscriberLambdaFunctionName({})).toThrow(
-      "PODSCRIBER_LAMBDA_FUNCTION_NAME must be set.",
+      "BACKEND_LAMBDA_FUNCTION_NAME must be set.",
     );
-    expect(
-      getPodscriberLambdaFunctionName({ PODSCRIBER_LAMBDA_FUNCTION_NAME: " custom-name " }),
-    ).toBe("custom-name");
+    expect(getPodscriberLambdaFunctionName({ BACKEND_LAMBDA_FUNCTION_NAME: " custom-name " })).toBe(
+      "custom-name",
+    );
   });
 
   test("invokes Lambda with direct queue-podcast-transcription JSON", async () => {

@@ -52,9 +52,11 @@ type Result struct {
 
 // DirectRequest is the local/Lambda JSON envelope used by direct invocations.
 type DirectRequest struct {
-	Action  string               `json:"action"`
-	Text    string               `json:"text,omitempty"`
-	Podcast podcastaddict.Result `json:"podcast,omitempty"`
+	Action   string               `json:"action"`
+	Text     string               `json:"text,omitempty"`
+	Title    string               `json:"title,omitempty"`
+	Contents string               `json:"contents,omitempty"`
+	Podcast  podcastaddict.Result `json:"podcast,omitempty"`
 }
 
 type AudioTranscriber interface {

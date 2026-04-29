@@ -41,18 +41,18 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
       type: "String",
     });
 
-    const podscriberLambdaFunctionName = new cdk.CfnParameter(
+    const backendLambdaFunctionName = new cdk.CfnParameter(
       this,
-      "PodscriberLambdaFunctionName",
+      "BackendLambdaFunctionName",
       {
-        description: "Backend Lambda function name used by /admin/podscriber",
+        description: "Backend Lambda function name invoked by Nitro server functions",
         type: "String",
       },
     );
 
-    const podscriberLambdaFunctionArn = new cdk.CfnParameter(
+    const backendLambdaFunctionArn = new cdk.CfnParameter(
       this,
-      "PodscriberLambdaFunctionArn",
+      "BackendLambdaFunctionArn",
       {
         description: "Backend Lambda function ARN the site Lambda may invoke",
         type: "String",
@@ -97,7 +97,7 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
       ),
       description: "apps.debugjois.dev Nitro Lambda",
       environment: {
-        PODSCRIBER_LAMBDA_FUNCTION_NAME: podscriberLambdaFunctionName.valueAsString,
+        BACKEND_LAMBDA_FUNCTION_NAME: backendLambdaFunctionName.valueAsString,
       },
       handler: "server/index.handler",
       memorySize: 1024,
@@ -108,7 +108,7 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
     siteLambda.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ["lambda:InvokeFunction"],
-        resources: [podscriberLambdaFunctionArn.valueAsString],
+        resources: [backendLambdaFunctionArn.valueAsString],
       }),
     );
 

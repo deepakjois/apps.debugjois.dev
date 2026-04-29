@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"testing"
@@ -68,6 +69,131 @@ func TestHandleDirectLambdaEventUnknownAction(t *testing.T) {
 	}
 	if transcribe.HTTPStatus(err) != 400 {
 		t.Fatalf("expected HTTP 400 classification, got %d", transcribe.HTTPStatus(err))
+	}
+}
+
+func TestHandleDirectLambdaEventGetDailyLog(t *testing.T) {
+	originalLoad := loadDailyLogContentFunc
+	originalDate := currentDailyDateFunc
+	loadDailyLogContentFunc = func(_ context.Context, date string) (string, error) {
+		if date != "2026-04-29" {
+			t.Fatalf("expected current date, got %q", date)
+		}
+		return "### 2026-04-29\n\nhello", nil
+	}
+	currentDailyDateFunc = func() string {
+		return "2026-04-29"
+	}
+	t.Cleanup(func() {
+		loadDailyLogContentFunc = originalLoad
+		currentDailyDateFunc = originalDate
+	})
+
+	body, err := handleDirectLambdaEvent(context.Background(), json.RawMessage(`{"action":"get-daily-log"}`))
+	if err != nil {
+		t.Fatalf("get daily log: %v", err)
+	}
+
+	var got dailyLogResponse
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("unmarshal daily log response: %v", err)
+	}
+	if got.Title != "2026-04-29.md" {
+		t.Fatalf("expected title, got %q", got.Title)
+	}
+	decoded, err := base64.StdEncoding.DecodeString(got.Contents)
+	if err != nil {
+		t.Fatalf("decode contents: %v", err)
+	}
+	if string(decoded) != "### 2026-04-29\n\nhello" {
+		t.Fatalf("expected loaded content, got %q", string(decoded))
+	}
+}
+
+func TestHandleDirectLambdaEventPostDailyLog(t *testing.T) {
+	originalSave := saveDailyLogContentFunc
+	originalDate := currentDailyDateFunc
+	currentDailyDateFunc = func() string {
+		return "2026-04-29"
+	}
+
+	var savedTitle string
+	var savedContents string
+	saveDailyLogContentFunc = func(_ context.Context, title, contents string) error {
+		savedTitle = title
+		savedContents = contents
+		return nil
+	}
+	t.Cleanup(func() {
+		saveDailyLogContentFunc = originalSave
+		currentDailyDateFunc = originalDate
+	})
+
+	body, err := handleDirectLambdaEvent(context.Background(), json.RawMessage(`{
+		"action":"post-daily-log",
+		"title":"2026-04-29.md",
+		"contents":"aGVsbG8="
+	}`))
+	if err != nil {
+		t.Fatalf("post daily log: %v", err)
+	}
+
+	var got dailyLogResponse
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("unmarshal daily log response: %v", err)
+	}
+	if got.Title != "2026-04-29.md" || got.Contents != "aGVsbG8=" {
+		t.Fatalf("unexpected response: %#v", got)
+	}
+	if savedTitle != "2026-04-29.md" || savedContents != "hello" {
+		t.Fatalf("unexpected saved note: title=%q contents=%q", savedTitle, savedContents)
+	}
+}
+
+func TestHandleDirectLambdaEventPostDailyLogRejectsInvalidPayloads(t *testing.T) {
+	originalSave := saveDailyLogContentFunc
+	originalDate := currentDailyDateFunc
+	currentDailyDateFunc = func() string {
+		return "2026-04-29"
+	}
+	saveDailyLogContentFunc = func(context.Context, string, string) error {
+		t.Fatal("did not expect save for invalid payload")
+		return nil
+	}
+	t.Cleanup(func() {
+		saveDailyLogContentFunc = originalSave
+		currentDailyDateFunc = originalDate
+	})
+
+	for name, payload := range map[string]json.RawMessage{
+		"title mismatch": json.RawMessage(`{"action":"post-daily-log","title":"2026-04-28.md","contents":"aGVsbG8="}`),
+		"bad base64":     json.RawMessage(`{"action":"post-daily-log","title":"2026-04-29.md","contents":"%%%"}`),
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := handleDirectLambdaEvent(context.Background(), payload)
+			if err == nil {
+				t.Fatal("expected invalid payload to be rejected")
+			}
+			if transcribe.HTTPStatus(err) != 400 {
+				t.Fatalf("expected HTTP 400 classification, got %d", transcribe.HTTPStatus(err))
+			}
+		})
+	}
+}
+
+func TestHandleDirectLambdaEventDailyLogPropagatesStorageErrors(t *testing.T) {
+	originalLoad := loadDailyLogContentFunc
+	expected := errors.New("drive failed")
+	loadDailyLogContentFunc = func(context.Context, string) (string, error) {
+		return "", expected
+	}
+	t.Cleanup(func() {
+		loadDailyLogContentFunc = originalLoad
+	})
+
+	_, err := handleDirectLambdaEvent(context.Background(), json.RawMessage(`{"action":"get-daily-log"}`))
+	if !errors.Is(err, expected) {
+		t.Fatalf("expected storage error, got %v", err)
 	}
 }
 

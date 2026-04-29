@@ -1,33 +1,165 @@
 /* Full-screen route surface for the standalone admin logger editor. */
 .admin-logger-page {
+  display: grid;
+  grid-template-rows: 56px minmax(0, 1fr);
   width: 100vw;
   height: 100vh;
   min-height: 100vh;
   overflow: hidden;
   background: #0d1117;
+  color: #c9d1d9;
 }
 
-.admin-logger-page .cm-editor {
-  width: 100%;
-  height: 100%;
+.admin-logger-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 20px;
+  border-bottom: 1px solid #30363d;
   background: #0d1117;
 }
 
-.admin-logger-page .cm-scroller {
+.admin-logger-title {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #8b949e;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-logger-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-logger-save-message {
+  margin: 0;
+  color: #ff7b72;
+  font-size: 13px;
+}
+
+.admin-logger-save-button {
+  min-width: 80px;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid #30363d;
+  border-radius: 999px;
+  background: #21262d;
+  color: #f0f6fc;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-logger-save-button:hover:not(:disabled) {
+  border-color: #8b949e;
+}
+
+.admin-logger-save-button:focus-visible {
+  outline: 2px solid #58a6ff;
+  outline-offset: 2px;
+}
+
+.admin-logger-save-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-logger-save-button.is-saved {
+  border-color: #238636;
+  color: #7ee787;
+}
+
+.admin-logger-save-button.is-error {
+  border-color: #da3633;
+  color: #ff7b72;
+}
+
+.admin-logger-editor-pane,
+.admin-logger-codemirror,
+.admin-logger-codemirror .cm-editor {
+  min-height: 0;
+  height: 100%;
+}
+
+.admin-logger-codemirror .cm-editor {
+  width: 100%;
+  background: #0d1117;
+}
+
+.admin-logger-codemirror .cm-scroller {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: 15px;
   line-height: 1.65;
 }
 
-.admin-logger-page .cm-content {
+.admin-logger-codemirror .cm-content {
   min-height: 100%;
   padding: 32px 28px 64px;
 }
 
-.admin-logger-page .cm-gutters {
+.admin-logger-codemirror .cm-gutters {
   min-height: 100%;
 }
 
-.admin-logger-page .cm-focused {
+.admin-logger-codemirror .cm-focused {
   outline: none;
+}
+
+.admin-logger-status {
+  display: grid;
+  place-items: center;
+  width: 100vw;
+  min-height: 100vh;
+  padding: 24px;
+  background: #0d1117;
+  color: #c9d1d9;
+}
+
+.admin-logger-status-card {
+  width: min(100%, 520px);
+  padding: 28px;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  background: #161b22;
+}
+
+.admin-logger-status-label {
+  margin: 0 0 12px;
+  color: #8b949e;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-logger-status-card h1 {
+  margin: 0;
+  color: #f0f6fc;
+}
+
+.admin-logger-status-card p:last-child {
+  color: #ff7b72;
+}
+
+@media (max-width: 720px) {
+  .admin-logger-toolbar {
+    padding: 0 14px;
+  }
+
+  .admin-logger-save-message {
+    display: none;
+  }
+
+  .admin-logger-codemirror .cm-content {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
 }

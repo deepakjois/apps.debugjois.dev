@@ -16,6 +16,8 @@ import (
 
 const (
 	actionHealthCheck                 = "health-check"
+	actionGetDailyLog                 = "get-daily-log"
+	actionPostDailyLog                = "post-daily-log"
 	actionQueuePodcastTranscription   = "queue-podcast-transcription"
 	actionProcessPodcastTranscription = "process-podcast-transcription"
 )
@@ -58,6 +60,10 @@ func handleDirectLambdaEvent(ctx context.Context, payload json.RawMessage) (json
 	switch strings.TrimSpace(directRequest.Action) {
 	case actionHealthCheck:
 		return json.Marshal(map[string]bool{"ok": true})
+	case actionGetDailyLog:
+		return handleGetDailyLog(ctx)
+	case actionPostDailyLog:
+		return handlePostDailyLog(ctx, directRequest.Title, directRequest.Contents)
 	case actionQueuePodcastTranscription:
 		return handleQueuePodcastTranscription(ctx, directRequest.Text)
 	case actionProcessPodcastTranscription:

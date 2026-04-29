@@ -87,9 +87,23 @@ All behaviors use CloudFront's native `redirect-to-https` policy.
 
 # Backend Lambda
 
-`AppDebugJoisDevBackendStack` deploys the Go backend as a Lambda container image with no API Gateway. It supports direct Lambda invocation actions such as `queue-podcast-transcription` and `process-podcast-transcription`. The backend Lambda reads the Deepgram API key from the `apps-debugjois-dev/deepgram-api-key` Secrets Manager secret and writes transcripts to the existing `debugjois-dev-site` transcript bucket.
+`AppDebugJoisDevBackendStack` deploys the Go backend as a Lambda container image with no API Gateway. It supports direct Lambda invocation actions such as `get-daily-log`, `post-daily-log`, `queue-podcast-transcription`, and `process-podcast-transcription`. The backend Lambda reads the Deepgram API key from the `apps-debugjois-dev/deepgram-api-key` Secrets Manager secret, writes transcripts to the existing `debugjois-dev-site` transcript bucket, and uses Google Drive for daily-log load/save actions.
 
-The deploy script passes the backend Lambda function name and ARN into the site stack. The site stack sets `PODSCRIBER_LAMBDA_FUNCTION_NAME` on the Nitro Lambda and grants that role `lambda:InvokeFunction` only on the backend Lambda ARN.
+The backend Lambda execution role has the stable name `apps-debugjois-dev-backend-lambda-role` so GCP Workload Identity Federation can trust it by role subject.
+
+The backend image bundles a non-secret Google external-account credential config at `/gcp-credentials.json`. The backend stack sets `GOOGLE_APPLICATION_CREDENTIALS=/gcp-credentials.json`; no Google service-account key is stored in AWS.
+
+Enable the GCP-side trust for the stable backend Lambda role with:
+
+```bash
+gcloud iam service-accounts add-iam-policy-binding \
+  gdrive-obsidian@daily-notes-obsidian-gdrive.iam.gserviceaccount.com \
+  --project=daily-notes-obsidian-gdrive \
+  --role=roles/iam.workloadIdentityUser \
+  --member='principal://iam.googleapis.com/projects/1016117555218/locations/global/workloadIdentityPools/github-actions-pool/subject/apps-debugjois-dev-backend-lambda-role'
+```
+
+The deploy script passes the backend Lambda function name and ARN into the site stack. The site stack sets `BACKEND_LAMBDA_FUNCTION_NAME` on the Nitro Lambda and grants that role `lambda:InvokeFunction` only on the backend Lambda ARN.
 
 # Notes
 

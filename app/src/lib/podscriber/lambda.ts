@@ -1,14 +1,9 @@
-import { InvokeCommand, LambdaClient, type InvokeCommandOutput } from "@aws-sdk/client-lambda";
+import {
+  getBackendLambdaFunctionName,
+  invokeBackendLambda,
+  type InvokeBackendLambdaOptions,
+} from "../backend/lambda";
 import type { PodcastTranscribeResponse } from "./types";
-
-const textDecoder = new TextDecoder();
-
-type EnvSource = Pick<NodeJS.ProcessEnv, "PODSCRIBER_LAMBDA_FUNCTION_NAME">;
-
-// LambdaInvoker is the minimal AWS Lambda client surface used by tests and production.
-type LambdaInvoker = {
-  send(command: InvokeCommand): Promise<InvokeCommandOutput>;
-};
 
 // QueuePodcastTranscriptionPayload is the JSON envelope expected by the backend Lambda.
 type QueuePodcastTranscriptionPayload = {
@@ -16,18 +11,12 @@ type QueuePodcastTranscriptionPayload = {
   text: string;
 };
 
-export type InvokePodscriberLambdaOptions = {
-  client?: LambdaInvoker;
-  functionName?: string;
-};
+export type InvokePodscriberLambdaOptions = InvokeBackendLambdaOptions;
 
-export function getPodscriberLambdaFunctionName(env: EnvSource = process.env): string {
-  const functionName = env.PODSCRIBER_LAMBDA_FUNCTION_NAME?.trim();
-  if (!functionName) {
-    throw new Error("PODSCRIBER_LAMBDA_FUNCTION_NAME must be set.");
-  }
-
-  return functionName;
+export function getPodscriberLambdaFunctionName(
+  env?: Parameters<typeof getBackendLambdaFunctionName>[0],
+): string {
+  return getBackendLambdaFunctionName(env);
 }
 
 export async function invokePodscriberLambda(
@@ -44,56 +33,5 @@ export async function invokePodscriberLambda(
     text: trimmedText,
   };
 
-  const client = options.client ?? new LambdaClient({});
-  const functionName = options.functionName?.trim() || getPodscriberLambdaFunctionName();
-  const output = await client.send(
-    new InvokeCommand({
-      FunctionName: functionName,
-      InvocationType: "RequestResponse",
-      Payload: new TextEncoder().encode(JSON.stringify(payload)),
-    }),
-  );
-
-  const responseText = decodeLambdaPayload(output.Payload);
-  if (output.FunctionError) {
-    throw new Error(lambdaErrorMessage(responseText) ?? `Lambda failed: ${output.FunctionError}`);
-  }
-  if (!responseText) {
-    throw new Error("Lambda returned an empty response.");
-  }
-
-  return parseLambdaJSONResponse(responseText);
-}
-
-function decodeLambdaPayload(payload: InvokeCommandOutput["Payload"]): string {
-  return payload ? textDecoder.decode(payload) : "";
-}
-
-function lambdaErrorMessage(responseText: string): string | null {
-  if (!responseText) {
-    return null;
-  }
-
-  try {
-    const body = JSON.parse(responseText) as { errorMessage?: unknown; error?: unknown };
-    for (const value of [body.errorMessage, body.error]) {
-      if (typeof value === "string" && value.trim()) {
-        return value;
-      }
-    }
-  } catch {
-    return responseText;
-  }
-
-  return null;
-}
-
-function parseLambdaJSONResponse(responseText: string): PodcastTranscribeResponse {
-  try {
-    return JSON.parse(responseText) as PodcastTranscribeResponse;
-  } catch (error) {
-    throw new Error(
-      `Lambda returned invalid JSON: ${error instanceof Error ? error.message : "unknown error"}`,
-    );
-  }
+  return invokeBackendLambda<PodcastTranscribeResponse>(payload, options);
 }

@@ -15,7 +15,7 @@ Usage: ./deploy.sh [--with-artifact] [--with-backend-image]
 
 Without --with-backend-image, an existing backend stack reuses its currently
 deployed Lambda image. The backend stack must exist before the site stack can
-be deployed because /admin/podscriber is wired to invoke it directly.
+be deployed because admin server functions are wired to invoke it directly.
 USAGE
 }
 
@@ -157,9 +157,9 @@ if [[ -n "$BACKEND_IMAGE_URI" ]]; then
     --parameters "$BACKEND_STACK:BackendImageUri=$BACKEND_IMAGE_URI"
 fi
 
-# The site Lambda invokes the backend Lambda for /admin/podscriber submissions.
-PODSCRIBER_LAMBDA_FUNCTION_NAME="$(stack_output "$ARTIFACT_REGION" "$BACKEND_STACK" "LambdaFunctionName")"
-PODSCRIBER_LAMBDA_FUNCTION_ARN="$(stack_output "$ARTIFACT_REGION" "$BACKEND_STACK" "LambdaFunctionArn")"
+# The site Lambda invokes the backend Lambda for admin server-function actions.
+BACKEND_LAMBDA_FUNCTION_NAME="$(stack_output "$ARTIFACT_REGION" "$BACKEND_STACK" "LambdaFunctionName")"
+BACKEND_LAMBDA_FUNCTION_ARN="$(stack_output "$ARTIFACT_REGION" "$BACKEND_STACK" "LambdaFunctionArn")"
 
 if [[ "$WITH_ARTIFACT" == "1" ]]; then
   # Build a fresh app bundle before packaging a new Lambda artifact.
@@ -217,8 +217,8 @@ cdk_deploy_stack "$SITE_STACK" \
   --parameters "$SITE_STACK:ArtifactBucketName=$ARTIFACT_BUCKET_NAME" \
   --parameters "$SITE_STACK:ArtifactObjectKey=$ARTIFACT_OBJECT_KEY" \
   --parameters "$SITE_STACK:ArtifactObjectVersion=$ARTIFACT_OBJECT_VERSION" \
-  --parameters "$SITE_STACK:PodscriberLambdaFunctionName=$PODSCRIBER_LAMBDA_FUNCTION_NAME" \
-  --parameters "$SITE_STACK:PodscriberLambdaFunctionArn=$PODSCRIBER_LAMBDA_FUNCTION_ARN"
+  --parameters "$SITE_STACK:BackendLambdaFunctionName=$BACKEND_LAMBDA_FUNCTION_NAME" \
+  --parameters "$SITE_STACK:BackendLambdaFunctionArn=$BACKEND_LAMBDA_FUNCTION_ARN"
 
 SITE_URL="$(stack_output "$ARTIFACT_REGION" "$SITE_STACK" "SiteUrl")"
 
@@ -243,4 +243,4 @@ printf 'Artifact version: %s\n' "$ARTIFACT_OBJECT_VERSION"
 if [[ -n "$BACKEND_IMAGE_URI" ]]; then
   printf 'Backend image: %s\n' "$BACKEND_IMAGE_URI"
 fi
-printf 'Podscriber Lambda: %s\n' "$PODSCRIBER_LAMBDA_FUNCTION_NAME"
+printf 'Backend Lambda: %s\n' "$BACKEND_LAMBDA_FUNCTION_NAME"
