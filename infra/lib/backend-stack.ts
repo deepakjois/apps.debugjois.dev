@@ -28,12 +28,6 @@ export class AppDebugJoisDevBackendStack extends cdk.Stack {
     );
     deepgramAPIKeySecret.applyRemovalPolicy(cdk.RemovalPolicy.RETAIN);
 
-    const deepgramAPIKeySecretRef = secretsmanager.Secret.fromSecretCompleteArn(
-      this,
-      "DeepgramAPIKeySecretRef",
-      deepgramAPIKeySecret.attrId,
-    );
-
     const transcriptBucket = s3.Bucket.fromBucketArn(
       this,
       "TranscriptBucket",
@@ -50,7 +44,6 @@ export class AppDebugJoisDevBackendStack extends cdk.Stack {
       roleName: "apps-debugjois-dev-backend-lambda-role",
     });
 
-    deepgramAPIKeySecretRef.grantRead(backendRole);
     transcriptBucket.grantReadWrite(backendRole);
 
     const backendLambda = new lambda.CfnFunction(this, "BackendLambda", {
@@ -61,7 +54,7 @@ export class AppDebugJoisDevBackendStack extends cdk.Stack {
       description: "apps.debugjois.dev backend Lambda",
       environment: {
         variables: {
-          DEEPGRAM_API_KEY_SECRET_ARN: deepgramAPIKeySecret.attrId,
+          DEEPGRAM_API_KEY: `{{resolve:secretsmanager:${deepgramAPIKeySecretName}}}`,
           GOOGLE_APPLICATION_CREDENTIALS: "/gcp-credentials.json",
         },
       },
@@ -70,6 +63,7 @@ export class AppDebugJoisDevBackendStack extends cdk.Stack {
       role: backendRole.roleArn,
       timeout: 900,
     });
+    backendLambda.node.addDependency(deepgramAPIKeySecret);
 
     // queue-podcast-transcription self-invokes this Lambda asynchronously.
     new iam.Policy(this, "BackendLambdaSelfInvokePolicy", {

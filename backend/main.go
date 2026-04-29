@@ -23,9 +23,6 @@ func main() {
 	lambdaRuntime := isLambdaRuntime()
 
 	if lambdaRuntime {
-		if err := loadLambdaSecrets(ctx); err != nil {
-			log.Fatal(err)
-		}
 		lambda.Start(handleDirectRuntimeEvent)
 		return
 	}

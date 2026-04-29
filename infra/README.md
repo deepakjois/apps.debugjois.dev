@@ -87,7 +87,7 @@ All behaviors use CloudFront's native `redirect-to-https` policy.
 
 # Backend Lambda
 
-`AppDebugJoisDevBackendStack` deploys the Go backend as a Lambda container image with no API Gateway. It supports direct Lambda invocation actions such as `get-daily-log`, `post-daily-log`, `queue-podcast-transcription`, and `process-podcast-transcription`. The backend Lambda reads the Deepgram API key from the `apps-debugjois-dev/deepgram-api-key` Secrets Manager secret, writes transcripts to the existing `debugjois-dev-site` transcript bucket, and uses Google Drive for daily-log load/save actions.
+`AppDebugJoisDevBackendStack` deploys the Go backend as a Lambda container image with no API Gateway. It supports direct Lambda invocation actions such as `get-daily-log`, `post-daily-log`, `queue-podcast-transcription`, and `process-podcast-transcription`. The backend Lambda receives `DEEPGRAM_API_KEY` through a CloudFormation Secrets Manager dynamic reference to the `apps-debugjois-dev/deepgram-api-key` secret, writes transcripts to the existing `debugjois-dev-site` transcript bucket, and uses Google Drive for daily-log load/save actions.
 
 The backend Lambda execution role has the stable name `apps-debugjois-dev-backend-lambda-role` so GCP Workload Identity Federation can trust it by role subject.
 

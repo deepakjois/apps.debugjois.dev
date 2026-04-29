@@ -10,7 +10,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.22.16
 	github.com/aws/aws-sdk-go-v2/service/lambda v1.90.0
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.100.0
-	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.41.6
 	github.com/aws/smithy-go v1.25.1
 	github.com/deepgram/deepgram-go-sdk/v3 v3.5.0
 	github.com/joho/godotenv v1.5.1

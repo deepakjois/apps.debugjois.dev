@@ -114,7 +114,7 @@ Build and push a fresh backend image from the repository root:
 ./backend/build-and-push-image.sh
 ```
 
-The script prints an immutable ECR image URI like `.../apps-debugjois-dev-backend@sha256:...`, which the backend stack uses for deployment. Lambda loads `DEEPGRAM_API_KEY` from the Secrets Manager secret configured by the backend stack.
+The script prints an immutable ECR image URI like `.../apps-debugjois-dev-backend@sha256:...`, which the backend stack uses for deployment. Lambda receives `DEEPGRAM_API_KEY` through a CloudFormation Secrets Manager dynamic reference to the secret configured by the backend stack.
 
 The image also bundles `/gcp-credentials.json`, a non-secret Google Workload
 Identity Federation credential config. In Lambda, `GOOGLE_APPLICATION_CREDENTIALS`
