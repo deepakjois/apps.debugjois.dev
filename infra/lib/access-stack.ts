@@ -3,9 +3,9 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { Construct } from "constructs";
 
 // Account-wide GitHub Actions OIDC provider ARN. The provider itself is
-// owned out-of-band by another CDK stack (debugjois.dev/InfraStack) because
-// AWS only permits a single OIDC provider per issuer per account. We only
-// reference it here by ARN to build the role trust policy.
+// managed manually outside this stack because AWS only permits a single
+// OIDC provider per issuer per account. We only reference it here by ARN
+// to build the role trust policy.
 const GITHUB_OIDC_PROVIDER_ARN =
   "arn:aws:iam::654654546088:oidc-provider/token.actions.githubusercontent.com";
 
