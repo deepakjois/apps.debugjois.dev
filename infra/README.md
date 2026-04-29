@@ -109,6 +109,16 @@ The deploy script passes the backend Lambda function name and ARN into the site 
 
 - The hosted zone is `debugjois.dev`.
 - The app domain is `apps.debugjois.dev`.
+- The site stack creates the retained `apps-debugjois-dev/linkpreview-api-key` Secrets Manager secret for logger URL title fetching. Set or rotate the value with:
+
+  ```bash
+  aws secretsmanager put-secret-value \
+    --region us-west-2 \
+    --secret-id apps-debugjois-dev/linkpreview-api-key \
+    --secret-string 'your-linkpreview-api-key'
+  ```
+
+  Redeploy the site stack after changing the secret value so the Lambda environment variable is refreshed from the versionless CloudFormation dynamic reference.
 - Frontend Lambda artifacts are stored in a versioned S3 bucket and the site stack is deployed with both the object key and object version.
 - Backend Lambda images are stored in the `apps-debugjois-dev-backend` ECR repository and the backend stack is deployed with a digest-pinned image URI.
 - Static frontend assets are uploaded outside CloudFormation by `infra/deploy.sh --with-artifact`.

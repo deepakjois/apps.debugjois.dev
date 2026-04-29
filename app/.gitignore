@@ -75,3 +75,4 @@ todos.json
 *.tgz
 .yarn-integrity
 .vscode-test
+.env

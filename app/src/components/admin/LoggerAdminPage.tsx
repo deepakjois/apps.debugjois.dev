@@ -2,13 +2,32 @@ import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { languages } from "@codemirror/language-data";
 import { tags as t } from "@lezer/highlight";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import CodeMirror, { basicSetup, EditorView } from "@uiw/react-codemirror";
 import { githubDark } from "@uiw/codemirror-theme-github";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import {
+  isHttpUrl,
+  loggerLinkPreviewQueryOptions,
+  type LoggerLinkPreview,
+} from "../../queries/queries";
 import { getDailyLogServerFn, saveDailyLogServerFn } from "../../server/logger";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
+type FetchLoggerLinkPreview = (url: string) => Promise<LoggerLinkPreview>;
+
+// PasteEditorView is the CodeMirror surface needed by the URL paste handler.
+type PasteEditorView = {
+  state: {
+    doc: { toString: () => string };
+    selection: { main: { from: number; to: number } };
+    sliceDoc: (from: number, to: number) => string;
+  };
+  dispatch: (transaction: {
+    changes: { from: number; to: number; insert: string };
+    selection?: { anchor: number };
+  }) => void;
+};
 
 // Heading styles make Markdown structure visually scannable in the editor.
 const markdownHighlightStyle = HighlightStyle.define([
@@ -29,6 +48,7 @@ const loggerEditorExtensions = [
 ];
 
 export function LoggerAdminPage() {
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [value, setValue] = useState("");
   const [savedValue, setSavedValue] = useState("");
@@ -81,7 +101,15 @@ export function LoggerAdminPage() {
     return () => clearSaveResetTimeout(saveResetTimeoutRef);
   }, []);
 
-  const editorExtensions = useMemo(() => loggerEditorExtensions, []);
+  const editorExtensions = useMemo(
+    () => [
+      ...loggerEditorExtensions,
+      buildLoggerPasteExtension((url) =>
+        queryClient.fetchQuery(loggerLinkPreviewQueryOptions(url)),
+      ),
+    ],
+    [queryClient],
+  );
   const isDirty = dailyLogQuery.isSuccess && value !== savedValue;
   const isSaving = saveState === "saving";
   const saveButtonLabel =
@@ -133,6 +161,67 @@ export function LoggerAdminPage() {
       </main>
     </div>
   );
+}
+
+export function buildLoggerPasteExtension(fetchLinkPreview: FetchLoggerLinkPreview) {
+  return EditorView.domEventHandlers({
+    paste: (event, view) => handleLoggerUrlPaste(event, view, fetchLinkPreview),
+  });
+}
+
+export function handleLoggerUrlPaste(
+  event: ClipboardEvent,
+  view: PasteEditorView,
+  fetchLinkPreview: FetchLoggerLinkPreview,
+): boolean {
+  const text = event.clipboardData?.getData("text/plain")?.trim() ?? "";
+  if (!isHttpUrl(text)) {
+    return false;
+  }
+
+  event.preventDefault();
+
+  const { from, to } = view.state.selection.main;
+  const selectedText = view.state.sliceDoc(from, to);
+
+  if (selectedText) {
+    const link = `[${selectedText}](${text})`;
+    view.dispatch({
+      changes: { from, to, insert: link },
+      selection: { anchor: from + link.length },
+    });
+
+    return true;
+  }
+
+  const placeholder = `[Fetching title...](${text})`;
+  view.dispatch({
+    changes: { from, to, insert: placeholder },
+    selection: { anchor: from + placeholder.length },
+  });
+
+  void fetchLinkPreview(text)
+    .then((preview) => {
+      const title = preview.title.trim() || text;
+      replacePlaceholder(view, placeholder, `[${title}](${text})`);
+    })
+    .catch(() => {
+      replacePlaceholder(view, placeholder, `[${text}](${text})`);
+    });
+
+  return true;
+}
+
+function replacePlaceholder(view: PasteEditorView, placeholder: string, replacement: string) {
+  const content = view.state.doc.toString();
+  const index = content.indexOf(placeholder);
+  if (index === -1) {
+    return;
+  }
+
+  view.dispatch({
+    changes: { from: index, to: index + placeholder.length, insert: replacement },
+  });
 }
 
 type LoggerStatusScreenProps = {

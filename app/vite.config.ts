@@ -8,6 +8,9 @@ import rsc from "@vitejs/plugin-rsc";
 import { nitro } from "nitro/vite";
 
 const config = defineConfig({
+  optimizeDeps: {
+    exclude: ["@tanstack/react-query"],
+  },
   resolve: { tsconfigPaths: true },
   plugins: [
     devtools(),

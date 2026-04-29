@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
 export const TRANSCRIPT_INDEX_URL = "https://www.debugjois.dev/transcripts/transcripts.json";
+export const LINKPREVIEW_API_URL = "https://api.linkpreview.net/";
 
 export type TranscriptIndexItem = {
   title?: string;
@@ -10,6 +11,22 @@ export type TranscriptIndexItem = {
 
 type TranscriptIndexResponse = {
   transcripts?: TranscriptIndexItem[];
+};
+
+export type LoggerLinkPreview = {
+  title: string;
+};
+
+type LoggerLinkPreviewResponse = {
+  title?: unknown;
+};
+
+// Fetcher lets tests inject a fake fetch implementation without global state.
+type Fetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+
+export type FetchLoggerLinkPreviewOptions = {
+  apiKey: string;
+  fetcher?: Fetcher;
 };
 
 type TranscriptSentence = {
@@ -105,6 +122,74 @@ export function transcriptQueryOptions(location: string) {
     queryKey: ["transcripts", "item", location],
     queryFn: () => fetchTranscript(location),
   });
+}
+
+export async function fetchLoggerLinkPreview(
+  url: string,
+  options: FetchLoggerLinkPreviewOptions,
+): Promise<LoggerLinkPreview> {
+  if (typeof window !== "undefined") {
+    throw new Error("LinkPreview API calls must run on the server.");
+  }
+
+  const normalizedUrl = normalizeHttpUrl(url);
+  if (!normalizedUrl) {
+    throw new Error("A valid HTTP or HTTPS URL is required.");
+  }
+
+  const apiKey = options.apiKey.trim();
+  if (apiKey.length !== 32) {
+    throw new Error("LINKPREVIEW_API_KEY must be set to a 32-character key.");
+  }
+
+  const fetcher = options.fetcher ?? fetch;
+  const response = await fetcher(`${LINKPREVIEW_API_URL}?q=${encodeURIComponent(normalizedUrl)}`, {
+    headers: {
+      "X-Linkpreview-Api-Key": apiKey,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`LinkPreview API returned HTTP ${response.status}.`);
+  }
+
+  const data = (await response.json()) as LoggerLinkPreviewResponse;
+
+  return {
+    title: typeof data.title === "string" ? data.title : "",
+  };
+}
+
+export function loggerLinkPreviewQueryOptions(url: string) {
+  return queryOptions({
+    queryKey: ["admin", "logger", "link-preview", url],
+    queryFn: async () => {
+      const { getLoggerLinkPreviewServerFn } = await import("../server/logger");
+
+      return getLoggerLinkPreviewServerFn({ data: { url } });
+    },
+  });
+}
+
+export function isHttpUrl(value: string): boolean {
+  return normalizeHttpUrl(value) !== null;
+}
+
+function normalizeHttpUrl(value: string): string | null {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return null;
+  }
+
+  try {
+    const parsedUrl = new URL(trimmedValue);
+
+    return parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:"
+      ? parsedUrl.toString()
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 export function normalizeTranscriptHash(value: unknown): string | undefined {

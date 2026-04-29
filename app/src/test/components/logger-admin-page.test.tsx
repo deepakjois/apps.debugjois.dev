@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { LoggerAdminPage } from "../../components/admin/LoggerAdminPage";
+import { handleLoggerUrlPaste, LoggerAdminPage } from "../../components/admin/LoggerAdminPage";
 import { getDailyLogServerFn, saveDailyLogServerFn } from "../../server/logger";
 
 vi.mock("@uiw/react-codemirror", async () => {
@@ -17,7 +17,10 @@ vi.mock("@uiw/react-codemirror", async () => {
         value,
       }),
     basicSetup: () => [],
-    EditorView: { lineWrapping: {} },
+    EditorView: {
+      domEventHandlers: (handlers: unknown) => handlers,
+      lineWrapping: {},
+    },
   };
 });
 
@@ -97,4 +100,82 @@ describe("LoggerAdminPage", () => {
     expect(await screen.findByText("Could not open logger.")).toBeTruthy();
     expect(screen.getByText("Admin session required.")).toBeTruthy();
   });
+
+  test("pastes a URL over selected text as a Markdown link", () => {
+    const event = createPasteEvent("https://example.com");
+    const view = createPasteView("Read this", 0, 4);
+
+    expect(handleLoggerUrlPaste(event, view, vi.fn())).toBe(true);
+
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(view.getValue()).toBe("[Read](https://example.com) this");
+  });
+
+  test("fetches a title when pasting a bare URL", async () => {
+    const event = createPasteEvent("https://example.com");
+    const view = createPasteView("", 0, 0);
+    const fetchLinkPreview = vi.fn(async () => ({ title: "Example Title" }));
+
+    expect(handleLoggerUrlPaste(event, view, fetchLinkPreview)).toBe(true);
+    expect(view.getValue()).toBe("[Fetching title...](https://example.com)");
+
+    await waitFor(() => {
+      expect(view.getValue()).toBe("[Example Title](https://example.com)");
+    });
+  });
+
+  test("falls back to the URL when title fetching fails", async () => {
+    const event = createPasteEvent("https://example.com");
+    const view = createPasteView("", 0, 0);
+    const fetchLinkPreview = vi.fn(async () => {
+      throw new Error("LinkPreview unavailable.");
+    });
+
+    expect(handleLoggerUrlPaste(event, view, fetchLinkPreview)).toBe(true);
+
+    await waitFor(() => {
+      expect(view.getValue()).toBe("[https://example.com](https://example.com)");
+    });
+  });
 });
+
+function createPasteEvent(text: string) {
+  return {
+    clipboardData: {
+      getData: (format: string) => (format === "text/plain" ? text : ""),
+    },
+    preventDefault: vi.fn(),
+  } as unknown as ClipboardEvent & { preventDefault: ReturnType<typeof vi.fn> };
+}
+
+function createPasteView(initialValue: string, from: number, to: number) {
+  let value = initialValue;
+  const state = {
+    doc: {
+      toString: () => value,
+    },
+    selection: {
+      main: { from, to },
+    },
+    sliceDoc: (sliceFrom: number, sliceTo: number) => value.slice(sliceFrom, sliceTo),
+  };
+
+  // The fake view mutates an in-memory doc when CodeMirror dispatches changes.
+  const view = {
+    state,
+    dispatch: vi.fn(
+      (transaction: {
+        changes: { from: number; to: number; insert: string };
+        selection?: { anchor: number };
+      }) => {
+        const { changes, selection } = transaction;
+        value = `${value.slice(0, changes.from)}${changes.insert}${value.slice(changes.to)}`;
+        const anchor = selection?.anchor ?? changes.from + changes.insert.length;
+        state.selection.main = { from: anchor, to: anchor };
+      },
+    ),
+    getValue: () => value,
+  };
+
+  return view;
+}

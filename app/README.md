@@ -82,6 +82,16 @@ The editor uses CodeMirror through `@uiw/react-codemirror` with Markdown syntax 
 
 `contents` is base64-encoded Markdown at the backend Lambda boundary; the React editor works with decoded Markdown text.
 
+Pasting a URL into the logger turns it into a Markdown link. If text is selected, the selected text becomes the link label. If no text is selected, the app fetches a page title through the Nitro server using LinkPreview and inserts a Markdown link with that title.
+
+For local logger title-fetching, copy the example env file and set a 32-character LinkPreview key before starting the app:
+
+```bash
+cp .env.example .env.local
+# edit .env.local and set LINKPREVIEW_API_KEY
+npm run dev
+```
+
 # Deployment Packaging
 
 Deployment packaging is handled by `../infra/deploy.sh --with-artifact`.

@@ -9,7 +9,10 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
+
+const linkPreviewAPIKeySecretName = "apps-debugjois-dev/linkpreview-api-key";
 
 export interface AppsDebugJoisDevSiteStackProps extends cdk.StackProps {
   domainName: string;
@@ -80,6 +83,17 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
       artifactBucketName.valueAsString,
     );
 
+    const linkPreviewAPIKeySecret = new secretsmanager.CfnSecret(
+      this,
+      "LinkPreviewAPIKeySecret",
+      {
+        description: "LinkPreview API key for logger URL title fetching",
+        name: linkPreviewAPIKeySecretName,
+        secretString: "replace-me-with-linkpreview-key",
+      },
+    );
+    linkPreviewAPIKeySecret.applyRemovalPolicy(cdk.RemovalPolicy.RETAIN);
+
     // Holds static frontend files uploaded separately from CloudFormation.
     const siteBucket = new s3.Bucket(this, "StaticAssetsBucket", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -98,12 +112,14 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
       description: "apps.debugjois.dev Nitro Lambda",
       environment: {
         BACKEND_LAMBDA_FUNCTION_NAME: backendLambdaFunctionName.valueAsString,
+        LINKPREVIEW_API_KEY: `{{resolve:secretsmanager:${linkPreviewAPIKeySecretName}}}`,
       },
       handler: "server/index.handler",
       memorySize: 1024,
       runtime: lambda.Runtime.NODEJS_22_X,
       timeout: cdk.Duration.seconds(30),
     });
+    siteLambda.node.addDependency(linkPreviewAPIKeySecret);
 
     siteLambda.addToRolePolicy(
       new iam.PolicyStatement({
@@ -231,6 +247,16 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
     new cdk.CfnOutput(this, "SiteUrl", {
       value: `https://${props.domainName}`,
       description: "Canonical URL for the deployed app",
+    });
+
+    new cdk.CfnOutput(this, "LinkPreviewAPIKeySecretArn", {
+      value: linkPreviewAPIKeySecret.attrId,
+      description: "Secrets Manager ARN for the LinkPreview API key",
+    });
+
+    new cdk.CfnOutput(this, "LinkPreviewAPIKeySecretName", {
+      value: linkPreviewAPIKeySecretName,
+      description: "Secrets Manager name for the LinkPreview API key",
     });
   }
 }
