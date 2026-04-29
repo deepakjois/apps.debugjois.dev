@@ -45,14 +45,17 @@ function NotFound() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const isAdminRoute = useRouterState({
-    select: (state) => state.location.pathname.startsWith("/admin"),
+  const routeChrome = useRouterState({
+    select: (state) => ({
+      isAdminRoute: state.location.pathname.startsWith("/admin"),
+      isLoggerRoute: state.location.pathname === "/admin/logger",
+    }),
   });
 
   return (
     <html
-      data-admin-webtui={isAdminRoute ? "true" : undefined}
-      data-webtui-theme={isAdminRoute ? "catppuccin" : undefined}
+      data-admin-webtui={routeChrome.isAdminRoute ? "true" : undefined}
+      data-webtui-theme={routeChrome.isAdminRoute ? "catppuccin" : undefined}
       lang="en"
     >
       <head>
@@ -60,17 +63,19 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="app-body">
         {children}
-        <TanStackDevtools
-          config={{
-            position: "bottom-right",
-          }}
-          plugins={[
-            {
-              name: "Tanstack Router",
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-          ]}
-        />
+        {routeChrome.isLoggerRoute ? null : (
+          <TanStackDevtools
+            config={{
+              position: "bottom-right",
+            }}
+            plugins={[
+              {
+                name: "Tanstack Router",
+                render: <TanStackRouterDevtoolsPanel />,
+              },
+            ]}
+          />
+        )}
         <Scripts />
       </body>
     </html>

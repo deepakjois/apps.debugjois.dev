@@ -59,6 +59,12 @@ The target Lambda function name is read server-side from `PODSCRIBER_LAMBDA_FUNC
 
 For local `npm run preview` submissions, set `PODSCRIBER_LAMBDA_FUNCTION_NAME` to the deployed backend Lambda function name.
 
+# Logger Admin
+
+`/admin/logger` is an authenticated full-screen Markdown editor for drafting logger notes.
+
+The editor uses CodeMirror through `@uiw/react-codemirror` with Markdown syntax support, GitHub dark theme styling, and route-local CSS. It currently loads representative sample Markdown content and does not persist edits yet.
+
 # Deployment Packaging
 
 Deployment packaging is handled by `../infra/deploy.sh --with-artifact`.
