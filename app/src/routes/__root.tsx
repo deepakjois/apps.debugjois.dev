@@ -50,8 +50,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       isAdminRoute: state.location.pathname.startsWith("/admin"),
     }),
   });
-  // Keep debug UI local-only and out of admin screens.
-  const showDevtools = import.meta.env.DEV && !routeChrome.isAdminRoute;
+  // Keep debug UI local-only.
+  const showDevtools = import.meta.env.DEV;
 
   return (
     <html
