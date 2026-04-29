@@ -17,9 +17,6 @@ export interface AppsDebugJoisDevSiteStackProps extends cdk.StackProps {
   hostedZoneName: string;
 }
 
-const podscriberLambdaFunctionName =
-  "DebugjoisDevStack-DebugJoisDevLambda1E2510C0-FbQR7k6bgY9Q";
-
 export class AppsDebugJoisDevSiteStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: AppsDebugJoisDevSiteStackProps) {
     super(scope, id, props);
@@ -43,6 +40,24 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
       description: "S3 object version for the Lambda deployment zip",
       type: "String",
     });
+
+    const podscriberLambdaFunctionName = new cdk.CfnParameter(
+      this,
+      "PodscriberLambdaFunctionName",
+      {
+        description: "Backend Lambda function name used by /admin/podscriber",
+        type: "String",
+      },
+    );
+
+    const podscriberLambdaFunctionArn = new cdk.CfnParameter(
+      this,
+      "PodscriberLambdaFunctionArn",
+      {
+        description: "Backend Lambda function ARN the site Lambda may invoke",
+        type: "String",
+      },
+    );
 
     const hostedZone = route53.HostedZone.fromHostedZoneAttributes(
       this,
@@ -82,7 +97,7 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
       ),
       description: "apps.debugjois.dev Nitro Lambda",
       environment: {
-        PODSCRIBER_LAMBDA_FUNCTION_NAME: podscriberLambdaFunctionName,
+        PODSCRIBER_LAMBDA_FUNCTION_NAME: podscriberLambdaFunctionName.valueAsString,
       },
       handler: "server/index.handler",
       memorySize: 1024,
@@ -93,7 +108,7 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
     siteLambda.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ["lambda:InvokeFunction"],
-        resources: ["*"],
+        resources: [podscriberLambdaFunctionArn.valueAsString],
       }),
     );
 

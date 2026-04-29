@@ -14,7 +14,8 @@ Usage: ./deploy.sh [--with-artifact] [--with-backend-image]
   -h, --help            Show this help text.
 
 Without --with-backend-image, an existing backend stack reuses its currently
-deployed Lambda image. If the backend stack does not exist yet, it is skipped.
+deployed Lambda image. The backend stack must exist before the site stack can
+be deployed because /admin/podscriber is wired to invoke it directly.
 USAGE
 }
 
@@ -145,7 +146,8 @@ else
     printf '==> Reusing currently deployed backend Lambda image\n'
     BACKEND_IMAGE_URI="$(lambda_image_uri_for_stack "$ARTIFACT_REGION" "$BACKEND_STACK")"
   else
-    printf '==> Backend stack does not exist yet; skipping backend deploy without --with-backend-image\n'
+    printf '==> Backend stack does not exist yet; run with --with-backend-image before deploying the site stack\n' >&2
+    exit 1
   fi
 fi
 
@@ -154,6 +156,10 @@ if [[ -n "$BACKEND_IMAGE_URI" ]]; then
   cdk_deploy_stack "$BACKEND_STACK" \
     --parameters "$BACKEND_STACK:BackendImageUri=$BACKEND_IMAGE_URI"
 fi
+
+# The site Lambda invokes the backend Lambda for /admin/podscriber submissions.
+PODSCRIBER_LAMBDA_FUNCTION_NAME="$(stack_output "$ARTIFACT_REGION" "$BACKEND_STACK" "LambdaFunctionName")"
+PODSCRIBER_LAMBDA_FUNCTION_ARN="$(stack_output "$ARTIFACT_REGION" "$BACKEND_STACK" "LambdaFunctionArn")"
 
 if [[ "$WITH_ARTIFACT" == "1" ]]; then
   # Build a fresh app bundle before packaging a new Lambda artifact.
@@ -210,7 +216,9 @@ cdk_deploy_stack "$SITE_STACK" \
   --parameters "$SITE_STACK:CertificateArn=$CERTIFICATE_ARN" \
   --parameters "$SITE_STACK:ArtifactBucketName=$ARTIFACT_BUCKET_NAME" \
   --parameters "$SITE_STACK:ArtifactObjectKey=$ARTIFACT_OBJECT_KEY" \
-  --parameters "$SITE_STACK:ArtifactObjectVersion=$ARTIFACT_OBJECT_VERSION"
+  --parameters "$SITE_STACK:ArtifactObjectVersion=$ARTIFACT_OBJECT_VERSION" \
+  --parameters "$SITE_STACK:PodscriberLambdaFunctionName=$PODSCRIBER_LAMBDA_FUNCTION_NAME" \
+  --parameters "$SITE_STACK:PodscriberLambdaFunctionArn=$PODSCRIBER_LAMBDA_FUNCTION_ARN"
 
 SITE_URL="$(stack_output "$ARTIFACT_REGION" "$SITE_STACK" "SiteUrl")"
 
@@ -235,3 +243,4 @@ printf 'Artifact version: %s\n' "$ARTIFACT_OBJECT_VERSION"
 if [[ -n "$BACKEND_IMAGE_URI" ]]; then
   printf 'Backend image: %s\n' "$BACKEND_IMAGE_URI"
 fi
+printf 'Podscriber Lambda: %s\n' "$PODSCRIBER_LAMBDA_FUNCTION_NAME"

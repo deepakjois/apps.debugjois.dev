@@ -69,7 +69,7 @@ When `--with-artifact` is passed, the script also:
 6. syncs `../app/.output/public` into the static asset bucket
 7. invalidates the CloudFront distribution
 
-Without `--with-artifact`, the script reuses the existing `ArtifactObjectKey` and `ArtifactObjectVersion` from `AppsDebugJoisDevSiteStack`. Without `--with-backend-image`, the script reuses the backend Lambda image currently deployed in `AppDebugJoisDevBackendStack`; if that stack does not exist yet, backend deployment is skipped until a fresh image is built.
+Without `--with-artifact`, the script reuses the existing `ArtifactObjectKey` and `ArtifactObjectVersion` from `AppsDebugJoisDevSiteStack`. Without `--with-backend-image`, the script reuses the backend Lambda image currently deployed in `AppDebugJoisDevBackendStack`; if that stack does not exist yet, deployment stops and you must rerun with `--with-backend-image`.
 
 # Routing
 
@@ -89,7 +89,7 @@ All behaviors use CloudFront's native `redirect-to-https` policy.
 
 `AppDebugJoisDevBackendStack` deploys the Go backend as a Lambda container image with no API Gateway. It supports direct Lambda invocation actions such as `queue-podcast-transcription` and `process-podcast-transcription`. The backend Lambda reads the Deepgram API key from the `apps-debugjois-dev/deepgram-api-key` Secrets Manager secret and writes transcripts to the existing `debugjois-dev-site` transcript bucket.
 
-The site stack still grants the Nitro Lambda generic `lambda:InvokeFunction` permission on `*` so `/admin/podscriber` can invoke a backend Lambda.
+The deploy script passes the backend Lambda function name and ARN into the site stack. The site stack sets `PODSCRIBER_LAMBDA_FUNCTION_NAME` on the Nitro Lambda and grants that role `lambda:InvokeFunction` only on the backend Lambda ARN.
 
 # Notes
 

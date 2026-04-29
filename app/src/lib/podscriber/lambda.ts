@@ -1,9 +1,6 @@
 import { InvokeCommand, LambdaClient, type InvokeCommandOutput } from "@aws-sdk/client-lambda";
 import type { PodcastTranscribeResponse } from "./types";
 
-export const DEFAULT_PODSCRIBER_LAMBDA_FUNCTION_NAME =
-  "DebugjoisDevStack-DebugJoisDevLambda1E2510C0-FbQR7k6bgY9Q";
-
 const textDecoder = new TextDecoder();
 
 type EnvSource = Pick<NodeJS.ProcessEnv, "PODSCRIBER_LAMBDA_FUNCTION_NAME">;
@@ -25,7 +22,12 @@ export type InvokePodscriberLambdaOptions = {
 };
 
 export function getPodscriberLambdaFunctionName(env: EnvSource = process.env): string {
-  return env.PODSCRIBER_LAMBDA_FUNCTION_NAME?.trim() || DEFAULT_PODSCRIBER_LAMBDA_FUNCTION_NAME;
+  const functionName = env.PODSCRIBER_LAMBDA_FUNCTION_NAME?.trim();
+  if (!functionName) {
+    throw new Error("PODSCRIBER_LAMBDA_FUNCTION_NAME must be set.");
+  }
+
+  return functionName;
 }
 
 export async function invokePodscriberLambda(

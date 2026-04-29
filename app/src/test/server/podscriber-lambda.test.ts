@@ -1,7 +1,6 @@
 import { InvokeCommand, type InvokeCommandOutput } from "@aws-sdk/client-lambda";
 import { describe, expect, test } from "vitest";
 import {
-  DEFAULT_PODSCRIBER_LAMBDA_FUNCTION_NAME,
   getPodscriberLambdaFunctionName,
   invokePodscriberLambda,
 } from "../../lib/podscriber/lambda";
@@ -22,8 +21,10 @@ function encodedPayload(value: unknown): Uint8Array {
 }
 
 describe("podscriber Lambda invoke helper", () => {
-  test("uses the configured Lambda name with default fallback", () => {
-    expect(getPodscriberLambdaFunctionName({})).toBe(DEFAULT_PODSCRIBER_LAMBDA_FUNCTION_NAME);
+  test("requires a configured Lambda name", () => {
+    expect(() => getPodscriberLambdaFunctionName({})).toThrow(
+      "PODSCRIBER_LAMBDA_FUNCTION_NAME must be set.",
+    );
     expect(
       getPodscriberLambdaFunctionName({ PODSCRIBER_LAMBDA_FUNCTION_NAME: " custom-name " }),
     ).toBe("custom-name");
@@ -73,9 +74,9 @@ describe("podscriber Lambda invoke helper", () => {
       Payload: encodedPayload({ errorMessage: "expected Podcast Addict episode URL" }),
     });
 
-    await expect(invokePodscriberLambda("bad", { client })).rejects.toThrow(
-      "expected Podcast Addict episode URL",
-    );
+    await expect(
+      invokePodscriberLambda("bad", { client, functionName: "target-lambda" }),
+    ).rejects.toThrow("expected Podcast Addict episode URL");
   });
 
   test("rejects invalid Lambda JSON responses", async () => {
@@ -84,8 +85,8 @@ describe("podscriber Lambda invoke helper", () => {
       Payload: encodedPayload("not-json"),
     });
 
-    await expect(invokePodscriberLambda("payload", { client })).rejects.toThrow(
-      "Lambda returned invalid JSON",
-    );
+    await expect(
+      invokePodscriberLambda("payload", { client, functionName: "target-lambda" }),
+    ).rejects.toThrow("Lambda returned invalid JSON");
   });
 });

@@ -55,7 +55,9 @@ npm run preview
 { "action": "queue-podcast-transcription", "text": "..." }
 ```
 
-The target Lambda function name is read server-side from `PODSCRIBER_LAMBDA_FUNCTION_NAME` and defaults to `DebugjoisDevStack-DebugJoisDevLambda1E2510C0-FbQR7k6bgY9Q`. The deployed Nitro Lambda role must be able to call `lambda:InvokeFunction`.
+The target Lambda function name is read server-side from `PODSCRIBER_LAMBDA_FUNCTION_NAME`. Production deployments set it from the `AppDebugJoisDevBackendStack` backend Lambda output, and the deployed Nitro Lambda role must be able to call `lambda:InvokeFunction` on that backend Lambda.
+
+For local `npm run preview` submissions, set `PODSCRIBER_LAMBDA_FUNCTION_NAME` to the deployed backend Lambda function name.
 
 # Deployment Packaging
 
