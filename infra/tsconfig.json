@@ -1,20 +1,18 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "commonjs",
     "lib": ["ES2022"],
     "types": ["node"],
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "moduleResolution": "node",
+    // Use Node's modern package.json-aware resolver instead of TypeScript's
+    // legacy `node10` resolver.
+    "module": "Node16",
+    "moduleResolution": "node16",
     "outDir": "dist",
-    // CDK's `cdk init` template uses the legacy "node" module resolution,
-    // which TypeScript 6 flags as deprecated (TS5107). Acknowledge the
-    // deprecation here; will need to migrate to Node16/NodeNext when TS 7
-    // removes "node10" entirely.
-    "ignoreDeprecations": "6.0"
+    "resolveJsonModule": true
   },
   "include": ["bin/**/*.ts", "lib/**/*.ts"]
 }
