@@ -159,7 +159,6 @@ fi
 
 # The site Lambda invokes the backend Lambda for admin server-function actions.
 BACKEND_LAMBDA_FUNCTION_NAME="$(stack_output "$ARTIFACT_REGION" "$BACKEND_STACK" "LambdaFunctionName")"
-BACKEND_LAMBDA_FUNCTION_ARN="$(stack_output "$ARTIFACT_REGION" "$BACKEND_STACK" "LambdaFunctionArn")"
 
 if [[ "$WITH_ARTIFACT" == "1" ]]; then
   # Build a fresh app bundle before packaging a new Lambda artifact.
@@ -217,8 +216,7 @@ cdk_deploy_stack "$SITE_STACK" \
   --parameters "$SITE_STACK:ArtifactBucketName=$ARTIFACT_BUCKET_NAME" \
   --parameters "$SITE_STACK:ArtifactObjectKey=$ARTIFACT_OBJECT_KEY" \
   --parameters "$SITE_STACK:ArtifactObjectVersion=$ARTIFACT_OBJECT_VERSION" \
-  --parameters "$SITE_STACK:BackendLambdaFunctionName=$BACKEND_LAMBDA_FUNCTION_NAME" \
-  --parameters "$SITE_STACK:BackendLambdaFunctionArn=$BACKEND_LAMBDA_FUNCTION_ARN"
+  --parameters "$SITE_STACK:BackendLambdaFunctionName=$BACKEND_LAMBDA_FUNCTION_NAME"
 
 SITE_URL="$(stack_output "$ARTIFACT_REGION" "$SITE_STACK" "SiteUrl")"
 

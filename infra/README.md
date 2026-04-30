@@ -103,7 +103,7 @@ gcloud iam service-accounts add-iam-policy-binding \
   --member='principal://iam.googleapis.com/projects/1016117555218/locations/global/workloadIdentityPools/github-actions-pool/subject/apps-debugjois-dev-backend-lambda-role'
 ```
 
-The deploy script passes the backend Lambda function name and ARN into the site stack. The site stack sets `BACKEND_LAMBDA_FUNCTION_NAME` on the Nitro Lambda and grants that role `lambda:InvokeFunction` only on the backend Lambda ARN.
+The deploy script passes the backend Lambda function name into the site stack. The site stack sets `BACKEND_LAMBDA_FUNCTION_NAME` on the Nitro Lambda and grants that role `lambda:InvokeFunction` on the backend Lambda ARN derived from that function name.
 
 # Notes
 

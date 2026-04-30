@@ -53,15 +53,6 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
       },
     );
 
-    const backendLambdaFunctionArn = new cdk.CfnParameter(
-      this,
-      "BackendLambdaFunctionArn",
-      {
-        description: "Backend Lambda function ARN the site Lambda may invoke",
-        type: "String",
-      },
-    );
-
     const hostedZone = route53.HostedZone.fromHostedZoneAttributes(
       this,
       "HostedZone",
@@ -124,7 +115,14 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
     siteLambda.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ["lambda:InvokeFunction"],
-        resources: [backendLambdaFunctionArn.valueAsString],
+        resources: [
+          this.formatArn({
+            service: "lambda",
+            resource: "function",
+            arnFormat: cdk.ArnFormat.COLON_RESOURCE_NAME,
+            resourceName: backendLambdaFunctionName.valueAsString,
+          }),
+        ],
       }),
     );
 
