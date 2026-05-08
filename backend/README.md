@@ -4,7 +4,7 @@ Go podcast transcription tools for `apps.debugjois.dev`. The module can run loca
 
 ## Requirements
 
-- Go 1.26+
+- Go 1.26.3+
 - `golangci-lint` on `PATH` for linting backend code
 - AWS credentials for S3 transcript writes or index generation with `--write`
 - `DEEPGRAM_API_KEY` in `backend/.env` for local transcription
