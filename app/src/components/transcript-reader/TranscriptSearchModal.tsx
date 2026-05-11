@@ -59,7 +59,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
-function getFocusableElements(container: HTMLDivElement | null): HTMLElement[] {
+function getFocusableElements(container: HTMLElement | null): HTMLElement[] {
   const focusableElements = container?.querySelectorAll<HTMLElement>(
     'button:not([disabled]), input:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
   );
@@ -73,7 +73,7 @@ function getFocusableElements(container: HTMLDivElement | null): HTMLElement[] {
   );
 }
 
-function trapModalFocus(event: KeyboardEvent, container: HTMLDivElement | null) {
+function trapModalFocus(event: KeyboardEvent, container: HTMLElement | null) {
   if (event.key !== "Tab") {
     return;
   }
@@ -112,7 +112,7 @@ export default function TranscriptSearchModal({
   const [activeResultIndex, setActiveResultIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const searchTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const modalPanelRef = useRef<HTMLDivElement | null>(null);
+  const modalPanelRef = useRef<HTMLDialogElement | null>(null);
 
   const visibleResults = useMemo(() => {
     if (!query.trim()) {
@@ -329,12 +329,12 @@ export default function TranscriptSearchModal({
             onClick={closeModal}
             type="button"
           />
-          <div
+          <dialog
             aria-labelledby={SEARCH_DIALOG_TITLE_ID}
             aria-modal="true"
             className="modal-panel"
+            open
             ref={modalPanelRef}
-            role="dialog"
           >
             <h2 className="modal-title sr-only" id={SEARCH_DIALOG_TITLE_ID}>
               Search transcripts
@@ -378,7 +378,7 @@ export default function TranscriptSearchModal({
                 ))
               )}
             </select>
-          </div>
+          </dialog>
         </div>
       ) : null}
     </>
