@@ -158,43 +158,42 @@
 }
 
 .modal-results {
-  list-style: none;
-  padding: 10px;
-  margin: 0;
-}
-
-.modal-result {
-  width: 100%;
+  display: block;
+  width: calc(100% - 20px);
   border: 0;
   border-radius: 14px;
+  margin: 10px;
   background: transparent;
-  color: inherit;
-  text-align: left;
-  padding: 13px 12px;
+  color: var(--tr-text-bright);
   cursor: pointer;
-  transition: background 0.15s ease;
+  font-family: var(--tr-serif);
+  font-size: 18px;
+  line-height: 1.35;
+  overflow: auto;
 }
 
-.modal-result:hover,
-.modal-result.is-active {
-  background: var(--tr-accent-dim);
-}
-
-.modal-results.is-keyboard-nav .modal-result:hover {
-  background: transparent;
-}
-
-.modal-results.is-keyboard-nav .modal-result.is-active:hover {
-  background: var(--tr-accent-dim);
-}
-
-.modal-result:focus {
+.modal-results:focus {
   outline: none;
 }
 
-.modal-result:focus-visible {
-  background: var(--tr-accent-dim);
+.modal-results:focus-visible {
   box-shadow: inset 0 0 0 1px var(--tr-accent-soft);
+}
+
+.modal-results option {
+  background: rgb(24 25 29 / 95%);
+  color: var(--tr-text-bright);
+  padding: 13px 12px;
+}
+
+.modal-results option:checked {
+  background: var(--tr-accent-dim);
+}
+
+.modal-results option:disabled {
+  color: var(--tr-text-dim);
+  font-family: var(--tr-sans);
+  font-size: 13px;
 }
 
 .sr-only {
@@ -207,31 +206,6 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-
-.modal-result-title {
-  display: block;
-  font-family: var(--tr-serif);
-  font-size: 21px;
-  line-height: 1.25;
-  color: var(--tr-text-bright);
-}
-
-.modal-result-date {
-  display: block;
-  margin-top: 5px;
-  font-family: var(--tr-sans);
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--tr-text-dim);
-}
-
-.modal-empty {
-  padding: 18px 20px 22px;
-  font-family: var(--tr-sans);
-  font-size: 13px;
-  color: var(--tr-text-dim);
 }
 
 .podcast-name {

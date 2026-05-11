@@ -44,7 +44,7 @@ describe("TranscriptSearchModal", () => {
 
     fireEvent.keyDown(document, { key: "k", metaKey: true });
 
-    const input = screen.getByRole("combobox", { name: "Search transcripts" });
+    const input = screen.getByRole("searchbox", { name: "Search transcripts" });
 
     expect(input).toBeTruthy();
 
@@ -58,10 +58,11 @@ describe("TranscriptSearchModal", () => {
 
     fireEvent.keyDown(document, { key: "k", metaKey: true });
 
-    const reopenedInput = screen.getByRole("combobox", { name: "Search transcripts" });
+    const reopenedInput = screen.getByRole("searchbox", { name: "Search transcripts" });
+    const reopenedResults = screen.getByRole("listbox", { name: "Matching transcripts" });
 
     expect(reopenedInput).toHaveProperty("value", "");
-    expect(reopenedInput.getAttribute("aria-activedescendant")).toBe("transcript-search-result-0");
+    expect(reopenedResults).toHaveProperty("value", TRANSCRIPTS[0].location);
   });
 
   test("slash opens fresh outside editable fields and ignores editable fields", () => {
@@ -73,12 +74,12 @@ describe("TranscriptSearchModal", () => {
     externalInput.focus();
 
     fireEvent.keyDown(externalInput, { key: "/" });
-    expect(screen.queryByRole("combobox", { name: "Search transcripts" })).toBeNull();
+    expect(screen.queryByRole("searchbox", { name: "Search transcripts" })).toBeNull();
 
     externalInput.remove();
     fireEvent.keyDown(document, { key: "/" });
 
-    expect(screen.getByRole("combobox", { name: "Search transcripts" })).toBeTruthy();
+    expect(screen.getByRole("searchbox", { name: "Search transcripts" })).toBeTruthy();
   });
 
   test("does not open from keyboard when there are no transcripts", () => {
@@ -87,7 +88,7 @@ describe("TranscriptSearchModal", () => {
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
     fireEvent.keyDown(document, { key: "/" });
 
-    expect(screen.queryByRole("combobox", { name: "Search transcripts" })).toBeNull();
+    expect(screen.queryByRole("searchbox", { name: "Search transcripts" })).toBeNull();
   });
 
   test("traps tab focus inside the modal panel", () => {
@@ -95,21 +96,21 @@ describe("TranscriptSearchModal", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Search transcripts" }));
 
-    const input = screen.getByRole("combobox", { name: "Search transcripts" });
-    const secondButton = screen.getByRole("option", { name: /Second transcript/ });
+    const input = screen.getByRole("searchbox", { name: "Search transcripts" });
+    const results = screen.getByRole("listbox", { name: "Matching transcripts" });
 
     act(() => {
       input.focus();
     });
 
     fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
-    expect(secondButton).toBe(document.activeElement);
+    expect(results).toBe(document.activeElement);
 
     fireEvent.keyDown(document, { key: "Tab" });
     expect(input).toBe(document.activeElement);
 
     act(() => {
-      secondButton.focus();
+      results.focus();
     });
 
     fireEvent.keyDown(document, { key: "Tab" });
@@ -121,12 +122,25 @@ describe("TranscriptSearchModal", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Search transcripts" }));
 
-    const input = screen.getByRole("combobox", { name: "Search transcripts" });
+    const input = screen.getByRole("searchbox", { name: "Search transcripts" });
+    const results = screen.getByRole("listbox", { name: "Matching transcripts" });
 
     fireEvent.keyDown(input, { key: "ArrowUp" });
-    expect(input.getAttribute("aria-activedescendant")).toBe("transcript-search-result-1");
+    expect(results).toHaveProperty("value", TRANSCRIPTS[1].location);
 
     fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(onSelectTranscript).toHaveBeenCalledWith(TRANSCRIPTS[1]);
+  });
+
+  test("selecting a native result selects the transcript", () => {
+    const { onSelectTranscript } = renderModal();
+
+    fireEvent.click(screen.getByRole("button", { name: "Search transcripts" }));
+
+    fireEvent.change(screen.getByRole("listbox", { name: "Matching transcripts" }), {
+      target: { value: TRANSCRIPTS[1].location },
+    });
 
     expect(onSelectTranscript).toHaveBeenCalledWith(TRANSCRIPTS[1]);
   });

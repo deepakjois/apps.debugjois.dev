@@ -94,7 +94,9 @@ describe("TranscriptReaderPage", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Search transcripts" }));
-    fireEvent.click(screen.getByRole("option", { name: /Next transcript/ }));
+    fireEvent.change(screen.getByRole("listbox", { name: "Matching transcripts" }), {
+      target: { value: NEXT_LOCATION },
+    });
 
     expect(screen.getByRole("heading", { name: "Current transcript" })).toBeTruthy();
     expect(screen.queryByText("Transcript", { selector: ".transcript-heading" })).toBeTruthy();

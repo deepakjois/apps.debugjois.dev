@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { KeyboardEvent as ReactKeyboardEvent } from "react";
+import type { ChangeEvent as ReactChangeEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { formatTranscriptDate } from "../../queries/queries";
 import type { TranscriptIndexItem } from "../../queries/queries";
 
@@ -61,7 +61,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 
 function getFocusableElements(container: HTMLDivElement | null): HTMLElement[] {
   const focusableElements = container?.querySelectorAll<HTMLElement>(
-    'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+    'button:not([disabled]), input:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
   );
 
   if (!focusableElements) {
@@ -108,7 +108,6 @@ export default function TranscriptSearchModal({
   onSelectTranscript,
 }: TranscriptSearchModalProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isKeyboardNavigating, setIsKeyboardNavigating] = useState(false);
   const [query, setQuery] = useState("");
   const [activeResultIndex, setActiveResultIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -167,7 +166,6 @@ export default function TranscriptSearchModal({
       return;
     }
 
-    setIsKeyboardNavigating(false);
     setQuery("");
     setActiveResultIndex(0);
     setIsOpen(true);
@@ -231,11 +229,17 @@ export default function TranscriptSearchModal({
     onSelectTranscript(item);
   }
 
+  function getResultLabel(item: TranscriptIndexItem): string {
+    const title = item.title ?? "Untitled";
+    const date = formatTranscriptDate(item.date) ?? "Undated";
+
+    return `${title} — ${date}`;
+  }
+
   function handleSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
     // Keep focus on the input while arrow keys move the active result.
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      setIsKeyboardNavigating(true);
 
       if (visibleResults.length) {
         setActiveResultIndex((currentIndex) => (currentIndex + 1) % visibleResults.length);
@@ -246,7 +250,6 @@ export default function TranscriptSearchModal({
 
     if (event.key === "ArrowUp") {
       event.preventDefault();
-      setIsKeyboardNavigating(true);
 
       if (visibleResults.length) {
         setActiveResultIndex(
@@ -274,9 +277,24 @@ export default function TranscriptSearchModal({
     }
   }
 
-  const activeResultId = visibleResults[activeResultIndex]
-    ? `transcript-search-result-${activeResultIndex}`
-    : undefined;
+  function handleResultsChange(event: ReactChangeEvent<HTMLSelectElement>) {
+    const selectedItem = visibleResults.find((item) => item.location === event.target.value);
+
+    if (selectedItem) {
+      selectTranscript(selectedItem);
+    }
+  }
+
+  function handleResultsKeyDown(event: ReactKeyboardEvent<HTMLSelectElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeModal();
+    }
+  }
+
+  // Native select options are keyed by transcript location, which is unique in the index.
+  const activeResultValue = visibleResults[activeResultIndex]?.location ?? "";
+  const resultsSize = Math.max(visibleResults.length, 1);
 
   return (
     <>
@@ -322,10 +340,7 @@ export default function TranscriptSearchModal({
               Search transcripts
             </h2>
             <input
-              aria-activedescendant={activeResultId}
-              aria-autocomplete="list"
               aria-controls={SEARCH_RESULTS_ID}
-              aria-expanded="true"
               aria-label="Search transcripts"
               autoComplete="off"
               className="modal-search"
@@ -337,52 +352,32 @@ export default function TranscriptSearchModal({
               onKeyDown={handleSearchKeyDown}
               placeholder="Search transcripts"
               ref={searchInputRef}
-              role="combobox"
               spellCheck={false}
               type="search"
               value={query}
             />
 
-            <ul
-              className={`modal-results${isKeyboardNavigating ? " is-keyboard-nav" : ""}`}
+            <select
+              aria-label="Matching transcripts"
+              className="modal-results"
               id={SEARCH_RESULTS_ID}
-              role="listbox"
+              onChange={handleResultsChange}
+              onKeyDown={handleResultsKeyDown}
+              size={resultsSize}
+              value={activeResultValue}
             >
               {visibleResults.length === 0 ? (
-                <li className="modal-empty">No transcripts match your search.</li>
+                <option disabled value="">
+                  No transcripts match your search.
+                </option>
               ) : (
-                visibleResults.map((item, index) => {
-                  const isActive = index === activeResultIndex;
-
-                  return (
-                    <li key={item.location}>
-                      <button
-                        aria-selected={isActive}
-                        className={`modal-result${isActive ? " is-active" : ""}`}
-                        id={`transcript-search-result-${index}`}
-                        onClick={() => {
-                          selectTranscript(item);
-                        }}
-                        onMouseMove={() => {
-                          setIsKeyboardNavigating(false);
-
-                          if (index !== activeResultIndex) {
-                            setActiveResultIndex(index);
-                          }
-                        }}
-                        role="option"
-                        type="button"
-                      >
-                        <span className="modal-result-title">{item.title ?? "Untitled"}</span>
-                        <span className="modal-result-date">
-                          {formatTranscriptDate(item.date) ?? "Undated"}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })
+                visibleResults.map((item) => (
+                  <option key={item.location} value={item.location}>
+                    {getResultLabel(item)}
+                  </option>
+                ))
               )}
-            </ul>
+            </select>
           </div>
         </div>
       ) : null}
