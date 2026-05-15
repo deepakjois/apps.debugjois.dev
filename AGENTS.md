@@ -25,3 +25,36 @@ For logs, prefer `aws logs start-query` instead of `aws logs filter` because the
 
 ## Github Actions Convention
 Keep workflow YAML files declarative. Do not inline multiline or complex bash in `run:` blocks — extract any non-trivial shell logic into a script under .github/scripts/ and call it from the workflow step.
+
+## Cursor Cloud specific instructions
+
+### Project overview
+
+This is a monorepo with three independent sub-projects. See each sub-project's README for detailed commands.
+
+| Sub-project | Language | Purpose |
+|---|---|---|
+| `app/` | TypeScript (React 19, TanStack Start, Vite 8) | SSR web app on port 3000 |
+| `backend/` | Go 1.26.3 | Lambda backend (podcast transcription, daily log) |
+| `infra/` | TypeScript (AWS CDK) | Infrastructure-as-code |
+
+### Quick reference
+
+| Task | Command |
+|---|---|
+| App dev server | `cd app && npm run dev` |
+| App lint+format | `cd app && npm run check` |
+| App tests | `cd app && npm run test` |
+| Backend health-check | `cd backend && printf '{"action":"health-check"}' \| go run . invoke` |
+| Backend lint | `cd backend && golangci-lint run ./...` |
+| Backend tests | `cd backend && go test ./...` |
+| Infra synth | `cd infra && npm run synth` |
+
+### Non-obvious caveats
+
+- No Jujutsu (jj) is present in the Cloud Agent VM; use git directly.
+- Go 1.26.3 is required (the update script installs it to `/usr/local/go`). Ensure `/usr/local/go/bin` is on PATH.
+- `golangci-lint` is installed to `/usr/local/bin` by the update script.
+- The app dev server (`npm run dev`) automatically invokes the local Go backend via `go run . invoke` when `BACKEND_LAMBDA_FUNCTION_NAME` is not set. No separate backend server process is needed.
+- External APIs (S3 for transcripts, Google Drive for logger, Deepgram for transcription) require credentials not available in the Cloud Agent VM; the transcript reader fetches data from S3 at runtime so it works when AWS creds are present in the environment. Admin features (logger, podscriber) require Google OAuth which cannot be tested headlessly.
+- The `infra/` CDK synth can run without AWS credentials; deployment (`deploy.sh`) requires them.
