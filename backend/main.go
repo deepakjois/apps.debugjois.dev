@@ -3,8 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -19,106 +17,128 @@ import (
 const defaultLocalDotEnvPath = ".env"
 
 func main() {
-	ctx := context.Background()
-	lambdaRuntime := isLambdaRuntime()
-
-	if lambdaRuntime {
-		lambda.Start(handleDirectRuntimeEvent)
+	if isLambdaRuntime() {
+		lambda.Start(handleInvocation)
 		return
 	}
 
-	_ = loadOptionalLocalEnvFile()
+	startLocal(handleInvocation)
+}
 
-	if len(os.Args) < 2 {
-		printUsage(os.Stderr)
-		os.Exit(1)
+// InvocationRequest is the temporary input shape used while the backend is rebuilt.
+type InvocationRequest struct {
+	Message string `json:"message"`
+}
+
+// InvocationResponse is the temporary output shape shared by Lambda and local runs.
+type InvocationResponse struct {
+	Message string `json:"message"`
+	Runtime string `json:"runtime"`
+}
+
+func handleInvocation(_ context.Context, request InvocationRequest) (InvocationResponse, error) {
+	message := strings.TrimSpace(request.Message)
+	if message == "" {
+		message = "hello world"
 	}
 
-	switch os.Args[1] {
-	case "invoke":
-		if err := runInvoke(ctx, os.Args[2:], os.Stdin, os.Stdout); err != nil {
-			log.Fatal(err)
-		}
-	default:
-		printUsage(os.Stderr)
-		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", os.Args[1])
-		os.Exit(1)
+	return InvocationResponse{
+		Message: message,
+		Runtime: runtimeName(),
+	}, nil
+}
+
+func startLocal(handler any) {
+	if err := runLocal(context.Background(), handler, os.Args[1:], os.Stdin, os.Stdout); err != nil {
+		log.Fatal(err)
 	}
 }
 
-func printUsage(w io.Writer) {
-	_, _ = fmt.Fprintf(w, "Usage: %s <command> [args]\n\n", os.Args[0])
-	_, _ = fmt.Fprintf(w, "Commands:\n")
-	_, _ = fmt.Fprintf(w, "  invoke   Process a direct/EventBridge JSON payload (from stdin or --payload file)\n")
-}
-
-func runInvoke(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer) error {
-	invokeFlags := flag.NewFlagSet("invoke", flag.ContinueOnError)
-	invokeFlags.SetOutput(io.Discard)
-	payloadFile := invokeFlags.String("payload", "", "Path to JSON payload file (reads from stdin if not set)")
-	if err := invokeFlags.Parse(args); err != nil {
-		return fmt.Errorf("parse invoke flags: %w", err)
-	}
-	if invokeFlags.NArg() != 0 {
-		return fmt.Errorf("invoke does not accept positional arguments")
+func runLocal(ctx context.Context, handler any, args []string, stdin io.Reader, stdout io.Writer) error {
+	if err := loadOptionalLocalEnvFile(); err != nil {
+		return err
 	}
 
-	payload, err := readInvokePayload(*payloadFile, stdin)
+	payload, err := localPayload(args, stdin)
 	if err != nil {
 		return err
 	}
 
-	result, err := dispatchBackendEvent(ctx, payload)
+	response, err := lambda.NewHandler(handler).Invoke(ctx, payload)
 	if err != nil {
-		return err
-	}
-	if result == nil {
-		return nil
+		return fmt.Errorf("invoke local handler: %w", err)
 	}
 
-	if _, err := fmt.Fprintln(stdout, string(result)); err != nil {
-		return fmt.Errorf("write invoke response: %w", err)
+	if _, err := stdout.Write(response); err != nil {
+		return fmt.Errorf("write local invocation response: %w", err)
+	}
+	if _, err := fmt.Fprintln(stdout); err != nil {
+		return fmt.Errorf("write local invocation newline: %w", err)
 	}
 
 	return nil
 }
 
-func readInvokePayload(payloadFile string, stdin io.Reader) (json.RawMessage, error) {
+func localPayload(args []string, stdin io.Reader) ([]byte, error) {
+	localFlags := flag.NewFlagSet("local", flag.ContinueOnError)
+	localFlags.SetOutput(io.Discard)
+
+	payloadValue := localFlags.String("payload", "", "JSON payload to invoke locally")
+	payloadFile := localFlags.String("payload-file", "", "JSON payload file to invoke locally, or - for stdin")
+	if err := localFlags.Parse(args); err != nil {
+		return nil, fmt.Errorf("parse local flags: %w", err)
+	}
+	if localFlags.NArg() != 0 {
+		return nil, fmt.Errorf("unexpected local arguments: %s", strings.Join(localFlags.Args(), " "))
+	}
+	if strings.TrimSpace(*payloadValue) != "" && strings.TrimSpace(*payloadFile) != "" {
+		return nil, fmt.Errorf("use only one of --payload or --payload-file")
+	}
+
 	var (
 		payload []byte
 		err     error
 	)
-
-	if strings.TrimSpace(payloadFile) != "" {
-		payload, err = os.ReadFile(payloadFile)
-	} else {
+	switch {
+	case strings.TrimSpace(*payloadValue) != "":
+		payload = []byte(*payloadValue)
+	case strings.TrimSpace(*payloadFile) == "-":
 		payload, err = io.ReadAll(stdin)
+	case strings.TrimSpace(*payloadFile) != "":
+		payload, err = os.ReadFile(*payloadFile)
+	default:
+		payload = []byte(`{}`)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("read invoke payload: %w", err)
+		return nil, fmt.Errorf("read local invocation payload: %w", err)
 	}
 
 	payload = bytes.TrimSpace(payload)
 	if len(payload) == 0 {
-		return nil, errors.New("invoke payload is empty")
+		payload = []byte(`{}`)
 	}
 
-	return json.RawMessage(payload), nil
-}
-
-func handleDirectRuntimeEvent(ctx context.Context, payload json.RawMessage) (json.RawMessage, error) {
-	return dispatchBackendEvent(ctx, payload)
+	return payload, nil
 }
 
 func isLambdaRuntime() bool {
 	return strings.TrimSpace(os.Getenv("AWS_LAMBDA_RUNTIME_API")) != ""
 }
 
+func runtimeName() string {
+	if isLambdaRuntime() {
+		return "lambda"
+	}
+
+	return "local"
+}
+
 func loadOptionalLocalEnvFile() error {
 	if _, err := os.Stat(defaultLocalDotEnvPath); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
+		if os.IsNotExist(err) {
 			return nil
 		}
+
 		return fmt.Errorf("stat local env file %q: %w", defaultLocalDotEnvPath, err)
 	}
 

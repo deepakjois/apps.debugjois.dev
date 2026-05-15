@@ -10,51 +10,90 @@ import (
 	"testing"
 )
 
-func TestRunInvokeReadsPayloadFromStdin(t *testing.T) {
+func TestRunLocalInvokesHandlerWithPayload(t *testing.T) {
 	var stdout bytes.Buffer
-	err := runInvoke(context.Background(), nil, strings.NewReader(`{"action":"health-check"}`), &stdout)
+
+	err := runLocal(
+		context.Background(),
+		handleInvocation,
+		[]string{"--payload", `{"message":"local hello"}`},
+		strings.NewReader(`{"message":"local hello"}`),
+		&stdout,
+	)
 	if err != nil {
-		t.Fatalf("run invoke: %v", err)
+		t.Fatalf("run local: %v", err)
 	}
 
-	var got map[string]bool
+	var got InvocationResponse
 	if err := json.Unmarshal(bytes.TrimSpace(stdout.Bytes()), &got); err != nil {
-		t.Fatalf("unmarshal stdout: %v", err)
+		t.Fatalf("unmarshal local response: %v", err)
 	}
-	if !got["ok"] {
-		t.Fatalf("expected ok response, got %q", stdout.String())
+	if got.Message != "local hello" {
+		t.Fatalf("expected local message, got %q", got.Message)
 	}
-}
-
-func TestRunInvokeReadsPayloadFromFile(t *testing.T) {
-	dir := t.TempDir()
-	payloadPath := filepath.Join(dir, "event.json")
-	if err := os.WriteFile(payloadPath, []byte(`{"action":"health-check"}`), 0o600); err != nil {
-		t.Fatalf("write payload: %v", err)
-	}
-
-	var stdout bytes.Buffer
-	if err := runInvoke(context.Background(), []string{"--payload", payloadPath}, strings.NewReader(""), &stdout); err != nil {
-		t.Fatalf("run invoke: %v", err)
-	}
-	if !strings.Contains(stdout.String(), `"ok":true`) {
-		t.Fatalf("expected ok response, got %q", stdout.String())
+	if got.Runtime != "local" {
+		t.Fatalf("expected local runtime, got %q", got.Runtime)
 	}
 }
 
-func TestRunInvokeRejectsEmptyPayload(t *testing.T) {
-	var stdout bytes.Buffer
-	if err := runInvoke(context.Background(), nil, strings.NewReader("  \n"), &stdout); err == nil {
-		t.Fatal("expected empty payload error")
-	}
-}
-
-func TestDispatchBackendEventHandlesScheduledEvent(t *testing.T) {
-	body, err := dispatchBackendEvent(context.Background(), json.RawMessage(`{"source":"aws.events","detail-type":"Scheduled Event","id":"evt-1"}`))
+func TestRunLocalLoadsDotEnvBeforeHandler(t *testing.T) {
+	t.Setenv("BACKEND_LOCAL_ENV_TEST", "")
+	originalDir, err := os.Getwd()
 	if err != nil {
-		t.Fatalf("dispatch scheduled event: %v", err)
+		t.Fatalf("get current directory: %v", err)
 	}
-	if !strings.Contains(string(body), `"ok":true`) {
-		t.Fatalf("expected ok response, got %s", string(body))
+	if err := os.Chdir(t.TempDir()); err != nil {
+		t.Fatalf("change to temp directory: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chdir(originalDir); err != nil {
+			t.Fatalf("restore current directory: %v", err)
+		}
+	})
+	if err := os.WriteFile(filepath.Join(".", defaultLocalDotEnvPath), []byte("BACKEND_LOCAL_ENV_TEST=loaded\n"), 0o600); err != nil {
+		t.Fatalf("write env file: %v", err)
+	}
+
+	var stdout bytes.Buffer
+	handler := func(context.Context, InvocationRequest) (InvocationResponse, error) {
+		return InvocationResponse{
+			Message: os.Getenv("BACKEND_LOCAL_ENV_TEST"),
+			Runtime: runtimeName(),
+		}, nil
+	}
+
+	if err := runLocal(context.Background(), handler, nil, strings.NewReader(`{}`), &stdout); err != nil {
+		t.Fatalf("run local: %v", err)
+	}
+
+	var got InvocationResponse
+	if err := json.Unmarshal(bytes.TrimSpace(stdout.Bytes()), &got); err != nil {
+		t.Fatalf("unmarshal local response: %v", err)
+	}
+	if got.Message != "loaded" {
+		t.Fatalf("expected dotenv value, got %q", got.Message)
+	}
+}
+
+func TestRunLocalReadsExplicitStdinPayload(t *testing.T) {
+	var stdout bytes.Buffer
+
+	err := runLocal(
+		context.Background(),
+		handleInvocation,
+		[]string{"--payload-file", "-"},
+		strings.NewReader(`{"message":"stdin hello"}`),
+		&stdout,
+	)
+	if err != nil {
+		t.Fatalf("run local: %v", err)
+	}
+
+	var got InvocationResponse
+	if err := json.Unmarshal(bytes.TrimSpace(stdout.Bytes()), &got); err != nil {
+		t.Fatalf("unmarshal local response: %v", err)
+	}
+	if got.Message != "stdin hello" {
+		t.Fatalf("expected stdin message, got %q", got.Message)
 	}
 }
