@@ -1,6 +1,9 @@
 import { QueryClient } from "@tanstack/react-query";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { loadTranscriptReaderData } from "../../routes/transcript-reader";
+import {
+  getTranscriptReaderCacheHeaders,
+  loadTranscriptReaderData,
+} from "../../routes/transcript-reader";
 
 const TRANSCRIPT_A_LOCATION =
   "https://example.com/transcript-a--1111111111111111222222222222222233333333333333334444444444444444.json";
@@ -156,6 +159,34 @@ describe("transcript reader loader", () => {
           },
         },
       },
+    });
+  });
+});
+
+describe("transcript reader cache headers", () => {
+  test("uses the short latest TTL when no transcript is selected", () => {
+    expect(
+      getTranscriptReaderCacheHeaders({
+        transcriptList: [],
+        selectedLocation: null,
+        transcript: null,
+        pageTitle: "Transcript Reader",
+      }),
+    ).toEqual({
+      "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
+    });
+  });
+
+  test("uses the long immutable TTL for a hash-selected transcript", () => {
+    expect(
+      getTranscriptReaderCacheHeaders({
+        transcriptList: [],
+        selectedLocation: TRANSCRIPT_A_LOCATION,
+        transcript: { podcast: { episode: { title: "Episode A" } } },
+        pageTitle: "Episode A | Transcript Reader",
+      }),
+    ).toEqual({
+      "Cache-Control": "public, max-age=60, s-maxage=31536000, stale-while-revalidate=86400",
     });
   });
 });

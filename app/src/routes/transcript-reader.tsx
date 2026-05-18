@@ -12,7 +12,6 @@ import {
   transcriptQueryOptions,
 } from "../queries/queries";
 import type { TranscriptIndexItem, TranscriptPayload } from "../queries/queries";
-import { setCacheControl } from "../server/cache-control";
 import "../styles/transcript-reader.css";
 
 type TranscriptReaderSearch = {
@@ -26,6 +25,10 @@ type TranscriptReaderLoaderData = {
   pageTitle: string;
 };
 
+type TranscriptReaderCacheHeaders = {
+  "Cache-Control": string;
+};
+
 // Short TTL used for routes whose output depends on "latest" (redirects to
 // the newest transcript) — the CDN refreshes quickly when a new transcript
 // lands.
@@ -34,6 +37,20 @@ const LATEST_CACHE_CONTROL = "public, max-age=0, s-maxage=60, stale-while-revali
 // content-addressed, so a given URL never changes meaning — the CDN can
 // hold it indefinitely. Browser TTL stays short so clients still revalidate.
 const HASH_CACHE_CONTROL = "public, max-age=60, s-maxage=31536000, stale-while-revalidate=86400";
+
+// Cache headers are route metadata so TanStack Router can merge them into the
+// SSR response without calling server-only response utilities from a loader.
+export function getTranscriptReaderCacheHeaders(
+  loaderData: TranscriptReaderLoaderData | undefined,
+): TranscriptReaderCacheHeaders | undefined {
+  if (!loaderData) {
+    return undefined;
+  }
+
+  return {
+    "Cache-Control": loaderData.selectedLocation ? HASH_CACHE_CONTROL : LATEST_CACHE_CONTROL,
+  };
+}
 
 export async function loadTranscriptReaderData(
   queryClient: QueryClient,
@@ -64,7 +81,6 @@ export async function loadTranscriptReaderData(
   }
 
   if (!resolvedTranscript.item) {
-    await setCacheControl(LATEST_CACHE_CONTROL);
     return {
       transcriptList,
       selectedLocation: null,
@@ -76,8 +92,6 @@ export async function loadTranscriptReaderData(
   const transcript = await queryClient.ensureQueryData(
     transcriptQueryOptions(resolvedTranscript.item.location),
   );
-
-  await setCacheControl(HASH_CACHE_CONTROL);
 
   return {
     transcriptList,
@@ -119,6 +133,7 @@ export const Route = createFileRoute("/transcript-reader")({
       },
     ],
   }),
+  headers: ({ loaderData }) => getTranscriptReaderCacheHeaders(loaderData),
   loader: ({ context, deps }) => loadTranscriptReaderData(context.queryClient, deps.requestedHash),
   component: TranscriptReaderRouteComponent,
 });
