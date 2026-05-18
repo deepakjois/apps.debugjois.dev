@@ -14,7 +14,7 @@ require (
 	github.com/deepgram/deepgram-go-sdk/v3 v3.5.0
 	github.com/joho/godotenv v1.5.1
 	golang.org/x/oauth2 v0.36.0
-	google.golang.org/api v0.278.0
+	google.golang.org/api v0.279.0
 )
 
 require (
