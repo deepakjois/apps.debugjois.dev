@@ -7,6 +7,7 @@ type SubmitState = "idle" | "submitting" | "success" | "error";
 
 export function PodscriberAdminPage() {
   const payloadId = useId();
+  const payloadLabelId = useId();
   const [payload, setPayload] = useState("");
   const [response, setResponse] = useState<PodcastTranscribeResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -68,10 +69,11 @@ export function PodscriberAdminPage() {
       </div>
 
       <form className="admin-podscriber-form" onSubmit={handleSubmit}>
-        <label className="admin-podscriber-label" htmlFor={payloadId}>
+        <label className="admin-podscriber-label" htmlFor={payloadId} id={payloadLabelId}>
           PodcastAddict Payload
         </label>
         <textarea
+          aria-labelledby={payloadLabelId}
           className="admin-podscriber-textarea"
           disabled={isDisabled}
           id={payloadId}
