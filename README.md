@@ -8,3 +8,17 @@ see README in the subfolders for more details.
 - `app-v2/` - Fresh route-based micro frontend foundation; see its README for development and build commands
 - `backend/` - Go podcast transcription tools, CLIs, and Lambda container image
 - `infra/` - AWS CDK infrastructure for the Nitro app
+
+## Orb development
+
+Fresh Amp orbs run `.agents/setup` to install the pinned Node.js, npm, and Go
+toolchains, AWS CLI, `golangci-lint`, and all locked dependencies. Run it manually
+to prepare another Debian-based development machine:
+
+```sh
+.agents/setup
+```
+
+Builds and tests need no credentials. Deployment and integrations still require
+the AWS, Google Drive, Deepgram, or LinkPreview credentials described in the
+subproject READMEs.
