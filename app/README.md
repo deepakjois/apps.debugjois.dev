@@ -16,6 +16,20 @@ npm run dev
 Vite defaults to port 3000. The transcript reader needs no credentials or local
 backend services.
 
+### Admin authentication
+
+Every route under `/admin` requires Google sign-in. The browser uses the existing
+Google OAuth web client ID; no client secret or local environment variable is
+needed. The server verifies Google's signed ID token against Google's JWKS,
+requires a verified email in the admin allowlist, and stores the token in an
+`HttpOnly` cookie.
+
+Real local sign-in requires `http://localhost:3000` to be listed under **Authorized
+JavaScript origins** for the OAuth client in Google Cloud. If a different port is
+used, add that exact origin too. Google sign-in and server verification both need
+internet access. Automated tests use mocks and need neither Google credentials nor
+network access.
+
 For a dev server behind a tunnel or Amp portal, set Vite's
 `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` environment variable to the exact public
 hostname. Avoid `server.allowedHosts: true`, which disables host validation.
@@ -60,9 +74,9 @@ consume those queries with TanStack Query. Do not use a global server-side
 QueryClient shared across requests.
 
 The transcript reader loads the public transcript index and immutable transcript
-payloads from `www.debugjois.dev`. **Admin routes are currently public stubs.** Add
-server-side authentication and authorization before implementing private data or
-actions.
+payloads from `www.debugjois.dev`. Admin route rendering is authenticated, but
+future private server functions must also call `getAdminSession` before reading or
+changing private data; the route guard alone does not authorize server endpoints.
 
 Future subdomains can point at this same build with host-to-path rewrites at the
 hosting boundary. DNS, TLS, rewrites, canonical URLs, cookie scope, and client

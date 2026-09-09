@@ -69,6 +69,48 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
+.admin-auth-screen {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 32px;
+  color: #202c30;
+  background: #f7f8f5;
+  font-family: system-ui, sans-serif;
+}
+.admin-auth-card {
+  width: min(100%, 520px);
+  padding: clamp(32px, 7vw, 64px);
+  border: 1px solid #d9ded8;
+  background: #fff;
+  box-shadow: 0 18px 60px rgb(32 44 48 / 8%);
+}
+.admin-auth-card h1 {
+  margin: 12px 0 16px;
+  font-size: clamp(32px, 6vw, 48px);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+.admin-auth-card > p:not(.admin-eyebrow, .admin-auth-error, .admin-status-copy) {
+  color: #52655c;
+}
+.admin-auth-actions {
+  margin-top: 32px;
+}
+.admin-google-button-wrap > div:first-child {
+  min-height: 44px;
+}
+.admin-google-button-disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+.admin-status-copy {
+  color: #52655c;
+  font-size: 14px;
+}
+.admin-auth-error {
+  color: #a12b2b;
+}
 .admin-stub {
   margin-top: 40px;
   padding-top: 24px;

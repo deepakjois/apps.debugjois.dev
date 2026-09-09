@@ -1,8 +1,14 @@
 // @vitest-environment jsdom
 
 import { createMemoryHistory } from "@tanstack/react-router";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { getRouter } from "./router";
+
+vi.mock("./server/adminAuth", () => ({
+  getAdminSessionServerFn: vi.fn().mockResolvedValue(null),
+  loginAdminServerFn: vi.fn(),
+  logoutAdminServerFn: vi.fn(),
+}));
 
 const TEST_HASH = "1111111111111111222222222222222233333333333333334444444444444444";
 const TEST_LOCATION = `https://example.com/transcript--${TEST_HASH}.json`;
