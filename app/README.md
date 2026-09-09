@@ -1,179 +1,100 @@
 # app
 
-Barebones TanStack Start app using React 19, SSR, and experimental React Server Components on Vite 8.
+The TanStack Start application for `apps.debugjois.dev`, using React 19, TanStack
+Router and Query, Vite 8, Nitro, and experimental React Server Components.
 
-Nitro is configured with the `aws_lambda` preset so production builds target AWS Lambda.
+## Development
 
-# Getting Started
+Use Node.js 24.15+ (24.x) or 26+ and npm. The upgraded Vitest/jsdom tooling
+requires a recent Node version; this foundation was verified on Node 26.5.1.
 
-Install dependencies and start the dev server:
-
-```bash
-npm install
+```sh
+npm ci
 npm run dev
 ```
 
-The app runs on `http://localhost:3000`.
+Vite defaults to port 3000. The transcript reader needs no credentials or local
+backend services.
 
-# Build
+For a dev server behind a tunnel or Amp portal, set Vite's
+`__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` environment variable to the exact public
+hostname. Avoid `server.allowedHosts: true`, which disables host validation.
+Amp portal services provide `PUBLIC_URL` and `PORT`, so their startup command can
+derive the allowed host without hard-coding a temporary hostname:
 
-Create a production build:
-
-```bash
-npm run build
+```sh
+export __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS="$(node -p 'new URL(process.env.PUBLIC_URL).hostname')"
+npm run dev -- --host 0.0.0.0 --port "$PORT"
 ```
 
-The Nitro output is written to `.output/` and is configured for the AWS Lambda preset.
+This command is for an Amp service started with `--portal`; regular local
+development needs neither environment variable.
 
-# Admin Auth
+## Feature boundaries
 
-Admin routes live under `/admin/*` and use Google sign-in on the frontend through `react-oauth/google`.
+These are route-based micro frontends compiled together, not independently
+deployed applications or module-federation remotes.
 
-The server treats Google as the source of truth by verifying the Google ID token against Google's JWKS and then checking the authenticated email against an allowlist.
+```text
+src/features/
+  transcript-reader/       → /transcript-reader
+  admin/
+    podscriber/            → /admin/podscriber
+    daily-log/             → /admin/daily-log
+```
 
-Current allowlist:
+Each feature owns its UI, queries, styles, and tests.
+Features should not import another feature's internals. Thin files in `src/routes`
+own URLs and route metadata; `admin.tsx` provides the shared admin layout.
+TanStack Router automatically generates `src/routeTree.gen.ts`; do not edit it.
+The root document owns only the HTML document and a minimal reset. The transcript
+reader and admin layout each own their chrome and load a separate stylesheet from
+route `head` metadata, so SSR includes the matched CSS before first paint.
+Cross-feature links reload the document because React retains stylesheet resources
+after client navigation; links within a feature remain client-side. `/` redirects
+to the transcript reader and `/admin` redirects to Podscriber.
 
-- `deepak.jois@gmail.com`
+`src/router.tsx` creates a QueryClient per router instance and integrates it with
+SSR hydration. Loaders prefetch through `context.queryClient`; feature components
+consume those queries with TanStack Query. Do not use a global server-side
+QueryClient shared across requests.
 
-Current Google OAuth client ID:
+The transcript reader loads the public transcript index and immutable transcript
+payloads from `www.debugjois.dev`. **Admin routes are currently public stubs.** Add
+server-side authentication and authorization before implementing private data or
+actions.
 
-- `1056519509576-4av02t7h19bafa5dtfspcfod1in63eup.apps.googleusercontent.com`
+Future subdomains can point at this same build with host-to-path rewrites at the
+hosting boundary. DNS, TLS, rewrites, canonical URLs, cookie scope, and client
+navigation must be configured when that is introduced; host routing is not yet
+implemented. Feature code remains independent of that hosting decision.
 
-After a successful sign-in, the server stores the Google ID token in an `HttpOnly` session cookie and re-verifies it on each admin request.
+## Build and tooling
 
-To run the built server locally:
+```sh
+npm run format        # oxfmt
+npm run check         # type-aware oxlint and formatting checks
+npm run build         # generate routes and the production artifact
+npx tsc --noEmit      # TypeScript check after route generation
+npm test              # Vitest routing and request isolation checks
+```
 
-```bash
+Nitro uses the `aws_lambda` preset with streaming disabled for API Gateway HTTP API
+compatibility. One build produces `.output/server/index.mjs`, which exports the
+Lambda `handler`, and `.output/public`, which contains the static browser assets.
+
+To build, package, upload, and deploy a fresh production artifact, run from the
+repository root:
+
+```sh
+./infra/deploy.sh --with-artifact
+```
+
+For a local production preview, build with the Node preset instead:
+
+```sh
+NITRO_PRESET=node-server npm run build
 npm run preview
 ```
 
-# Podscriber Admin
-
-`/admin/podscriber` lets an authenticated admin paste Podcast Addict share text and submit it to the existing backend Lambda with a direct JSON payload:
-
-```json
-{ "action": "queue-podcast-transcription", "text": "..." }
-```
-
-The target Lambda function name is read server-side from `BACKEND_LAMBDA_FUNCTION_NAME`. Production deployments set it from the `AppDebugJoisDevBackendStack` backend Lambda output, and the deployed Nitro Lambda role must be able to call `lambda:InvokeFunction` on that backend Lambda.
-
-For local `npm run preview` submissions, set `BACKEND_LAMBDA_FUNCTION_NAME` to the deployed backend Lambda function name.
-
-During `npm run dev`, if `BACKEND_LAMBDA_FUNCTION_NAME` is not set, server functions fall back to invoking the local Go backend with `go run . invoke` from `../backend`. Configure local Google Drive ADC first for logger testing:
-
-```bash
-gcloud auth application-default login \
-  --impersonate-service-account='gdrive-obsidian@daily-notes-obsidian-gdrive.iam.gserviceaccount.com' \
-  --scopes='https://www.googleapis.com/auth/drive'
-```
-
-If the app is launched from a nonstandard working directory, set `LOCAL_BACKEND_INVOKE_DIR` to the backend folder path.
-
-# Logger Admin
-
-`/admin/logger` is an authenticated full-screen Markdown editor for today's daily log.
-
-The editor uses CodeMirror through `@uiw/react-codemirror` with Markdown syntax support, GitHub dark theme styling, and route-local CSS. It loads and saves the current daily note through TanStack server functions, which verify the admin session and invoke the backend Lambda directly:
-
-```json
-{ "action": "get-daily-log" }
-{ "action": "post-daily-log", "title": "YYYY-MM-DD.md", "contents": "..." }
-```
-
-`contents` is base64-encoded Markdown at the backend Lambda boundary; the React editor works with decoded Markdown text.
-
-Pasting a URL into the logger turns it into a Markdown link. If text is selected, the selected text becomes the link label. If no text is selected, the app fetches a page title through the Nitro server using LinkPreview and inserts a Markdown link with that title.
-
-For local logger title-fetching, copy the example env file and set a 32-character LinkPreview key before starting the app:
-
-```bash
-cp .env.example .env.local
-# edit .env.local and set LINKPREVIEW_API_KEY
-npm run dev
-```
-
-# Deployment Packaging
-
-Deployment packaging is handled by `../infra/deploy.sh --with-artifact`.
-
-That flow:
-
-- builds the app with Nitro's `aws_lambda` preset
-- packages the generated `.output/` directory into `artifacts/lambda-package.zip`
-- uploads the zip to the artifact bucket before the site stack is deployed
-
-Regular local development only needs `npm run build` or `npm run dev`.
-
-# Styling
-
-Styling for the transcript reader route lives in `src/styles/transcript-reader.css`.
-
-Admin route styling lives in `src/styles/admin.css`, imports WebTUI styles directly, uses the Catppuccin theme, and is attached only while `/admin/*` is active so WebTUI globals cannot bleed into non-admin routes.
-
-# Data Fetching
-
-TanStack Query is integrated with TanStack Router through the router context and SSR hydration.
-
-This lets route loaders use a shared `queryClient` for server-side prefetching and client hydration.
-
-Transcript reader query definitions and route helpers live in `src/queries/queries.ts`.
-
-# Tooling
-
-Lint the project with type-aware `oxlint`:
-
-```bash
-npm run lint
-```
-
-Type-aware linting is enabled in `.oxlintrc.json` and uses `oxlint-tsgolint` under the hood.
-
-Apply safe lint fixes:
-
-```bash
-npm run lint:fix
-```
-
-Format the project with `oxfmt`:
-
-```bash
-npm run format
-```
-
-Check formatting without writing files:
-
-```bash
-npm run format:check
-```
-
-Run the combined validation check:
-
-```bash
-npm run check
-```
-
-# Testing
-
-Run the test suite with Vitest:
-
-```bash
-npm run test
-```
-
-# Project Notes
-
-- `vite.config.ts` enables TanStack Start, Vite React, and `@vitejs/plugin-rsc`.
-- `nitro.config.ts` sets the Nitro preset to `aws_lambda` with streaming disabled for API Gateway HTTP API compatibility.
-- `src/router.tsx` integrates TanStack Query with router-managed SSR hydration.
-- `src/routes/__root.tsx` defines the typed router context.
-- `src/routes/index.tsx` redirects `/` to `/transcript-reader`.
-- `src/routes/transcript-reader.tsx` server-renders the latest transcript or a selected `?t=` transcript and redirects invalid hashes to the canonical route.
-- `src/routes/admin.tsx` is the protected admin layout route, provides Google OAuth only to the admin subtree, and attaches the WebTUI admin stylesheet only for the admin subtree.
-- `src/routes/admin.logger.tsx` and `src/components/admin/LoggerAdminPage.tsx` contain the persisted daily-log editor.
-- `src/routes/admin.podscriber.tsx` contains the authenticated Podscriber form that invokes the backend Lambda.
-- `src/server/logger.ts`, `src/server/podscriber.ts`, and `src/lib/backend/lambda.ts` contain the server-only Lambda invocation paths.
-- `src/server/adminAuth.ts` and `src/lib/auth/server.ts` contain Google token verification, allowlist checks, and cookie-backed admin session helpers.
-- `src/queries/queries.ts` contains transcript query options plus hash-resolution helpers used by the route.
-- `src/styles/transcript-reader.css` contains the transcript reader route styles extracted from the original standalone page.
-- `.oxlintrc.json` enables type-aware linting for the project.
-- `../infra/deploy.sh --with-artifact` packages and uploads the Nitro output for deployment.
+Run `npm run build` again to restore the Lambda-targeted artifact before packaging.

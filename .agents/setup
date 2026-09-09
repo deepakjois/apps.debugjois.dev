@@ -49,9 +49,13 @@ install_go() {
 }
 
 step "Installing system tools"
-if ! command -v aws >/dev/null; then
+# Install only missing commands so warm orb setup avoids apt entirely.
+system_packages=()
+command -v aws >/dev/null || system_packages+=(awscli)
+command -v zip >/dev/null || system_packages+=(zip)
+if ((${#system_packages[@]} > 0)); then
   sudo apt-get update
-  sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y awscli
+  sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y "${system_packages[@]}"
 fi
 
 step "Installing Node.js ${NODE_VERSION} and npm ${NPM_VERSION}"
@@ -67,7 +71,7 @@ if ! command -v golangci-lint >/dev/null || [[ "$(golangci-lint version 2>/dev/n
 fi
 
 # Each lockfile owns an independent dependency tree.
-for project in app app-v2 infra; do
+for project in app infra; do
   step "Installing ${project} dependencies"
   npm --prefix "$project" ci --no-audit --no-fund
 done
@@ -79,7 +83,6 @@ step "Downloading backend Go modules"
 )
 
 step "Creating optional local environment files"
-[[ -f app/.env.local ]] || cp -- app/.env.example app/.env.local
 [[ -f backend/.env ]] || cp -- backend/.env.example backend/.env
 
 printf '\nOrb setup complete.\n'

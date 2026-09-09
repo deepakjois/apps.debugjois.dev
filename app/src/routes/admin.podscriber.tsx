@@ -1,9 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PodscriberAdminPage } from "../components/admin/PodscriberAdminPage";
+import { Podscriber } from "../features/admin/podscriber";
 
 export const Route = createFileRoute("/admin/podscriber")({
-  head: () => ({
-    meta: [{ title: "Podscriber" }],
-  }),
-  component: PodscriberAdminPage,
+  head: () => ({ meta: [{ title: "Podscriber · Apps v2" }] }),
+  component: Podscriber,
 });

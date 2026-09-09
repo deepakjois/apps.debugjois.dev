@@ -1,0 +1,164 @@
+import type { QueryClient } from "@tanstack/react-query";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import TranscriptArticleSkeleton from "../components/transcript-reader/TranscriptArticleSkeleton";
+import { TRANSCRIPT_SWITCH_SKELETON_DELAY_MS } from "../components/transcript-reader/transcript-reader.constants";
+import TranscriptReaderPage from "../components/transcript-reader/TranscriptReaderPage";
+import {
+  canonicalHashForTranscript,
+  getTranscriptPageTitle,
+  normalizeTranscriptHash,
+  resolveTranscript,
+  transcriptIndexQueryOptions,
+  transcriptQueryOptions,
+} from "../queries/queries";
+import type { TranscriptIndexItem, TranscriptPayload } from "../queries/queries";
+import "../styles/transcript-reader.css";
+
+type TranscriptReaderSearch = {
+  t?: string;
+};
+
+type TranscriptReaderLoaderData = {
+  transcriptList: TranscriptIndexItem[];
+  selectedLocation: string | null;
+  transcript: TranscriptPayload | null;
+  pageTitle: string;
+};
+
+type TranscriptReaderCacheHeaders = {
+  "Cache-Control": string;
+};
+
+// Short TTL used for routes whose output depends on "latest" (redirects to
+// the newest transcript) — the CDN refreshes quickly when a new transcript
+// lands.
+const LATEST_CACHE_CONTROL = "public, max-age=0, s-maxage=60, stale-while-revalidate=300";
+// Long CDN TTL for hash-keyed transcript pages. The ?t=<hash> key is
+// content-addressed, so a given URL never changes meaning — the CDN can
+// hold it indefinitely. Browser TTL stays short so clients still revalidate.
+const HASH_CACHE_CONTROL = "public, max-age=60, s-maxage=31536000, stale-while-revalidate=86400";
+
+// Cache headers are route metadata so TanStack Router can merge them into the
+// SSR response without calling server-only response utilities from a loader.
+export function getTranscriptReaderCacheHeaders(
+  loaderData: TranscriptReaderLoaderData | undefined,
+): TranscriptReaderCacheHeaders | undefined {
+  if (!loaderData) {
+    return undefined;
+  }
+
+  return {
+    "Cache-Control": loaderData.selectedLocation ? HASH_CACHE_CONTROL : LATEST_CACHE_CONTROL,
+  };
+}
+
+export async function loadTranscriptReaderData(
+  queryClient: QueryClient,
+  requestedHash: string | undefined,
+): Promise<TranscriptReaderLoaderData> {
+  const transcriptList = await queryClient.ensureQueryData(transcriptIndexQueryOptions());
+  const latestTranscript = transcriptList[0] ?? null;
+  const latestCanonicalHash = canonicalHashForTranscript(latestTranscript) || undefined;
+
+  if (!requestedHash && latestCanonicalHash) {
+    throw redirect({
+      to: "/transcript-reader",
+      search: { t: latestCanonicalHash },
+      replace: true,
+      headers: { "Cache-Control": LATEST_CACHE_CONTROL },
+    });
+  }
+
+  const resolvedTranscript = resolveTranscript(transcriptList, requestedHash);
+
+  if (resolvedTranscript.shouldRedirect) {
+    throw redirect({
+      to: "/transcript-reader",
+      search: latestCanonicalHash ? { t: latestCanonicalHash } : undefined,
+      replace: true,
+      headers: { "Cache-Control": LATEST_CACHE_CONTROL },
+    });
+  }
+
+  if (!resolvedTranscript.item) {
+    return {
+      transcriptList,
+      selectedLocation: null,
+      transcript: null,
+      pageTitle: "Transcript Reader",
+    };
+  }
+
+  const transcript = await queryClient.ensureQueryData(
+    transcriptQueryOptions(resolvedTranscript.item.location),
+  );
+
+  return {
+    transcriptList,
+    selectedLocation: resolvedTranscript.item.location,
+    transcript,
+    pageTitle: getTranscriptPageTitle(transcript),
+  };
+}
+
+export const Route = createFileRoute("/transcript-reader")({
+  validateSearch: (search: Record<string, unknown>): TranscriptReaderSearch => ({
+    t: normalizeTranscriptHash(search.t),
+  }),
+  pendingComponent: TranscriptReaderPending,
+  pendingMinMs: TRANSCRIPT_SWITCH_SKELETON_DELAY_MS,
+  pendingMs: 0,
+  loaderDeps: ({ search }) => ({
+    requestedHash: search.t,
+  }),
+  head: ({ loaderData }) => ({
+    links: [
+      {
+        rel: "preconnect",
+        href: "https://fonts.googleapis.com",
+      },
+      {
+        rel: "preconnect",
+        href: "https://fonts.gstatic.com",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=DM+Sans:wght@400;500;600&display=swap",
+      },
+    ],
+    meta: [
+      {
+        title: loaderData?.pageTitle ?? "Transcript Reader",
+      },
+    ],
+  }),
+  headers: ({ loaderData }) => getTranscriptReaderCacheHeaders(loaderData),
+  loader: ({ context, deps }) => loadTranscriptReaderData(context.queryClient, deps.requestedHash),
+  component: TranscriptReaderRouteComponent,
+});
+
+function TranscriptReaderRouteComponent() {
+  const { selectedLocation, transcript, transcriptList } = Route.useLoaderData();
+
+  return (
+    <TranscriptReaderPage
+      selectedLocation={selectedLocation}
+      transcript={transcript}
+      transcriptList={transcriptList}
+    />
+  );
+}
+
+function TranscriptReaderPending() {
+  return (
+    <div className="transcript-reader-page">
+      <div className="toolbar">
+        <div aria-hidden="true" className="search-trigger" />
+      </div>
+      <main className="content content-pending">
+        <TranscriptArticleSkeleton dense />
+      </main>
+    </div>
+  );
+}

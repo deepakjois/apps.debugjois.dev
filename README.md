@@ -5,15 +5,15 @@ see README in the subfolders for more details.
 ## Folders
 
 - `app/` - TanStack Start/Nitro app for `apps.debugjois.dev`
-- `app-v2/` - Fresh route-based micro frontend foundation; see its README for development and build commands
+- `app-old/` - Archived previous app retained while the replacement settles
 - `backend/` - Go podcast transcription tools, CLIs, and Lambda container image
 - `infra/` - AWS CDK infrastructure for the Nitro app
 
 ## Orb development
 
 Fresh Amp orbs run `.agents/setup` to install the pinned Node.js, npm, and Go
-toolchains, AWS CLI, `golangci-lint`, and all locked dependencies. Run it manually
-to prepare another Debian-based development machine:
+toolchains, AWS CLI, `zip`, `golangci-lint`, and all locked dependencies. Run it
+manually to prepare another Debian-based development machine:
 
 ```sh
 .agents/setup
