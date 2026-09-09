@@ -6,7 +6,6 @@ import type {
 } from "@react-oauth/google";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { loginAdminServerFn } from "../../../server/adminAuth";
 import type { AdminSession } from "../../../lib/auth/server";
 
 declare global {
@@ -35,9 +34,7 @@ type AdminAuthGateProps = {
 export function AdminAuthGate({ initialSession, children }: AdminAuthGateProps) {
   const [session, setSession] = useState(initialSession);
   const loginMutation = useMutation({
-    mutationFn: async (credential: string) => {
-      return loginAdminServerFn({ data: { credential } });
-    },
+    mutationFn: loginAdmin,
     onSuccess: setSession,
   });
 
@@ -74,6 +71,20 @@ export function AdminAuthGate({ initialSession, children }: AdminAuthGateProps) 
       </section>
     </main>
   );
+}
+
+async function loginAdmin(credential: string): Promise<AdminSession> {
+  const response = await fetch("/admin/login", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ credential }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Google sign-in could not be completed");
+  }
+
+  return response.json() as Promise<AdminSession>;
 }
 
 type GoogleSignInButtonProps = {

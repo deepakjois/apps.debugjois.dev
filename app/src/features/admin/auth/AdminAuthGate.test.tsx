@@ -11,10 +11,6 @@ vi.mock("@react-oauth/google", () => ({
   }),
 }));
 
-vi.mock("../../../server/adminAuth", () => ({
-  loginAdminServerFn: vi.fn(),
-}));
-
 afterEach(cleanup);
 
 function renderGate(initialSession: Parameters<typeof AdminAuthGate>[0]["initialSession"]) {

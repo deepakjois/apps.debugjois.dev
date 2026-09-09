@@ -22,7 +22,8 @@ Every route under `/admin` requires Google sign-in. The browser uses the existin
 Google OAuth web client ID; no client secret or local environment variable is
 needed. The server verifies Google's signed ID token against Google's JWKS,
 requires a verified email in the admin allowlist, and stores the token in an
-`HttpOnly` cookie.
+`HttpOnly` cookie. The login POST is a Nitro route rather than a TanStack server
+function so the cookie is attached directly to the AWS Lambda response.
 
 Real local sign-in requires `http://localhost:3000` to be listed under **Authorized
 JavaScript origins** for the OAuth client in Google Cloud. If a different port is

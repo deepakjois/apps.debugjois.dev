@@ -6,8 +6,6 @@ import { getRouter } from "./router";
 
 vi.mock("./server/adminAuth", () => ({
   getAdminSessionServerFn: vi.fn().mockResolvedValue(null),
-  loginAdminServerFn: vi.fn(),
-  logoutAdminServerFn: vi.fn(),
 }));
 
 const TEST_HASH = "1111111111111111222222222222222233333333333333334444444444444444";
