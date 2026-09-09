@@ -34,6 +34,23 @@ describe("feature routing", () => {
     expect(router.state.location.pathname).toBe(destination);
   });
 
+  it.each([
+    ["/transcript-reader", "/transcript-reader"],
+    ["/admin/podscriber", "/admin"],
+    ["/admin/daily-log", "/admin"],
+  ])("loads only the stylesheet owned by %s", async (path, ownerRouteId) => {
+    const router = getRouter();
+    router.update({
+      context: router.options.context,
+      history: createMemoryHistory({ initialEntries: [path] }),
+    });
+    await router.load();
+    const stylesheetOwners = router.state.matches.flatMap((match) =>
+      (match.links ?? []).filter((link) => link?.rel === "stylesheet").map(() => match.routeId),
+    );
+    expect(stylesheetOwners).toEqual([ownerRouteId]);
+  });
+
   it("does not share cached data across router instances", () => {
     const first = getRouter().options.context.queryClient;
     const second = getRouter().options.context.queryClient;

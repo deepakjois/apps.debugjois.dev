@@ -29,15 +29,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <header>
-          <Link to="/" className="brand">
-            Apps <span>v2</span>
-          </Link>
-          <nav aria-label="Applications">
-            <Link to="/transcript-reader">Transcript reader</Link>
-            <Link to="/admin">Admin</Link>
-          </nav>
-        </header>
         {children}
         <Scripts />
       </body>

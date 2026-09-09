@@ -48,8 +48,12 @@ Each feature owns its UI and, when implemented, its queries, styles, and tests.
 Features should not import another feature's internals. Thin files in `src/routes`
 own URLs and route metadata; `admin.tsx` provides the shared admin layout.
 TanStack Router automatically generates `src/routeTree.gen.ts`; do not edit it.
-The root shell owns shared navigation and minimal styling. `/` redirects to the
-transcript reader and `/admin` redirects to Podscriber.
+The root document owns only the HTML document and a minimal reset. The transcript
+reader and admin layout each own their chrome and load a separate stylesheet from
+route `head` metadata, so SSR includes the matched CSS before first paint.
+Cross-feature links reload the document because React retains stylesheet resources
+after client navigation; links within a feature remain client-side. `/` redirects
+to the transcript reader and `/admin` redirects to Podscriber.
 
 `src/router.tsx` creates a QueryClient per router instance and integrates it with
 SSR hydration. Future loaders can prefetch through `context.queryClient`; feature

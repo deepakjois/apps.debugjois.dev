@@ -1,0 +1,75 @@
+.transcript-reader-shell {
+  min-height: 100vh;
+  color: #202c30;
+  background: #f7f8f5;
+  font-family: system-ui, sans-serif;
+  line-height: 1.6;
+}
+.transcript-reader-shell a {
+  color: inherit;
+  text-underline-offset: 5px;
+}
+.transcript-reader-shell a:focus-visible {
+  outline: 2px solid #236658;
+  outline-offset: 5px;
+}
+.transcript-reader-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: center;
+  padding: 24px 6vw;
+  border-bottom: 1px solid #d9ded8;
+}
+.transcript-reader-brand {
+  font-size: 22px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.transcript-reader-brand span {
+  color: #63736b;
+  font-size: 14px;
+}
+.transcript-reader-header nav {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.transcript-reader-header nav a {
+  text-decoration: none;
+}
+.transcript-reader-header nav a[aria-current="page"] {
+  color: #236658;
+  text-decoration: underline;
+}
+.transcript-reader-main {
+  padding: 72px 6vw;
+}
+.transcript-reader-main h1 {
+  margin: 16px 0 24px;
+  font-size: clamp(32px, 5vw, 56px);
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+}
+.transcript-reader-eyebrow {
+  color: #52655c;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.transcript-reader-stub {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid #d9ded8;
+  color: #52655c;
+  font-size: 14px;
+}
+@media (max-width: 640px) {
+  .transcript-reader-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .transcript-reader-main {
+    padding-top: 40px;
+  }
+}
