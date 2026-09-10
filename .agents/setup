@@ -52,6 +52,8 @@ step "Installing system tools"
 # Install only missing commands so warm orb setup avoids apt entirely.
 system_packages=()
 command -v aws >/dev/null || system_packages+=(awscli)
+command -v ffmpeg >/dev/null || system_packages+=(ffmpeg)
+command -v yt-dlp >/dev/null || system_packages+=(yt-dlp)
 command -v zip >/dev/null || system_packages+=(zip)
 if ((${#system_packages[@]} > 0)); then
   sudo apt-get update
