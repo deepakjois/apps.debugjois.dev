@@ -22,14 +22,27 @@ Every route under `/admin` requires Google sign-in. The browser uses the existin
 Google OAuth web client ID; no client secret or local environment variable is
 needed. The server verifies Google's signed ID token against Google's JWKS,
 requires a verified email in the admin allowlist, and stores the token in an
-`HttpOnly` cookie. The login POST is a Nitro route rather than a TanStack server
-function so the cookie is attached directly to the AWS Lambda response.
+`HttpOnly` cookie. The login and logout POSTs are Nitro routes rather than TanStack
+server functions so the cookie is attached directly to the AWS Lambda response.
 
-Real local sign-in requires `http://localhost:3000` to be listed under **Authorized
-JavaScript origins** for the OAuth client in Google Cloud. If a different port is
-used, add that exact origin too. Google sign-in and server verification both need
-internet access. Automated tests use mocks and need neither Google credentials nor
-network access.
+The sign-in card also shows Google One Tap with `auto_select` enabled, so a
+returning user with one signed-in Google account is signed in without a click.
+Otherwise One Tap lists the signed-in accounts to choose from. The email of the last
+account that signed in is kept in `localStorage` and passed as Google's
+`login_hint`, so the button popup preselects it. In Chrome the button uses the FedCM
+flow (`use_fedcm_for_button`), so it stays personalized with the signed-in account
+even when third-party cookies are blocked. The **Sign out** button in the
+admin header clears the cookie, forgets the remembered email, and calls Google's
+`disableAutoSelect` so One Tap cannot immediately sign the same account back in.
+
+Real local sign-in requires the dev origin to be listed under **Authorized
+JavaScript origins** for the OAuth client in Google Cloud. Google expects both
+`http://localhost` and `http://localhost:3000` for local development; without the
+port-less entry the button popup still works but the button status iframe and One
+Tap are rejected with "The given origin is not allowed for the given client ID".
+If a different port is used, add that exact origin too. Google sign-in and server
+verification both need internet access. Automated tests use mocks and need neither
+Google credentials nor network access.
 
 For a dev server behind a tunnel or Amp portal, set Vite's
 `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` environment variable to the exact public

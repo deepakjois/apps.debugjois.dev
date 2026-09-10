@@ -42,6 +42,26 @@
   color: #236658;
   text-decoration: underline;
 }
+.admin-signout {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #52655c;
+  font: inherit;
+  cursor: pointer;
+  text-underline-offset: 5px;
+}
+.admin-signout:hover {
+  text-decoration: underline;
+}
+.admin-signout:focus-visible {
+  outline: 2px solid #236658;
+  outline-offset: 5px;
+}
+.admin-signout:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
 .admin-layout {
   display: grid;
   grid-template-columns: 240px 1fr;

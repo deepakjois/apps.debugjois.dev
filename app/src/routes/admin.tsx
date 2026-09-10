@@ -1,6 +1,7 @@
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { AdminAuthGate } from "../features/admin/auth/AdminAuthGate";
+import { useAdminSession } from "../features/admin/auth/adminSession";
 import adminStylesHref from "../features/admin/styles.css?url";
 import { GOOGLE_CLIENT_ID } from "../lib/auth/config";
 import { getAdminSessionServerFn } from "../server/adminAuth";
@@ -29,6 +30,8 @@ function AdminRoute() {
 }
 
 function AdminLayout() {
+  const { session, signOut, isSigningOut } = useAdminSession();
+
   return (
     <div className="admin-shell">
       <header className="admin-header">
@@ -41,6 +44,15 @@ function AdminLayout() {
             Transcript reader
           </Link>
           <Link to="/admin">Admin</Link>
+          <button
+            type="button"
+            className="admin-signout"
+            disabled={isSigningOut}
+            onClick={signOut}
+            title={session.email}
+          >
+            Sign out
+          </button>
         </nav>
       </header>
       <div className="admin-layout">
