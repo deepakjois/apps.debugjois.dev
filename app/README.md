@@ -44,6 +44,16 @@ If a different port is used, add that exact origin too. Google sign-in and serve
 verification both need internet access. Automated tests use mocks and need neither
 Google credentials nor network access.
 
+To inspect pages behind the guard without using Google, enable the development-only
+server session:
+
+```sh
+DEV_ADMIN_BYPASS=true npm run dev
+```
+
+The bypass is guarded by Vite's build-time development flag and cannot be enabled
+in a production build. Leave it unset when testing the real Google sign-in flow.
+
 For a dev server behind a tunnel or Amp portal, set Vite's
 `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` environment variable to the exact public
 hostname. Avoid `server.allowedHosts: true`, which disables host validation.
@@ -78,8 +88,9 @@ TanStack Router automatically generates `src/routeTree.gen.ts`; do not edit it.
 The root document owns only the HTML document and a minimal reset. The transcript
 reader and admin layout each own their chrome and load a separate stylesheet from
 route `head` metadata, so SSR includes the matched CSS before first paint.
-Cross-feature links reload the document because React retains stylesheet resources
-after client navigation; links within a feature remain client-side. `/` redirects
+Admin pages use WebTUI with its Catppuccin theme; their package imports and custom
+layout rules live in `src/features/admin/styles.css`.
+The admin and transcript-reader interfaces do not link to each other. `/` redirects
 to the transcript reader and `/admin` redirects to Podscriber.
 
 `src/router.tsx` creates a QueryClient per router instance and integrates it with

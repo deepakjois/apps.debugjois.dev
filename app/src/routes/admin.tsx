@@ -33,38 +33,33 @@ function AdminLayout() {
   const { session, signOut, isSigningOut } = useAdminSession();
 
   return (
-    <div className="admin-shell">
-      <header className="admin-header">
-        <Link to="/admin" className="admin-brand">
-          Apps <span>v2</span>
-        </Link>
-        <nav aria-label="Applications">
-          {/* A document reload releases this feature's retained stylesheet. */}
-          <Link to="/transcript-reader" reloadDocument>
-            Transcript reader
-          </Link>
-          <Link to="/admin">Admin</Link>
+    <main className="admin-webtui admin-screen">
+      <div className="admin-shell">
+        <header box-="square" className="admin-shell-header">
+          <div className="admin-copy" is-="typography-block">
+            <span cap-="square round" is-="badge" variant-="foreground0">
+              Admin
+            </span>
+            <h1>Apps.debugjois.dev</h1>
+            <nav aria-label="Admin applications">
+              <Link to="/admin/podscriber">Podscriber</Link>
+              <Link to="/admin/daily-log">Daily log</Link>
+            </nav>
+          </div>
           <button
+            box-="round"
             type="button"
-            className="admin-signout"
+            className="admin-logout-button"
             disabled={isSigningOut}
             onClick={signOut}
             title={session.email}
+            variant-="foreground0"
           >
             Sign out
           </button>
-        </nav>
-      </header>
-      <div className="admin-layout">
-        <aside className="admin-sidebar">
-          <p className="admin-eyebrow">Admin</p>
-          <nav aria-label="Admin applications">
-            <Link to="/admin/podscriber">Podscriber</Link>
-            <Link to="/admin/daily-log">Daily log</Link>
-          </nav>
-        </aside>
+        </header>
         <Outlet />
       </div>
-    </div>
+    </main>
   );
 }

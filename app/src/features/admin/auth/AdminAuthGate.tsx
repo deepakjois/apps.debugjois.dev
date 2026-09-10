@@ -86,11 +86,15 @@ export function AdminAuthGate({ initialSession, children }: AdminAuthGateProps) 
   }
 
   return (
-    <main className="admin-auth-screen">
-      <section className="admin-auth-card">
-        <p className="admin-eyebrow">Admin</p>
-        <h1>Sign in to access admin routes.</h1>
-        <p>Only allowed Google accounts can view this section.</p>
+    <main className="admin-webtui admin-screen">
+      <section box-="double" className="admin-auth-card">
+        <div className="admin-copy" is-="typography-block">
+          <span cap-="square round" is-="badge" variant-="foreground0">
+            Admin
+          </span>
+          <h1>Sign in to access admin routes.</h1>
+          <p>Only allowed Google accounts can view this section.</p>
+        </div>
         <div className="admin-auth-actions">
           <GoogleSignInButton
             disabled={loginMutation.isPending}

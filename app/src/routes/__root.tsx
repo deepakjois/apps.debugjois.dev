@@ -1,5 +1,11 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { HeadContent, Link, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
+import {
+  HeadContent,
+  Link,
+  Scripts,
+  createRootRouteWithContext,
+  useRouterState,
+} from "@tanstack/react-router";
 import "../styles/global.css";
 
 // Shared request-local services available to every feature's loaders.
@@ -23,8 +29,16 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const isAdminRoute = useRouterState({
+    select: (state) => state.location.pathname.startsWith("/admin"),
+  });
+
   return (
-    <html lang="en">
+    <html
+      data-admin-webtui={isAdminRoute ? "true" : undefined}
+      data-webtui-theme={isAdminRoute ? "catppuccin" : undefined}
+      lang="en"
+    >
       <head>
         <HeadContent />
       </head>

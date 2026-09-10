@@ -21,9 +21,21 @@ import { getAdminSession, verifyGoogleIdToken } from "./server";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  delete process.env.DEV_ADMIN_BYPASS;
 });
 
 describe("admin session verification", () => {
+  it("provides an opt-in local session in development", async () => {
+    process.env.DEV_ADMIN_BYPASS = "true";
+
+    await expect(getAdminSession()).resolves.toEqual({
+      email: "local-admin@localhost",
+      name: "Local Admin",
+      picture: null,
+    });
+    expect(mocks.getCookie).not.toHaveBeenCalled();
+  });
+
   it("accepts only a Google-signed token for the configured audience", async () => {
     mocks.jwtVerify.mockResolvedValue({
       payload: {

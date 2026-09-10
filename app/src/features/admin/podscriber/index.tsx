@@ -1,10 +1,15 @@
 export function Podscriber() {
   return (
-    <main className="admin-main">
-      <p className="admin-eyebrow">Admin / 01</p>
-      <h1>Podscriber</h1>
-      <p>Manage podcast transcription requests.</p>
-      <p className="admin-stub">Foundation ready · Feature coming later</p>
-    </main>
+    <section box-="square" className="admin-page">
+      <div className="admin-copy" is-="typography-block">
+        <span cap-="square round" is-="badge" variant-="foreground1">
+          Podscriber
+        </span>
+        <h2>Manage podcast transcription requests.</h2>
+        <p box-="round" className="admin-todo">
+          Foundation ready · Feature coming later
+        </p>
+      </div>
+    </section>
   );
 }

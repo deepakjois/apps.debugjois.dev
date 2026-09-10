@@ -11,6 +11,13 @@ export type AdminSession = {
   picture: string | null;
 };
 
+// Local identity used to inspect protected UI without contacting Google.
+const developmentAdminSession: AdminSession = {
+  email: "local-admin@localhost",
+  name: "Local Admin",
+  picture: null,
+};
+
 function parseAllowedEmail(email: unknown, emailVerified: unknown): string {
   if (typeof email !== "string" || email.length === 0) {
     throw new Error("Google token did not include an email address");
@@ -42,6 +49,11 @@ export async function verifyGoogleIdToken(idToken: string): Promise<AdminSession
 }
 
 export async function getAdminSession(): Promise<AdminSession | null> {
+  // Vite replaces DEV at build time, so a production artifact cannot enable this bypass.
+  if (import.meta.env.DEV && process.env.DEV_ADMIN_BYPASS === "true") {
+    return developmentAdminSession;
+  }
+
   const idToken = getCookie(AUTH_COOKIE_NAME);
 
   if (!idToken) {

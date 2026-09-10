@@ -1,10 +1,15 @@
 export function DailyLog() {
   return (
-    <main className="admin-main">
-      <p className="admin-eyebrow">Admin / 02</p>
-      <h1>Daily log</h1>
-      <p>Write and manage daily notes.</p>
-      <p className="admin-stub">Foundation ready · Feature coming later</p>
-    </main>
+    <section box-="square" className="admin-page">
+      <div className="admin-copy" is-="typography-block">
+        <span cap-="square round" is-="badge" variant-="foreground1">
+          Daily log
+        </span>
+        <h2>Write and manage daily notes.</h2>
+        <p box-="round" className="admin-todo">
+          Foundation ready · Feature coming later
+        </p>
+      </div>
+    </section>
   );
 }
