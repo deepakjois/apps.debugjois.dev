@@ -9,16 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TranscriptReaderRouteImport } from './routes/transcript-reader'
-import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as TranscriptReaderRouteImport } from './routes/transcript-reader'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminDailyLogRouteImport } from './routes/admin.daily-log'
 import { Route as AdminPodscriberRouteImport } from './routes/admin.podscriber'
-import { Route as AdminLoggerRouteImport } from './routes/admin.logger'
 
-const TranscriptReaderRoute = TranscriptReaderRouteImport.update({
-  id: '/transcript-reader',
-  path: '/transcript-reader',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -26,9 +26,9 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const TranscriptReaderRoute = TranscriptReaderRouteImport.update({
+  id: '/transcript-reader',
+  path: '/transcript-reader',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -36,14 +36,14 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminDailyLogRoute = AdminDailyLogRouteImport.update({
+  id: '/daily-log',
+  path: '/daily-log',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminPodscriberRoute = AdminPodscriberRouteImport.update({
   id: '/podscriber',
   path: '/podscriber',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminLoggerRoute = AdminLoggerRouteImport.update({
-  id: '/logger',
-  path: '/logger',
   getParentRoute: () => AdminRoute,
 } as any)
 
@@ -51,14 +51,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/transcript-reader': typeof TranscriptReaderRoute
-  '/admin/logger': typeof AdminLoggerRoute
+  '/admin/daily-log': typeof AdminDailyLogRoute
   '/admin/podscriber': typeof AdminPodscriberRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/transcript-reader': typeof TranscriptReaderRoute
-  '/admin/logger': typeof AdminLoggerRoute
+  '/admin/daily-log': typeof AdminDailyLogRoute
   '/admin/podscriber': typeof AdminPodscriberRoute
   '/admin': typeof AdminIndexRoute
 }
@@ -67,7 +67,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/transcript-reader': typeof TranscriptReaderRoute
-  '/admin/logger': typeof AdminLoggerRoute
+  '/admin/daily-log': typeof AdminDailyLogRoute
   '/admin/podscriber': typeof AdminPodscriberRoute
   '/admin/': typeof AdminIndexRoute
 }
@@ -77,14 +77,14 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/transcript-reader'
-    | '/admin/logger'
+    | '/admin/daily-log'
     | '/admin/podscriber'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/transcript-reader'
-    | '/admin/logger'
+    | '/admin/daily-log'
     | '/admin/podscriber'
     | '/admin'
   id:
@@ -92,7 +92,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/transcript-reader'
-    | '/admin/logger'
+    | '/admin/daily-log'
     | '/admin/podscriber'
     | '/admin/'
   fileRoutesById: FileRoutesById
@@ -105,11 +105,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/transcript-reader': {
-      id: '/transcript-reader'
-      path: '/transcript-reader'
-      fullPath: '/transcript-reader'
-      preLoaderRoute: typeof TranscriptReaderRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -119,11 +119,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/transcript-reader': {
+      id: '/transcript-reader'
+      path: '/transcript-reader'
+      fullPath: '/transcript-reader'
+      preLoaderRoute: typeof TranscriptReaderRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -133,6 +133,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/daily-log': {
+      id: '/admin/daily-log'
+      path: '/daily-log'
+      fullPath: '/admin/daily-log'
+      preLoaderRoute: typeof AdminDailyLogRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/podscriber': {
       id: '/admin/podscriber'
       path: '/podscriber'
@@ -140,24 +147,17 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPodscriberRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/logger': {
-      id: '/admin/logger'
-      path: '/logger'
-      fullPath: '/admin/logger'
-      preLoaderRoute: typeof AdminLoggerRouteImport
-      parentRoute: typeof AdminRoute
-    }
   }
 }
 
 interface AdminRouteChildren {
-  AdminLoggerRoute: typeof AdminLoggerRoute
+  AdminDailyLogRoute: typeof AdminDailyLogRoute
   AdminPodscriberRoute: typeof AdminPodscriberRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
-  AdminLoggerRoute: AdminLoggerRoute,
+  AdminDailyLogRoute: AdminDailyLogRoute,
   AdminPodscriberRoute: AdminPodscriberRoute,
   AdminIndexRoute: AdminIndexRoute,
 }

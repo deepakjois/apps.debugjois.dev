@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# This repository has no services or non-interactive authentication to restore.
+printf 'No orb resume work required.\n'
