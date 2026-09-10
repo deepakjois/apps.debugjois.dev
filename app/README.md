@@ -16,6 +16,30 @@ npm run dev
 Vite defaults to port 3000. The transcript reader needs no credentials or local
 backend services.
 
+### Logger
+
+`/admin/logger` is a full-screen Markdown editor for today's Berlin-date note in
+Google Drive. The browser loads and saves through authenticated Nitro routes at
+`/api/admin/logger`; Nitro invokes the existing backend Lambda synchronously. The
+browser never receives AWS credentials.
+
+To exercise the complete logger flow locally, copy the example environment file:
+
+```sh
+cp .env.example .env.local
+```
+
+Set `BACKEND_LAMBDA_FUNCTION_NAME` and `AWS_REGION`, then provide credentials using
+the AWS SDK's normal credential chain. For example, set `AWS_ACCESS_KEY_ID` and
+`AWS_SECRET_ACCESS_KEY` (plus `AWS_SESSION_TOKEN` for temporary credentials), or
+use a configured local `AWS_PROFILE`. The identity needs `lambda:InvokeFunction`
+for the configured backend Lambda. Set the 32-character `LINKPREVIEW_API_KEY` to
+exercise automatic page-title lookup when pasting bare URLs.
+
+Start the app with `DEV_ADMIN_BYPASS=true npm run dev` to test without Google
+sign-in. This bypasses only the app's admin login; Nitro still performs the real
+AWS Lambda invocation with the supplied AWS credentials.
+
 ### Admin authentication
 
 Every route under `/admin` requires Google sign-in. The browser uses the existing
@@ -78,7 +102,7 @@ src/features/
   transcript-reader/       → /transcript-reader
   admin/
     podscriber/            → /admin/podscriber
-    daily-log/             → /admin/daily-log
+    logger/                 → /admin/logger
 ```
 
 Each feature owns its UI, queries, styles, and tests.
@@ -91,17 +115,20 @@ route `head` metadata, so SSR includes the matched CSS before first paint.
 Admin pages use WebTUI with its Catppuccin theme; their package imports and custom
 layout rules live in `src/features/admin/styles.css`.
 The admin and transcript-reader interfaces do not link to each other. `/` redirects
-to the transcript reader and `/admin` redirects to Podscriber.
+to the transcript reader and `/admin` redirects to Logger.
 
 `src/router.tsx` creates a QueryClient per router instance and integrates it with
-SSR hydration. Loaders prefetch through `context.queryClient`; feature components
-consume those queries with TanStack Query. Do not use a global server-side
-QueryClient shared across requests.
+SSR hydration. Transcript loaders prefetch through `context.queryClient`; feature
+components consume those queries with TanStack Query. Do not use a global
+server-side QueryClient shared across requests. Client-driven admin operations use
+authenticated Nitro routes rather than TanStack server functions. The admin
+layout's session server function remains because it hydrates the authenticated
+layout during rendering rather than serving as an application API.
 
 The transcript reader loads the public transcript index and immutable transcript
 payloads from `www.debugjois.dev`. Admin route rendering is authenticated, but
-future private server functions must also call `getAdminSession` before reading or
-changing private data; the route guard alone does not authorize server endpoints.
+private Nitro routes must also verify the admin cookie before reading or changing
+private data; the route guard alone does not authorize server endpoints.
 
 Future subdomains can point at this same build with host-to-path rewrites at the
 hosting boundary. DNS, TLS, rewrites, canonical URLs, cookie scope, and client

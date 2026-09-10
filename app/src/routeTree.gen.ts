@@ -13,7 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as TranscriptReaderRouteImport } from './routes/transcript-reader'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
-import { Route as AdminDailyLogRouteImport } from './routes/admin.daily-log'
+import { Route as AdminLoggerRouteImport } from './routes/admin.logger'
 import { Route as AdminPodscriberRouteImport } from './routes/admin.podscriber'
 
 const IndexRoute = IndexRouteImport.update({
@@ -36,9 +36,9 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminDailyLogRoute = AdminDailyLogRouteImport.update({
-  id: '/daily-log',
-  path: '/daily-log',
+const AdminLoggerRoute = AdminLoggerRouteImport.update({
+  id: '/logger',
+  path: '/logger',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminPodscriberRoute = AdminPodscriberRouteImport.update({
@@ -51,14 +51,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/transcript-reader': typeof TranscriptReaderRoute
-  '/admin/daily-log': typeof AdminDailyLogRoute
+  '/admin/logger': typeof AdminLoggerRoute
   '/admin/podscriber': typeof AdminPodscriberRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/transcript-reader': typeof TranscriptReaderRoute
-  '/admin/daily-log': typeof AdminDailyLogRoute
+  '/admin/logger': typeof AdminLoggerRoute
   '/admin/podscriber': typeof AdminPodscriberRoute
   '/admin': typeof AdminIndexRoute
 }
@@ -67,7 +67,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/transcript-reader': typeof TranscriptReaderRoute
-  '/admin/daily-log': typeof AdminDailyLogRoute
+  '/admin/logger': typeof AdminLoggerRoute
   '/admin/podscriber': typeof AdminPodscriberRoute
   '/admin/': typeof AdminIndexRoute
 }
@@ -77,14 +77,14 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/transcript-reader'
-    | '/admin/daily-log'
+    | '/admin/logger'
     | '/admin/podscriber'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/transcript-reader'
-    | '/admin/daily-log'
+    | '/admin/logger'
     | '/admin/podscriber'
     | '/admin'
   id:
@@ -92,7 +92,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/transcript-reader'
-    | '/admin/daily-log'
+    | '/admin/logger'
     | '/admin/podscriber'
     | '/admin/'
   fileRoutesById: FileRoutesById
@@ -133,11 +133,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/daily-log': {
-      id: '/admin/daily-log'
-      path: '/daily-log'
-      fullPath: '/admin/daily-log'
-      preLoaderRoute: typeof AdminDailyLogRouteImport
+    '/admin/logger': {
+      id: '/admin/logger'
+      path: '/logger'
+      fullPath: '/admin/logger'
+      preLoaderRoute: typeof AdminLoggerRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/podscriber': {
@@ -151,13 +151,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
-  AdminDailyLogRoute: typeof AdminDailyLogRoute
+  AdminLoggerRoute: typeof AdminLoggerRoute
   AdminPodscriberRoute: typeof AdminPodscriberRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
-  AdminDailyLogRoute: AdminDailyLogRoute,
+  AdminLoggerRoute: AdminLoggerRoute,
   AdminPodscriberRoute: AdminPodscriberRoute,
   AdminIndexRoute: AdminIndexRoute,
 }

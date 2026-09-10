@@ -1,5 +1,5 @@
 import { GoogleOAuthProvider } from "@react-oauth/google";
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { AdminAuthGate } from "../features/admin/auth/AdminAuthGate";
 import { useAdminSession } from "../features/admin/auth/adminSession";
 import adminStylesHref from "../features/admin/styles.css?url";
@@ -30,6 +30,19 @@ function AdminRoute() {
 }
 
 function AdminLayout() {
+  const isLogger = useRouterState({
+    select: (state) => state.location.pathname === "/admin/logger",
+  });
+
+  // Logger retains its standalone full-screen editing surface from the previous app.
+  if (isLogger) {
+    return <Outlet />;
+  }
+
+  return <AdminShell />;
+}
+
+function AdminShell() {
   const { session, signOut, isSigningOut } = useAdminSession();
 
   return (
@@ -43,7 +56,7 @@ function AdminLayout() {
             <h1>Apps.debugjois.dev</h1>
             <nav aria-label="Admin applications">
               <Link to="/admin/podscriber">Podscriber</Link>
-              <Link to="/admin/daily-log">Daily log</Link>
+              <Link to="/admin/logger">Logger</Link>
             </nav>
           </div>
           <button

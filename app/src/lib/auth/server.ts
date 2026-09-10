@@ -18,6 +18,13 @@ const developmentAdminSession: AdminSession = {
   picture: null,
 };
 
+export function getDevelopmentAdminSession(): AdminSession | null {
+  // Vite replaces DEV at build time, so a production artifact cannot enable this bypass.
+  return import.meta.env.DEV && process.env.DEV_ADMIN_BYPASS === "true"
+    ? developmentAdminSession
+    : null;
+}
+
 function parseAllowedEmail(email: unknown, emailVerified: unknown): string {
   if (typeof email !== "string" || email.length === 0) {
     throw new Error("Google token did not include an email address");
@@ -49,9 +56,9 @@ export async function verifyGoogleIdToken(idToken: string): Promise<AdminSession
 }
 
 export async function getAdminSession(): Promise<AdminSession | null> {
-  // Vite replaces DEV at build time, so a production artifact cannot enable this bypass.
-  if (import.meta.env.DEV && process.env.DEV_ADMIN_BYPASS === "true") {
-    return developmentAdminSession;
+  const developmentSession = getDevelopmentAdminSession();
+  if (developmentSession) {
+    return developmentSession;
   }
 
   const idToken = getCookie(AUTH_COOKIE_NAME);

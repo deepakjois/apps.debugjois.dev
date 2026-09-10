@@ -30,7 +30,7 @@ describe("feature routing", () => {
   it.each([
     ["/transcript-reader?t=1111111111111111", ["__root__", "/transcript-reader"]],
     ["/admin/podscriber", ["__root__", "/admin", "/admin/podscriber"]],
-    ["/admin/daily-log", ["__root__", "/admin", "/admin/daily-log"]],
+    ["/admin/logger", ["__root__", "/admin", "/admin/logger"]],
   ])("matches %s with its expected layout", async (path, routeIds) => {
     const router = getSeededRouter();
     router.update({
@@ -44,7 +44,7 @@ describe("feature routing", () => {
 
   it.each([
     ["/", "/transcript-reader"],
-    ["/admin", "/admin/podscriber"],
+    ["/admin", "/admin/logger"],
   ])("redirects %s to %s", async (path, destination) => {
     const router = getSeededRouter();
     router.update({
@@ -59,7 +59,7 @@ describe("feature routing", () => {
   it.each([
     ["/transcript-reader?t=1111111111111111", "/transcript-reader"],
     ["/admin/podscriber", "/admin"],
-    ["/admin/daily-log", "/admin"],
+    ["/admin/logger", "/admin"],
   ])("loads only the stylesheet owned by %s", async (path, ownerRouteId) => {
     const router = getSeededRouter();
     router.update({

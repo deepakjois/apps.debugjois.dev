@@ -17,6 +17,11 @@
     "check": "npm run lint && npm run format:check"
   },
   "dependencies": {
+    "@aws-sdk/client-lambda": "^3.1129.0",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/language-data": "^6.5.2",
+    "@lezer/highlight": "^1.2.3",
     "@react-oauth/google": "^0.13.5",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-query": "latest",
@@ -25,6 +30,8 @@
     "@tanstack/react-router-ssr-query": "latest",
     "@tanstack/react-start": "latest",
     "@tanstack/router-plugin": "latest",
+    "@uiw/codemirror-theme-github": "^4.25.11",
+    "@uiw/react-codemirror": "^4.25.11",
     "@vitejs/plugin-rsc": "^0.5.34",
     "@webtui/css": "^0.1.10",
     "@webtui/theme-catppuccin": "^0.0.5",
