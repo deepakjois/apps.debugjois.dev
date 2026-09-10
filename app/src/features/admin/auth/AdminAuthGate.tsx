@@ -4,17 +4,29 @@ import type {
   GsiButtonConfiguration,
   IdConfiguration,
 } from "@react-oauth/google";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { LAST_ADMIN_EMAIL_STORAGE_KEY } from "../../../lib/auth/config";
 import type { AdminSession } from "../../../lib/auth/server";
 import { AdminSessionContext } from "./adminSession";
+
+// Body of every /api/admin/session response; null means this browser holds no valid session.
+type SessionResponse = {
+  session: AdminSession | null;
+};
+
+// One Nitro resource owns the session: GET reads it, POST signs in, DELETE signs out.
+const SESSION_URL = "/api/admin/session";
+// Query cache entry mirroring the server's view of the session; sign-in and sign-out update it.
+const SESSION_QUERY_KEY = ["admin", "session"];
 
 // Page-wide Google Identity Services state: the client it was initialized for and the handler
 // that currently receives credentials (whichever sign-in button is mounted, if any).
 type GoogleIdentityInit = {
   clientId: string;
   onCredential: (response: CredentialResponse) => void;
+  // Whether One Tap has been requested on this page; Chrome allows one FedCM request at a time.
+  oneTapPrompted: boolean;
 };
 
 declare global {
@@ -37,22 +49,30 @@ declare global {
 }
 
 type AdminAuthGateProps = {
-  initialSession: AdminSession | null;
   children: React.ReactNode;
 };
 
-export function AdminAuthGate({ initialSession, children }: AdminAuthGateProps) {
+export function AdminAuthGate({ children }: AdminAuthGateProps) {
   const { clientId } = useGoogleOAuth();
-  const [session, setSession] = useState(initialSession);
+  const queryClient = useQueryClient();
   // After an explicit sign-out, One Tap stays quiet so the chooser does not pop straight back up.
   const [signedOutHere, setSignedOutHere] = useState(false);
+
+  // Only the browser fetches this. On the server the query stays pending, so SSR emits the checking
+  // state and admin pages never depend on server-rendered session data.
+  const sessionQuery = useQuery({
+    queryKey: SESSION_QUERY_KEY,
+    queryFn: fetchAdminSession,
+    staleTime: Infinity,
+    retry: false,
+  });
 
   const loginMutation = useMutation({
     mutationFn: loginAdmin,
     onSuccess: (nextSession) => {
       rememberLastAdminEmail(nextSession.email);
       setSignedOutHere(false);
-      setSession(nextSession);
+      queryClient.setQueryData<SessionResponse>(SESSION_QUERY_KEY, { session: nextSession });
     },
   });
 
@@ -65,11 +85,30 @@ export function AdminAuthGate({ initialSession, children }: AdminAuthGateProps) 
       ensureGoogleIdentityInitialized(clientId);
       window.google?.accounts?.id?.disableAutoSelect();
       setSignedOutHere(true);
-      setSession(null);
+      queryClient.setQueryData<SessionResponse>(SESSION_QUERY_KEY, { session: null });
     },
   });
 
-  const loginError = loginMutation.error instanceof Error ? loginMutation.error.message : null;
+  // A failed sign-in attempt is more actionable than a failed session check, so it wins.
+  const authError = loginMutation.error ?? sessionQuery.error;
+  const authErrorMessage = authError instanceof Error ? authError.message : null;
+
+  if (sessionQuery.isPending) {
+    return (
+      <main className="admin-webtui admin-screen">
+        <section box-="double" className="admin-auth-card">
+          <div className="admin-copy" is-="typography-block">
+            <span cap-="square round" is-="badge" variant-="foreground0">
+              Admin
+            </span>
+            <p className="admin-status-copy">Checking session...</p>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  const session = sessionQuery.data?.session ?? null;
 
   if (session) {
     return (
@@ -113,32 +152,49 @@ export function AdminAuthGate({ initialSession, children }: AdminAuthGateProps) 
           />
         </div>
         {loginMutation.isPending ? <p className="admin-status-copy">Signing in...</p> : null}
-        {loginError ? <p className="admin-auth-error">{loginError}</p> : null}
+        {authErrorMessage ? <p className="admin-auth-error">{authErrorMessage}</p> : null}
       </section>
     </main>
   );
 }
 
-async function loginAdmin(credential: string): Promise<AdminSession> {
-  const response = await fetch("/admin/login", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ credential }),
-  });
+async function fetchAdminSession(): Promise<SessionResponse> {
+  return requestSession(undefined, "Admin session could not be checked");
+}
 
-  if (!response.ok) {
+async function loginAdmin(credential: string): Promise<AdminSession> {
+  const { session } = await requestSession(
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ credential }),
+    },
+    "Google sign-in could not be completed",
+  );
+
+  if (!session) {
     throw new Error("Google sign-in could not be completed");
   }
 
-  return response.json() as Promise<AdminSession>;
+  return session;
 }
 
 async function logoutAdmin(): Promise<void> {
-  const response = await fetch("/admin/logout", { method: "POST" });
+  await requestSession({ method: "DELETE" }, "Sign-out could not be completed");
+}
+
+// Every session request hits the same resource; any non-2xx response surfaces as `failureMessage`.
+async function requestSession(
+  init: RequestInit | undefined,
+  failureMessage: string,
+): Promise<SessionResponse> {
+  const response = await fetch(SESSION_URL, init);
 
   if (!response.ok) {
-    throw new Error("Sign-out could not be completed");
+    throw new Error(failureMessage);
   }
+
+  return response.json() as Promise<SessionResponse>;
 }
 
 // Google allows one initialize() per page, and some of its other entry points (prompt,
@@ -157,7 +213,7 @@ function ensureGoogleIdentityInitialized(clientId: string): GoogleIdentityInit |
     return existing;
   }
 
-  const init: GoogleIdentityInit = { clientId, onCredential: () => {} };
+  const init: GoogleIdentityInit = { clientId, onCredential: () => {}, oneTapPrompted: false };
   const lastEmail = readLastAdminEmail();
 
   googleId.initialize({
@@ -284,9 +340,18 @@ function GoogleSignInButton({
       return;
     }
 
-    // Runs after the initialize effect above, which is declared first in this component.
+    const init = ensureGoogleIdentityInitialized(clientId);
+
+    // Chrome allows one FedCM request per page at a time and Google does not abort a pending One
+    // Tap before starting another, so a repeated prompt() (StrictMode or Fast Refresh re-running
+    // this effect) fails with NotAllowedError. One Tap is therefore requested once per page load.
+    if (!init || init.oneTapPrompted) {
+      return;
+    }
+
+    init.oneTapPrompted = true;
     window.google?.accounts?.id?.prompt();
-  }, [promptOneTap, scriptLoadedSuccessfully]);
+  }, [clientId, promptOneTap, scriptLoadedSuccessfully]);
 
   return (
     <div className="admin-google-button-wrap">

@@ -1,4 +1,4 @@
-import { createError, defineEventHandler, readBody, type H3Event } from "h3";
+import { createError, defineEventHandler, readBody, type H3Event } from "nitro/h3";
 import { requireAdminSession } from "../../../../utils/adminSession";
 
 const LINK_PREVIEW_API_URL = "https://api.linkpreview.net/";

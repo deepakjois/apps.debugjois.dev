@@ -3,6 +3,15 @@ export const GOOGLE_CLIENT_ID =
 
 export const AUTH_COOKIE_NAME = "apps_debugjois_dev_admin_session";
 
+// Attributes for every Set-Cookie of the admin session, issue and expiry alike, so the path used to
+// clear the cookie cannot drift from the one it was issued with. `secure` is decided per request.
+export const ADMIN_SESSION_COOKIE = {
+  path: "/",
+  httpOnly: true,
+  sameSite: "lax",
+  maxAge: 60 * 60 * 24 * 7,
+} as const;
+
 // localStorage key holding the last admin email, used as Google's login_hint on this browser.
 export const LAST_ADMIN_EMAIL_STORAGE_KEY = "apps_debugjois_dev_admin_last_email";
 

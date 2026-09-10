@@ -4,25 +4,19 @@ import { AdminAuthGate } from "../features/admin/auth/AdminAuthGate";
 import { useAdminSession } from "../features/admin/auth/adminSession";
 import adminStylesHref from "../features/admin/styles.css?url";
 import { GOOGLE_CLIENT_ID } from "../lib/auth/config";
-import { getAdminSessionServerFn } from "../server/adminAuth";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
     // The parent layout loads one stylesheet for every admin child route.
     links: [{ rel: "stylesheet", href: adminStylesHref }],
   }),
-  loader: async () => ({
-    session: await getAdminSessionServerFn(),
-  }),
   component: AdminRoute,
 });
 
 function AdminRoute() {
-  const { session } = Route.useLoaderData();
-
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <AdminAuthGate initialSession={session}>
+      <AdminAuthGate>
         <AdminLayout />
       </AdminAuthGate>
     </GoogleOAuthProvider>

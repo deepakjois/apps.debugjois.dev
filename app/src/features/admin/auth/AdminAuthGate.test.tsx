@@ -4,6 +4,7 @@ import type { IdConfiguration } from "@react-oauth/google";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LAST_ADMIN_EMAIL_STORAGE_KEY } from "../../../lib/auth/config";
+import type { AdminSession } from "../../../lib/auth/server";
 import { AdminAuthGate } from "./AdminAuthGate";
 import { useAdminSession } from "./adminSession";
 
@@ -25,7 +26,9 @@ const googleId = {
   disableAutoSelect: vi.fn(),
 };
 
-const session = { email: "deepak.jois@gmail.com", name: "Deepak", picture: null };
+const session: AdminSession = { email: "deepak.jois@gmail.com", name: "Deepak", picture: null };
+
+const SIGN_IN_HEADING = "Sign in to access admin routes.";
 
 beforeEach(() => {
   oauthState.scriptLoadedSuccessfully = false;
@@ -53,15 +56,15 @@ function SignOutButton() {
   );
 }
 
-function renderGate(initialSession: Parameters<typeof AdminAuthGate>[0]["initialSession"]) {
-  // Each render gets isolated mutation state, matching the app's request-local query client.
+function renderGate() {
+  // Each render gets isolated query and mutation state, matching the app's request-local client.
   const queryClient = new QueryClient({
-    defaultOptions: { mutations: { retry: false } },
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <AdminAuthGate initialSession={initialSession}>
+      <AdminAuthGate>
         <p>Private admin content</p>
         <SignOutButton />
       </AdminAuthGate>
@@ -69,10 +72,25 @@ function renderGate(initialSession: Parameters<typeof AdminAuthGate>[0]["initial
   );
 }
 
-function mockFetchJson(body: unknown) {
-  return vi
-    .spyOn(globalThis, "fetch")
-    .mockResolvedValue(new Response(JSON.stringify(body), { status: 200 }));
+// Fakes the /api/admin/session resource: GET reports `current`, POST signs in as `login`, DELETE
+// signs out. Every call gets a fresh Response because a body can only be read once.
+function mockSessionApi({
+  current,
+  login = session,
+}: {
+  current: AdminSession | null;
+  login?: AdminSession;
+}) {
+  return vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
+    switch (init?.method ?? "GET") {
+      case "POST":
+        return Response.json({ session: login });
+      case "DELETE":
+        return Response.json({ session: null });
+      default:
+        return Response.json({ session: current });
+    }
+  });
 }
 
 function initializedConfiguration(): IdConfiguration {
@@ -80,25 +98,42 @@ function initializedConfiguration(): IdConfiguration {
 }
 
 describe("AdminAuthGate", () => {
-  it("hides admin content when there is no verified session", () => {
-    renderGate(null);
+  it("shows a checking state until the session is known", async () => {
+    mockSessionApi({ current: null });
 
-    expect(screen.getByRole("heading", { name: "Sign in to access admin routes." })).toBeTruthy();
+    renderGate();
+
+    expect(screen.getByText("Checking session...")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: SIGN_IN_HEADING })).toBeNull();
+    expect(await screen.findByRole("heading", { name: SIGN_IN_HEADING })).toBeTruthy();
+  });
+
+  it("hides admin content when there is no verified session", async () => {
+    mockSessionApi({ current: null });
+
+    renderGate();
+
+    expect(await screen.findByRole("heading", { name: SIGN_IN_HEADING })).toBeTruthy();
     expect(screen.queryByText("Private admin content")).toBeNull();
   });
 
-  it("renders admin content for the server-verified session", () => {
-    renderGate(session);
+  it("renders admin content for a verified session", async () => {
+    const fetchSpy = mockSessionApi({ current: session });
 
-    expect(screen.getByText("Private admin content")).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Sign in to access admin routes." })).toBeNull();
+    renderGate();
+
+    expect(await screen.findByText("Private admin content")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: SIGN_IN_HEADING })).toBeNull();
+    expect(fetchSpy).toHaveBeenCalledWith("/api/admin/session", undefined);
   });
 
-  it("initializes Google with auto select and the remembered email, then shows One Tap", () => {
+  it("initializes Google with auto select and the remembered email, then shows One Tap", async () => {
     oauthState.scriptLoadedSuccessfully = true;
     window.localStorage.setItem(LAST_ADMIN_EMAIL_STORAGE_KEY, "deepak.jois@gmail.com");
+    mockSessionApi({ current: null });
 
-    renderGate(null);
+    renderGate();
+    await screen.findByRole("heading", { name: SIGN_IN_HEADING });
 
     expect(googleId.initialize).toHaveBeenCalledTimes(1);
     expect(initializedConfiguration()).toMatchObject({
@@ -112,35 +147,49 @@ describe("AdminAuthGate", () => {
     expect(googleId.prompt).toHaveBeenCalledTimes(1);
   });
 
+  it("requests One Tap once per page even when the sign-in card mounts again", async () => {
+    oauthState.scriptLoadedSuccessfully = true;
+    mockSessionApi({ current: null });
+
+    // StrictMode and Fast Refresh both re-run mount effects; a second FedCM request would fail.
+    renderGate();
+    await screen.findByRole("heading", { name: SIGN_IN_HEADING });
+    cleanup();
+    renderGate();
+    await screen.findByRole("heading", { name: SIGN_IN_HEADING });
+
+    expect(googleId.initialize).toHaveBeenCalledTimes(1);
+    expect(googleId.prompt).toHaveBeenCalledTimes(1);
+  });
+
   it("remembers the email of the account that signed in", async () => {
     oauthState.scriptLoadedSuccessfully = true;
-    const fetchSpy = mockFetchJson(session);
+    const fetchSpy = mockSessionApi({ current: null });
 
-    renderGate(null);
+    renderGate();
+    await screen.findByRole("heading", { name: SIGN_IN_HEADING });
     await act(async () => {
       initializedConfiguration().callback?.({ credential: "signed-google-token" });
     });
 
     expect(await screen.findByText("Private admin content")).toBeTruthy();
     expect(fetchSpy).toHaveBeenCalledWith(
-      "/admin/login",
+      "/api/admin/session",
       expect.objectContaining({ method: "POST" }),
     );
     expect(window.localStorage.getItem(LAST_ADMIN_EMAIL_STORAGE_KEY)).toBe("deepak.jois@gmail.com");
   });
 
-  it("signs out through the logout route without prompting One Tap again", async () => {
+  it("signs out through the session resource without prompting One Tap again", async () => {
     oauthState.scriptLoadedSuccessfully = true;
     window.localStorage.setItem(LAST_ADMIN_EMAIL_STORAGE_KEY, "deepak.jois@gmail.com");
-    const fetchSpy = mockFetchJson({ ok: true });
+    const fetchSpy = mockSessionApi({ current: session });
 
-    renderGate(session);
-    fireEvent.click(screen.getByRole("button", { name: "Sign out deepak.jois@gmail.com" }));
+    renderGate();
+    fireEvent.click(await screen.findByRole("button", { name: "Sign out deepak.jois@gmail.com" }));
 
-    expect(
-      await screen.findByRole("heading", { name: "Sign in to access admin routes." }),
-    ).toBeTruthy();
-    expect(fetchSpy).toHaveBeenCalledWith("/admin/logout", { method: "POST" });
+    expect(await screen.findByRole("heading", { name: SIGN_IN_HEADING })).toBeTruthy();
+    expect(fetchSpy).toHaveBeenCalledWith("/api/admin/session", { method: "DELETE" });
     expect(googleId.disableAutoSelect).toHaveBeenCalledTimes(1);
     expect(window.localStorage.getItem(LAST_ADMIN_EMAIL_STORAGE_KEY)).toBeNull();
     expect(googleId.renderButton).toHaveBeenCalledTimes(1);
@@ -149,14 +198,16 @@ describe("AdminAuthGate", () => {
 
   it("initializes Google exactly once when signing out from a page that loaded signed in", async () => {
     oauthState.scriptLoadedSuccessfully = true;
-    mockFetchJson({ ok: true });
+    mockSessionApi({ current: session });
+
+    renderGate();
+    const signOut = await screen.findByRole("button", { name: "Sign out deepak.jois@gmail.com" });
 
     // The sign-in card never rendered, so nothing has initialized Google yet.
-    renderGate(session);
     expect(googleId.initialize).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Sign out deepak.jois@gmail.com" }));
-    await screen.findByRole("heading", { name: "Sign in to access admin routes." });
+    fireEvent.click(signOut);
+    await screen.findByRole("heading", { name: SIGN_IN_HEADING });
 
     // Google's disableAutoSelect creates an unconfigured client if none exists, and the card's own
     // initialize() would then be a second call. Ours must run first and the card must reuse it.

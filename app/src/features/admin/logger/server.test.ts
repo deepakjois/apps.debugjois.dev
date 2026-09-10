@@ -1,4 +1,4 @@
-import { H3Event } from "h3";
+import { H3Event } from "nitro/h3";
 import { describe, expect, it, vi } from "vitest";
 import { handleGetLogger } from "../../../../server/routes/api/admin/logger.get";
 import { handleSaveLogger } from "../../../../server/routes/api/admin/logger.post";

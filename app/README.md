@@ -46,8 +46,13 @@ Every route under `/admin` requires Google sign-in. The browser uses the existin
 Google OAuth web client ID; no client secret or local environment variable is
 needed. The server verifies Google's signed ID token against Google's JWKS,
 requires a verified email in the admin allowlist, and stores the token in an
-`HttpOnly` cookie. The login and logout POSTs are Nitro routes rather than TanStack
-server functions so the cookie is attached directly to the AWS Lambda response.
+`HttpOnly` cookie. The browser manages that session through one Nitro resource,
+`/api/admin/session`: `GET` reports the current session, `POST` signs in with the
+Google credential, and `DELETE` signs out. Admin pages check the session from the
+browser, so the server renders only a "Checking session" state for them.
+`server/utils/adminSession.ts` is the only module that issues, expires, or checks the
+cookie; every private Nitro route authorizes through its `requireAdminSession`, and
+the cookie attributes are defined once in `src/lib/auth/config.ts`.
 
 The sign-in card also shows Google One Tap with `auto_select` enabled, so a
 returning user with one signed-in Google account is signed in without a click.
@@ -55,7 +60,9 @@ Otherwise One Tap lists the signed-in accounts to choose from. The email of the 
 account that signed in is kept in `localStorage` and passed as Google's
 `login_hint`, so the button popup preselects it. In Chrome the button uses the FedCM
 flow (`use_fedcm_for_button`), so it stays personalized with the signed-in account
-even when third-party cookies are blocked. The **Sign out** button in the
+even when third-party cookies are blocked. One Tap is requested at most once per page
+load: Chrome allows a single pending FedCM request, and React StrictMode in development
+replays mount effects. The **Sign out** button in the
 admin header clears the cookie, forgets the remembered email, and calls Google's
 `disableAutoSelect` so One Tap cannot immediately sign the same account back in.
 
@@ -120,15 +127,19 @@ to the transcript reader and `/admin` redirects to Logger.
 `src/router.tsx` creates a QueryClient per router instance and integrates it with
 SSR hydration. Transcript loaders prefetch through `context.queryClient`; feature
 components consume those queries with TanStack Query. Do not use a global
-server-side QueryClient shared across requests. Client-driven admin operations use
-authenticated Nitro routes rather than TanStack server functions. The admin
-layout's session server function remains because it hydrates the authenticated
-layout during rendering rather than serving as an application API.
+server-side QueryClient shared across requests. TanStack server functions are
+reserved for data that must be server-rendered; nothing uses them today, and the
+transcript reader prefetches through route loaders. Every `/admin` operation,
+including reading the session, is an authenticated Nitro route under
+`server/routes/api/admin`, never a server function. Nitro route code imports h3
+through `nitro/h3`, so the app does not depend on the transitive `h3` package
+directly.
 
 The transcript reader loads the public transcript index and immutable transcript
-payloads from `www.debugjois.dev`. Admin route rendering is authenticated, but
-private Nitro routes must also verify the admin cookie before reading or changing
-private data; the route guard alone does not authorize server endpoints.
+payloads from `www.debugjois.dev`. Admin pages gate rendering in the browser, so
+every private Nitro route must call `requireAdminSession` from
+`server/utils/adminSession.ts` before reading or changing private data; the page
+guard alone does not authorize server endpoints.
 
 Future subdomains can point at this same build with host-to-path rewrites at the
 hosting boundary. DNS, TLS, rewrites, canonical URLs, cookie scope, and client

@@ -1,4 +1,4 @@
-import { createError, defineEventHandler, readBody, type H3Event } from "h3";
+import { createError, defineEventHandler, readBody, type H3Event } from "nitro/h3";
 import { requireAdminSession } from "../../../utils/adminSession";
 import { saveLoggerNote, type LoggerNote } from "../../../utils/logger";
 

@@ -1,6 +1,5 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
-import { deleteCookie, getCookie } from "@tanstack/react-start/server";
-import { ALLOWED_ADMIN_EMAILS, AUTH_COOKIE_NAME, GOOGLE_CLIENT_ID, GOOGLE_ISSUERS } from "./config";
+import { ALLOWED_ADMIN_EMAILS, GOOGLE_CLIENT_ID, GOOGLE_ISSUERS } from "./config";
 
 const googleJwks = createRemoteJWKSet(new URL("https://www.googleapis.com/oauth2/v3/certs"));
 
@@ -11,19 +10,8 @@ export type AdminSession = {
   picture: string | null;
 };
 
-// Local identity used to inspect protected UI without contacting Google.
-const developmentAdminSession: AdminSession = {
-  email: "local-admin@localhost",
-  name: "Local Admin",
-  picture: null,
-};
-
-export function getDevelopmentAdminSession(): AdminSession | null {
-  // Vite replaces DEV at build time, so a production artifact cannot enable this bypass.
-  return import.meta.env.DEV && process.env.DEV_ADMIN_BYPASS === "true"
-    ? developmentAdminSession
-    : null;
-}
+// Shape of the token check, injectable so session and route tests never contact Google.
+export type VerifyGoogleIdToken = (idToken: string) => Promise<AdminSession>;
 
 function parseAllowedEmail(email: unknown, emailVerified: unknown): string {
   if (typeof email !== "string" || email.length === 0) {
@@ -53,24 +41,4 @@ export async function verifyGoogleIdToken(idToken: string): Promise<AdminSession
     name: typeof payload.name === "string" ? payload.name : null,
     picture: typeof payload.picture === "string" ? payload.picture : null,
   };
-}
-
-export async function getAdminSession(): Promise<AdminSession | null> {
-  const developmentSession = getDevelopmentAdminSession();
-  if (developmentSession) {
-    return developmentSession;
-  }
-
-  const idToken = getCookie(AUTH_COOKIE_NAME);
-
-  if (!idToken) {
-    return null;
-  }
-
-  try {
-    return await verifyGoogleIdToken(idToken);
-  } catch {
-    deleteCookie(AUTH_COOKIE_NAME, { path: "/" });
-    return null;
-  }
 }
