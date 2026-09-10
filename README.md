@@ -5,7 +5,6 @@ see README in the subfolders for more details.
 ## Folders
 
 - `app/` - TanStack Start/Nitro app for `apps.debugjois.dev`
-- `app-old/` - Archived previous app retained while the replacement settles
 - `backend/` - Go podcast transcription tools, CLIs, and Lambda container image
 - `infra/` - AWS CDK infrastructure for the Nitro app
 
