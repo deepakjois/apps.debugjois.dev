@@ -40,6 +40,20 @@ Start the app with `DEV_ADMIN_BYPASS=true npm run dev` to test without Google
 sign-in. This bypasses only the app's admin login; Nitro still performs the real
 AWS Lambda invocation with the supplied AWS credentials.
 
+### Podscriber
+
+`/admin/podscriber` accepts Podcast Addict share text and queues a transcription
+through the authenticated `/api/admin/podscriber` Nitro route. The route invokes
+the backend Lambda with this direct payload:
+
+```json
+{ "action": "queue-podcast-transcription", "text": "..." }
+```
+
+Local submissions use the same `BACKEND_LAMBDA_FUNCTION_NAME`, AWS region, and
+credential setup described for Logger. Use `DEV_ADMIN_BYPASS=true npm run dev` to
+exercise the form locally without Google sign-in.
+
 ### Admin authentication
 
 Every route under `/admin` requires Google sign-in. The browser uses the existing
