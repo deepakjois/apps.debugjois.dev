@@ -76,11 +76,13 @@ for project in app infra; do
   npm --prefix "$project" ci --no-audit --no-fund
 done
 
-step "Downloading backend Go modules"
-(
-  cd backend
-  go mod download
-)
+for project in backend backend-v2; do
+  step "Downloading ${project} Go modules"
+  (
+    cd "$project"
+    go mod download
+  )
+done
 
 step "Creating optional local environment files"
 [[ -f backend/.env ]] || cp -- backend/.env.example backend/.env
