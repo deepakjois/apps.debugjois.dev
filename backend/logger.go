@@ -13,6 +13,12 @@ import (
 	"github.com/deepakjois/apps.debugjois.dev/backend/dailylog/gdrive"
 )
 
+// postDailyLogRequest is the input carried by the post-daily-log action.
+type postDailyLogRequest struct {
+	Title    string `json:"title"`
+	Contents string `json:"contents"`
+}
+
 // dailyLogResponse is the existing base64-encoded daily-log wire format.
 type dailyLogResponse struct {
 	Title    string `json:"title"`

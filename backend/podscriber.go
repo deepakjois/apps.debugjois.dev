@@ -55,6 +55,17 @@ type podcastEpisode struct {
 	DescriptionHTML string `json:"description_html"`
 }
 
+// queuePodcastTranscriptionRequest is the input carried by the queue action.
+type queuePodcastTranscriptionRequest struct {
+	Text string `json:"text"`
+}
+
+// processPodcastTranscriptionRequest preserves the asynchronous worker envelope.
+type processPodcastTranscriptionRequest struct {
+	Action  string         `json:"action"`
+	Podcast podcastPayload `json:"podcast"`
+}
+
 // queuedResponse is the accepted response consumed by the admin UI.
 type queuedResponse struct {
 	Podcast               podcastPayload `json:"podcast"`
@@ -114,7 +125,7 @@ func handleQueuePodcastTranscription(ctx context.Context, text string) (json.Raw
 	return json.Marshal(queuedResponse{Podcast: podcast, TranscriptionLambdaID: id})
 }
 
-func handleProcessPodcastTranscription(ctx context.Context, request directRequest) (json.RawMessage, error) {
+func handleProcessPodcastTranscription(ctx context.Context, request processPodcastTranscriptionRequest) (json.RawMessage, error) {
 	if strings.TrimSpace(request.Podcast.Episode.AudioURL) == "" {
 		return nil, errors.New("podcast episode audio URL is missing")
 	}
@@ -189,7 +200,7 @@ func invokeSelfForPodcastTranscription(ctx context.Context, podcast podcastPaylo
 }
 
 func invokeWorker(ctx context.Context, client lambdaInvoker, functionName string, podcast podcastPayload) (string, error) {
-	payload, err := json.Marshal(directRequest{Action: actionProcessPodcastTranscription, Podcast: podcast})
+	payload, err := json.Marshal(processPodcastTranscriptionRequest{Action: actionProcessPodcastTranscription, Podcast: podcast})
 	if err != nil {
 		return "", fmt.Errorf("marshal transcription payload: %w", err)
 	}

@@ -116,10 +116,12 @@ go run ./cmd/podcast-index --write
 ## Lambda transport
 
 `main.go` starts the Lambda runtime and classifies direct, EventBridge, and API
-Gateway v2 envelopes before dispatching actions. EventBridge events remain
-acknowledged with `{"ok":true}`; API Gateway v2 remains explicitly unsupported.
-Unknown direct actions return an error rather than invoking an unrelated handler.
-`logger.go` handles daily logs; `podscriber.go` handles queue and worker actions.
+Gateway v2 envelopes before dispatching actions. Direct invocations first decode
+only the `action` discriminator, then decode the fields for that action.
+EventBridge events remain acknowledged with `{"ok":true}`; API Gateway v2 remains
+explicitly unsupported. Unknown direct actions return an error rather than
+invoking an unrelated handler. `logger.go` handles daily logs; `podscriber.go`
+handles queue and worker actions.
 
 The external JSON contract remains compatible with `backend-old/`:
 

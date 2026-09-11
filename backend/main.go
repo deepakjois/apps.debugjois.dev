@@ -20,13 +20,9 @@ const (
 	actionProcessPodcastTranscription = "process-podcast-transcription"
 )
 
-// directRequest preserves the deployed invocation envelope, including worker events.
+// directRequest reads the discriminator shared by every direct invocation.
 type directRequest struct {
-	Action   string         `json:"action"`
-	Text     string         `json:"text,omitempty"`
-	Title    string         `json:"title,omitempty"`
-	Contents string         `json:"contents,omitempty"`
-	Podcast  podcastPayload `json:"podcast,omitempty"`
+	Action string `json:"action"`
 }
 
 // eventType separates transport envelopes before dispatching application actions.
@@ -92,11 +88,23 @@ func handleDirectLambdaEvent(ctx context.Context, payload json.RawMessage) (json
 	case actionGetDailyLog:
 		return handleGetDailyLog(ctx)
 	case actionPostDailyLog:
-		return handlePostDailyLog(ctx, request.Title, request.Contents)
+		var post postDailyLogRequest
+		if err := json.Unmarshal(payload, &post); err != nil {
+			return nil, fmt.Errorf("unmarshal %s payload: %w", actionPostDailyLog, err)
+		}
+		return handlePostDailyLog(ctx, post.Title, post.Contents)
 	case actionQueuePodcastTranscription:
-		return handleQueuePodcastTranscription(ctx, request.Text)
+		var queue queuePodcastTranscriptionRequest
+		if err := json.Unmarshal(payload, &queue); err != nil {
+			return nil, fmt.Errorf("unmarshal %s payload: %w", actionQueuePodcastTranscription, err)
+		}
+		return handleQueuePodcastTranscription(ctx, queue.Text)
 	case actionProcessPodcastTranscription:
-		return handleProcessPodcastTranscription(ctx, request)
+		var process processPodcastTranscriptionRequest
+		if err := json.Unmarshal(payload, &process); err != nil {
+			return nil, fmt.Errorf("unmarshal %s payload: %w", actionProcessPodcastTranscription, err)
+		}
+		return handleProcessPodcastTranscription(ctx, process)
 	default:
 		return nil, errors.New("unknown direct invocation action")
 	}

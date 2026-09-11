@@ -10,6 +10,7 @@ import (
 func TestDispatchEnvelopes(t *testing.T) {
 	for _, tc := range []struct{ name, payload, wantError string }{
 		{"health", `{"action":" health-check ","future":true}`, ""},
+		{"health ignores fields from other actions", `{"action":"health-check","title":3,"podcast":false}`, ""},
 		{"scheduled", `{"source":"aws.events","detail-type":"Scheduled Event"}`, ""},
 		{"future EventBridge", `{"source":"future.service","detail-type":"New Type","action":"unknown"}`, ""},
 		{"API precedence", `{"requestContext":{"http":{}},"source":"aws.events","detail-type":"Scheduled Event"}`, "API Gateway events are not supported"},
@@ -19,6 +20,7 @@ func TestDispatchEnvelopes(t *testing.T) {
 		{"old alias", `{"action":"transcribe"}`, "unknown direct invocation action"},
 		{"malformed", `{`, "unmarshal direct invocation payload"},
 		{"wrong field type", `{"action":3}`, "unmarshal direct invocation payload"},
+		{"wrong action field type", `{"action":"post-daily-log","title":3}`, "unmarshal post-daily-log payload"},
 		{"malformed schedule", `{"source":"aws.events","detail-type":"Scheduled Event","time":"bad"}`, "unmarshal EventBridge event"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
