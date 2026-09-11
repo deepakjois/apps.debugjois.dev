@@ -23,6 +23,8 @@ import (
 // Literal legacy JSON pins field order, omission rules, and nested envelopes.
 const legacyPodcast = `{"source":{"input":"https://podcastaddict.com/show/episode/123","episode_url":"https://podcastaddict.com/show/episode/123"},"podcast":{"title":"A Show","url":"https://example.com/show"},"episode":{"title":"Episode Two","published_at":"2026-04-29T12:34:56.123+00:00","published_date":"2026-04-29","audio_url":"https://example.com/audio.mp3","description_html":"Notes"}}`
 const legacyWorker = `{"action":"process-podcast-transcription","podcast":` + legacyPodcast + `}`
+const typedPodcast = `{"source":{"type":"podcast_addict","input":"https://podcastaddict.com/show/episode/123","episode_url":"https://podcastaddict.com/show/episode/123"},"podcast":{"title":"A Show","url":"https://example.com/show"},"episode":{"title":"Episode Two","published_at":"2026-04-29T12:34:56.123+00:00","published_date":"2026-04-29","audio_url":"https://example.com/audio.mp3","description_html":"Notes"}}`
+const typedWorker = `{"action":"process-podcast-transcription","podcast":` + typedPodcast + `}`
 
 // roundTripFunc serves a synthetic Podcast Addict page without network access.
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -48,7 +50,7 @@ func TestQueueLegacyContract(t *testing.T) {
 	})}).Extract
 	invokePodcastWorker = func(ctx context.Context, podcast podcastPayload) (string, error) {
 		return invokeWorker(ctx, invokeFunc(func(in *awslambda.InvokeInput) (*awslambda.InvokeOutput, error) {
-			if *in.FunctionName != "backend-function" || in.InvocationType != types.InvocationTypeEvent || string(in.Payload) != legacyWorker {
+			if *in.FunctionName != "backend-function" || in.InvocationType != types.InvocationTypeEvent || string(in.Payload) != typedWorker {
 				t.Fatalf("unexpected invocation: %+v payload=%s", in, in.Payload)
 			}
 			out := &awslambda.InvokeOutput{}
@@ -57,7 +59,7 @@ func TestQueueLegacyContract(t *testing.T) {
 		}), "backend-function", podcast)
 	}
 	body, err := dispatchBackendEvent(context.Background(), json.RawMessage(`{"action":"queue-podcast-transcription","text":"  https://podcastaddict.com/show/episode/123  "}`))
-	want := `{"podcast":` + legacyPodcast + `,"transcription_lambda_id":"aws-request-123"}`
+	want := `{"podcast":` + typedPodcast + `,"transcription_lambda_id":"aws-request-123"}`
 	if err != nil || string(body) != want {
 		t.Fatalf("got %s err=%v; want %s", body, err, want)
 	}
@@ -111,7 +113,7 @@ func TestWorkerLegacyContract(t *testing.T) {
 		return nil
 	}
 	body, err := dispatchBackendEvent(context.Background(), json.RawMessage(legacyWorker))
-	want := `{"podcast":` + legacyPodcast + `,"deepgram":{"metadata":{"request_id":"dg-456"},"results":{}}}`
+	want := `{"podcast":` + typedPodcast + `,"deepgram":{"metadata":{"request_id":"dg-456"},"results":{}}}`
 	if err != nil || string(body) != want || string(saved) != want {
 		t.Fatalf("body=%s saved=%s err=%v", body, saved, err)
 	}

@@ -34,9 +34,10 @@ type podcastPayload struct {
 
 // podcastSource retains the share input and canonical episode page.
 type podcastSource struct {
-	Input      string `json:"input"`
-	ShareTitle string `json:"share_title,omitempty"`
-	EpisodeURL string `json:"episode_url"`
+	Type       podscriber.SourceType `json:"type,omitempty"`
+	Input      string                `json:"input"`
+	ShareTitle string                `json:"share_title,omitempty"`
+	EpisodeURL string                `json:"episode_url"`
 }
 
 // podcastSeries is the deployed podcast metadata shape.
@@ -133,7 +134,11 @@ func handleProcessPodcastTranscription(ctx context.Context, request processPodca
 	if err != nil {
 		return nil, err
 	}
-	body, err := json.Marshal(transcriptResponse{Podcast: request.Podcast, Deepgram: result.Transcript.Raw})
+	publishedPodcast := request.Podcast
+	if publishedPodcast.Source.Type == "" {
+		publishedPodcast.Source.Type = podscriber.SourceTypePodcastAddict
+	}
+	body, err := json.Marshal(transcriptResponse{Podcast: publishedPodcast, Deepgram: result.Transcript.Raw})
 	if err != nil {
 		return nil, fmt.Errorf("marshal transcript result: %w", err)
 	}
@@ -152,7 +157,7 @@ func podcastFromInput(input podscriber.TranscriptionInput) podcastPayload {
 		publishedAt = metadata.PublishedAt.Format(time.RFC3339Nano)
 	}
 	podcast := podcastPayload{
-		Source: podcastSource{Input: input.Source.Input, ShareTitle: shareTitle, EpisodeURL: input.Source.URL},
+		Source: podcastSource{Type: input.Source.Type, Input: input.Source.Input, ShareTitle: shareTitle, EpisodeURL: input.Source.URL},
 		Episode: podcastEpisode{Title: metadata.Title, PublishedAt: publishedAt, PublishedDate: metadata.PublishedDate,
 			Duration: duration, AudioURL: input.Media.URL, DescriptionHTML: metadata.DescriptionHTML},
 	}
@@ -173,9 +178,13 @@ func (p podcastPayload) transcriptionInput() podscriber.TranscriptionInput {
 	if strings.TrimSpace(input) == "" {
 		input = sourceURL
 	}
+	sourceType := p.Source.Type
+	if sourceType == "" {
+		sourceType = podscriber.SourceTypePodcastAddict
+	}
 	return podscriber.TranscriptionInput{
 		SchemaVersion: podscriber.SchemaVersion,
-		Source:        podscriber.Source{Type: podscriber.SourceTypePodcastAddict, Input: input, URL: sourceURL},
+		Source:        podscriber.Source{Type: sourceType, Input: input, URL: sourceURL},
 		Media:         podscriber.Media{Type: podscriber.MediaTypeRemoteURL, URL: p.Episode.AudioURL},
 		Metadata: podscriber.Metadata{Title: p.Episode.Title, DescriptionHTML: p.Episode.DescriptionHTML,
 			PublishedDate: p.Episode.PublishedDate, Series: &podscriber.Series{Title: p.Podcast.Title, URL: p.Podcast.URL}},

@@ -101,8 +101,9 @@ type podcastDocument struct {
 
 // sourceDocument identifies the original public episode page.
 type sourceDocument struct {
-	ShareTitle string `json:"share_title,omitempty"`
-	EpisodeURL string `json:"episode_url"`
+	Type       podscriber.SourceType `json:"type"`
+	ShareTitle string                `json:"share_title,omitempty"`
+	EpisodeURL string                `json:"episode_url"`
 }
 
 // seriesDocument identifies the podcast or channel.
@@ -125,6 +126,7 @@ func newDocument(result podscriber.TranscriptionResult) document {
 	doc := document{
 		Podcast: podcastDocument{
 			Source: sourceDocument{
+				Type:       result.Input.Source.Type,
 				ShareTitle: extraString(metadata.Extra, "share_title"),
 				EpisodeURL: result.Input.Source.URL,
 			},

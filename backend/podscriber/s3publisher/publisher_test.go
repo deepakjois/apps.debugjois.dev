@@ -103,6 +103,9 @@ func TestPublishWritesCompatibleDocumentAndRefreshesIndex(t *testing.T) {
 	if published.Podcast.Episode.Title != "Example Episode" || published.Podcast.Podcast.Title != "Example Show" {
 		t.Fatalf("published metadata = %#v", published.Podcast)
 	}
+	if published.Podcast.Source.Type != podscriber.SourceTypePodcastAddict {
+		t.Fatalf("published source type = %q", published.Podcast.Source.Type)
+	}
 	if string(published.Deepgram) != `{"metadata":{"created":"2026-09-10T12:00:00Z"}}` {
 		t.Fatalf("published Deepgram payload = %s", published.Deepgram)
 	}
@@ -113,6 +116,17 @@ func TestPublishWritesCompatibleDocumentAndRefreshesIndex(t *testing.T) {
 	}
 	if len(index.Transcripts) != 1 || index.Transcripts[0].Title != "Example Episode" || index.Transcripts[0].Date != "2026-09-09" {
 		t.Fatalf("published index = %#v", index)
+	}
+}
+
+func TestNewDocumentPreservesYouTubeSourceType(t *testing.T) {
+	result := testResult()
+	result.Input.Source.Type = podscriber.SourceTypeYouTube
+	result.Input.Source.URL = "https://www.youtube.com/watch?v=example"
+
+	got := newDocument(result)
+	if got.Podcast.Source.Type != podscriber.SourceTypeYouTube {
+		t.Fatalf("source type = %q", got.Podcast.Source.Type)
 	}
 }
 
