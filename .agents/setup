@@ -78,15 +78,12 @@ for project in app infra; do
   npm --prefix "$project" ci --no-audit --no-fund
 done
 
-for project in backend backend-v2; do
+for project in backend; do
   step "Downloading ${project} Go modules"
   (
     cd "$project"
     go mod download
   )
 done
-
-step "Creating optional local environment files"
-[[ -f backend/.env ]] || cp -- backend/.env.example backend/.env
 
 printf '\nOrb setup complete.\n'

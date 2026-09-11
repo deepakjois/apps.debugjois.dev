@@ -1,60 +1,35 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
 
-func TestRunInvokeReadsPayloadFromStdin(t *testing.T) {
-	var stdout bytes.Buffer
-	err := runInvoke(context.Background(), nil, strings.NewReader(`{"action":"health-check"}`), &stdout)
-	if err != nil {
-		t.Fatalf("run invoke: %v", err)
-	}
-
-	var got map[string]bool
-	if err := json.Unmarshal(bytes.TrimSpace(stdout.Bytes()), &got); err != nil {
-		t.Fatalf("unmarshal stdout: %v", err)
-	}
-	if !got["ok"] {
-		t.Fatalf("expected ok response, got %q", stdout.String())
-	}
-}
-
-func TestRunInvokeReadsPayloadFromFile(t *testing.T) {
-	dir := t.TempDir()
-	payloadPath := filepath.Join(dir, "event.json")
-	if err := os.WriteFile(payloadPath, []byte(`{"action":"health-check"}`), 0o600); err != nil {
-		t.Fatalf("write payload: %v", err)
-	}
-
-	var stdout bytes.Buffer
-	if err := runInvoke(context.Background(), []string{"--payload", payloadPath}, strings.NewReader(""), &stdout); err != nil {
-		t.Fatalf("run invoke: %v", err)
-	}
-	if !strings.Contains(stdout.String(), `"ok":true`) {
-		t.Fatalf("expected ok response, got %q", stdout.String())
-	}
-}
-
-func TestRunInvokeRejectsEmptyPayload(t *testing.T) {
-	var stdout bytes.Buffer
-	if err := runInvoke(context.Background(), nil, strings.NewReader("  \n"), &stdout); err == nil {
-		t.Fatal("expected empty payload error")
-	}
-}
-
-func TestDispatchBackendEventHandlesScheduledEvent(t *testing.T) {
-	body, err := dispatchBackendEvent(context.Background(), json.RawMessage(`{"source":"aws.events","detail-type":"Scheduled Event","id":"evt-1"}`))
-	if err != nil {
-		t.Fatalf("dispatch scheduled event: %v", err)
-	}
-	if !strings.Contains(string(body), `"ok":true`) {
-		t.Fatalf("expected ok response, got %s", string(body))
+func TestDispatchEnvelopes(t *testing.T) {
+	for _, tc := range []struct{ name, payload, wantError string }{
+		{"health", `{"action":" health-check ","future":true}`, ""},
+		{"scheduled", `{"source":"aws.events","detail-type":"Scheduled Event"}`, ""},
+		{"future EventBridge", `{"source":"future.service","detail-type":"New Type","action":"unknown"}`, ""},
+		{"API precedence", `{"requestContext":{"http":{}},"source":"aws.events","detail-type":"Scheduled Event"}`, "API Gateway events are not supported"},
+		{"partial envelope", `{"source":"future","action":"health-check"}`, ""},
+		{"empty", `{}`, "unknown direct invocation action"},
+		{"unknown", `{"action":"new-action"}`, "unknown direct invocation action"},
+		{"old alias", `{"action":"transcribe"}`, "unknown direct invocation action"},
+		{"malformed", `{`, "unmarshal direct invocation payload"},
+		{"wrong field type", `{"action":3}`, "unmarshal direct invocation payload"},
+		{"malformed schedule", `{"source":"aws.events","detail-type":"Scheduled Event","time":"bad"}`, "unmarshal EventBridge event"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body, err := dispatchBackendEvent(context.Background(), json.RawMessage(tc.payload))
+			if tc.wantError != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.wantError) || body != nil {
+					t.Fatalf("body=%s err=%v", body, err)
+				}
+			} else if err != nil || string(body) != `{"ok":true}` {
+				t.Fatalf("body=%s err=%v", body, err)
+			}
+		})
 	}
 }

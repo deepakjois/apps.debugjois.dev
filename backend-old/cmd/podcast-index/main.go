@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"github.com/deepakjois/apps.debugjois.dev/backend/transcripts"
+	"github.com/deepakjois/apps.debugjois.dev/backend-old/internal/transcripts"
 )
 
 const cliTimeout = 2 * time.Minute

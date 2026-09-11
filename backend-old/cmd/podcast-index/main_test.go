@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 
-	"github.com/deepakjois/apps.debugjois.dev/backend/transcripts"
+	"github.com/deepakjois/apps.debugjois.dev/backend-old/internal/transcripts"
 )
 
 type fakeTranscriptIndexS3Client struct {

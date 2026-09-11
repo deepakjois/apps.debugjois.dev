@@ -5,8 +5,8 @@ see README in the subfolders for more details.
 ## Folders
 
 - `app/` - TanStack Start/Nitro app for `apps.debugjois.dev`
-- `backend/` - Go podcast transcription tools, CLIs, and Lambda container image
-- `backend-v2/` - Refactored Go backend packages and daily-log/podcast transcription CLIs
+- `backend/` - Go backend Lambda and daily-log/podcast transcription/index CLIs
+- `backend-old/` - Previous Go backend retained for reference
 - `infra/` - AWS CDK infrastructure for the Nitro app
 
 ## Orb development

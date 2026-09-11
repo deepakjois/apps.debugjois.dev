@@ -1,130 +1,103 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
-	"io"
 	"log"
-	"os"
 	"strings"
 
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/joho/godotenv"
 )
 
-const defaultLocalDotEnvPath = ".env"
+const (
+	actionHealthCheck                 = "health-check"
+	actionGetDailyLog                 = "get-daily-log"
+	actionPostDailyLog                = "post-daily-log"
+	actionQueuePodcastTranscription   = "queue-podcast-transcription"
+	actionProcessPodcastTranscription = "process-podcast-transcription"
+)
+
+// directRequest preserves the deployed invocation envelope, including worker events.
+type directRequest struct {
+	Action   string         `json:"action"`
+	Text     string         `json:"text,omitempty"`
+	Title    string         `json:"title,omitempty"`
+	Contents string         `json:"contents,omitempty"`
+	Podcast  podcastPayload `json:"podcast,omitempty"`
+}
+
+// eventType separates transport envelopes before dispatching application actions.
+type eventType int
+
+const (
+	eventTypeAPIGateway eventType = iota
+	eventTypeScheduled
+	eventTypeDirect
+)
+
+// eventProbe reads only envelope discriminators, leaving action decoding separate.
+type eventProbe struct {
+	RequestContext *struct {
+		HTTP *struct{} `json:"http"`
+	} `json:"requestContext"`
+	Source     string `json:"source"`
+	DetailType string `json:"detail-type"`
+}
 
 func main() {
-	ctx := context.Background()
-	lambdaRuntime := isLambdaRuntime()
+	lambda.Start(dispatchBackendEvent)
+}
 
-	if lambdaRuntime {
-		lambda.Start(handleDirectRuntimeEvent)
-		return
+func classifyEvent(payload json.RawMessage) eventType {
+	var probe eventProbe
+	if err := json.Unmarshal(payload, &probe); err != nil {
+		return eventTypeDirect
 	}
-
-	_ = loadOptionalLocalEnvFile()
-
-	if len(os.Args) < 2 {
-		printUsage(os.Stderr)
-		os.Exit(1)
+	if probe.RequestContext != nil && probe.RequestContext.HTTP != nil {
+		return eventTypeAPIGateway
 	}
+	if probe.Source != "" && probe.DetailType != "" {
+		return eventTypeScheduled
+	}
+	return eventTypeDirect
+}
 
-	switch os.Args[1] {
-	case "invoke":
-		if err := runInvoke(ctx, os.Args[2:], os.Stdin, os.Stdout); err != nil {
-			log.Fatal(err)
+func dispatchBackendEvent(ctx context.Context, payload json.RawMessage) (json.RawMessage, error) {
+	switch classifyEvent(payload) {
+	case eventTypeAPIGateway:
+		return nil, errors.New("API Gateway events are not supported by the local backend port")
+	case eventTypeScheduled:
+		var event events.EventBridgeEvent
+		if err := json.Unmarshal(payload, &event); err != nil {
+			return nil, fmt.Errorf("unmarshal EventBridge event: %w", err)
 		}
+		log.Printf("Received scheduled event: source=%s detail-type=%s id=%s", event.Source, event.DetailType, event.ID)
+		return json.Marshal(map[string]bool{"ok": true})
 	default:
-		printUsage(os.Stderr)
-		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", os.Args[1])
-		os.Exit(1)
+		return handleDirectLambdaEvent(ctx, payload)
 	}
 }
 
-func printUsage(w io.Writer) {
-	_, _ = fmt.Fprintf(w, "Usage: %s <command> [args]\n\n", os.Args[0])
-	_, _ = fmt.Fprintf(w, "Commands:\n")
-	_, _ = fmt.Fprintf(w, "  invoke   Process a direct/EventBridge JSON payload (from stdin or --payload file)\n")
-}
-
-func runInvoke(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer) error {
-	invokeFlags := flag.NewFlagSet("invoke", flag.ContinueOnError)
-	invokeFlags.SetOutput(io.Discard)
-	payloadFile := invokeFlags.String("payload", "", "Path to JSON payload file (reads from stdin if not set)")
-	if err := invokeFlags.Parse(args); err != nil {
-		return fmt.Errorf("parse invoke flags: %w", err)
+func handleDirectLambdaEvent(ctx context.Context, payload json.RawMessage) (json.RawMessage, error) {
+	var request directRequest
+	if err := json.Unmarshal(payload, &request); err != nil {
+		return nil, fmt.Errorf("unmarshal direct invocation payload: %w", err)
 	}
-	if invokeFlags.NArg() != 0 {
-		return fmt.Errorf("invoke does not accept positional arguments")
+	switch strings.TrimSpace(request.Action) {
+	case actionHealthCheck:
+		return json.Marshal(map[string]bool{"ok": true})
+	case actionGetDailyLog:
+		return handleGetDailyLog(ctx)
+	case actionPostDailyLog:
+		return handlePostDailyLog(ctx, request.Title, request.Contents)
+	case actionQueuePodcastTranscription:
+		return handleQueuePodcastTranscription(ctx, request.Text)
+	case actionProcessPodcastTranscription:
+		return handleProcessPodcastTranscription(ctx, request)
+	default:
+		return nil, errors.New("unknown direct invocation action")
 	}
-
-	payload, err := readInvokePayload(*payloadFile, stdin)
-	if err != nil {
-		return err
-	}
-
-	result, err := dispatchBackendEvent(ctx, payload)
-	if err != nil {
-		return err
-	}
-	if result == nil {
-		return nil
-	}
-
-	if _, err := fmt.Fprintln(stdout, string(result)); err != nil {
-		return fmt.Errorf("write invoke response: %w", err)
-	}
-
-	return nil
-}
-
-func readInvokePayload(payloadFile string, stdin io.Reader) (json.RawMessage, error) {
-	var (
-		payload []byte
-		err     error
-	)
-
-	if strings.TrimSpace(payloadFile) != "" {
-		payload, err = os.ReadFile(payloadFile)
-	} else {
-		payload, err = io.ReadAll(stdin)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("read invoke payload: %w", err)
-	}
-
-	payload = bytes.TrimSpace(payload)
-	if len(payload) == 0 {
-		return nil, errors.New("invoke payload is empty")
-	}
-
-	return json.RawMessage(payload), nil
-}
-
-func handleDirectRuntimeEvent(ctx context.Context, payload json.RawMessage) (json.RawMessage, error) {
-	return dispatchBackendEvent(ctx, payload)
-}
-
-func isLambdaRuntime() bool {
-	return strings.TrimSpace(os.Getenv("AWS_LAMBDA_RUNTIME_API")) != ""
-}
-
-func loadOptionalLocalEnvFile() error {
-	if _, err := os.Stat(defaultLocalDotEnvPath); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil
-		}
-		return fmt.Errorf("stat local env file %q: %w", defaultLocalDotEnvPath, err)
-	}
-
-	if err := godotenv.Overload(defaultLocalDotEnvPath); err != nil {
-		return fmt.Errorf("load local env file %q: %w", defaultLocalDotEnvPath, err)
-	}
-
-	return nil
 }
