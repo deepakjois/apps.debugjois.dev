@@ -1,6 +1,6 @@
 # backend-v2
 
-Refactored Go backend packages and CLIs for daily logs and podcast transcription. Application packages are independent of their external-service adapters and CLI transports so they can also be used by a future Lambda.
+Refactored Go backend packages, CLIs, and a Lambda transport for daily logs and podcast transcription. Application packages are independent of their external-service adapters and transports.
 
 ## Requirements
 
@@ -42,8 +42,9 @@ Deepgram. YouTube sources are downloaded with `yt-dlp` into a temporary
 directory that is removed after transcription.
 
 The CLI accepts the payload as one argument or from stdin. With `-parse`, it
-only resolves the source and prints the JSON handoff that a queue Lambda would
-send to a transcription worker; this mode does not require a Deepgram key:
+only resolves the source and prints the internal JSON transcription input;
+this mode does not require a Deepgram key. The Lambda transport retains the
+older public envelope described below instead:
 
 ```bash
 go run ./cmd/podscriber -parse 'https://example.com/episode.mp3'
@@ -80,9 +81,9 @@ go run ./cmd/podscriber \
 ```
 
 Publishing is exposed through the `podscriber.Publisher` interface. The CLI
-opts into the S3 adapter only with `-publish`; a future Lambda transport can
-publish every successful transcription without putting that policy in the
-transcription service.
+opts into the S3 adapter only with `-publish`. The Lambda transport always
+publishes successful transcriptions, retaining the original backend's document
+and object-key identity for compatibility.
 
 Podcast Addict share text containing newlines must be quoted when passed as an
 argument, or it can be piped through stdin. The reusable
@@ -94,6 +95,49 @@ therefore demonstrates the handoff shape, but that local path is removed when
 the CLI exits. Before splitting YouTube processing across asynchronous Lambda
 invocations, the queue stage must put the downloaded media in shared storage,
 or the worker stage must perform the `yt-dlp` resolution itself.
+
+## Lambda transport
+
+`main.go` starts the Lambda runtime and classifies direct, EventBridge, and API
+Gateway v2 envelopes before dispatching actions. EventBridge events remain
+acknowledged with `{"ok":true}`; API Gateway v2 remains explicitly unsupported.
+Unknown direct actions return an error rather than invoking an unrelated handler.
+`logger.go` handles daily logs; `podscriber.go` handles queue and worker actions.
+
+The external JSON contract matches `backend/`:
+
+- `{"action":"health-check"}` returns `{"ok":true}`.
+- `{"action":"get-daily-log"}` returns `{"title":"YYYY-MM-DD.md","contents":"<base64>"}`.
+- `{"action":"post-daily-log","title":"YYYY-MM-DD.md","contents":"<base64>"}`
+  validates today's Berlin filename, saves the decoded bytes, and echoes the
+  trimmed title and original base64 string.
+- `{"action":"queue-podcast-transcription","text":"<Podcast Addict URL or share text>"}`
+  returns `{"podcast":{...},"transcription_lambda_id":"<AWS request ID>"}` and
+  invokes the same function asynchronously with
+  `{"action":"process-podcast-transcription","podcast":{...}}`.
+- The worker accepts the original nested `podcast.source`, `podcast.podcast`,
+  and `podcast.episode` fields (including `episode.audio_url`). It returns and
+  publishes `{"podcast":{...},"deepgram":{...}}`, then refreshes the transcript
+  index. Publishing failures fail the invocation so AWS can retry.
+
+Lambda queue input remains Podcast Addict-only. YouTube and direct audio input
+support remains available through the CLI, without changing the deployed API.
+The worker consumes previously prepared metadata without fetching the episode
+page again.
+
+Build the Lambda executable from `backend-v2/`:
+
+```bash
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o /tmp/backend-v2-bootstrap .
+```
+
+The executable requires the AWS Lambda Runtime API; use the existing `cmd/`
+tools for local operations, or `go test .` for credential-free dispatch tests.
+Lambda uses `AWS_LAMBDA_FUNCTION_NAME` for self-invocation, ambient AWS
+credentials for Lambda/S3, `DEEPGRAM_API_KEY`, and Google ADC (the existing
+`gcp-credentials.json` federation configuration in AWS). It needs the same IAM
+permissions as the original backend. Container packaging and infrastructure
+still target their existing entrypoints; this port does not switch deployments.
 
 ## Container image
 

@@ -213,7 +213,8 @@ func parseEpisodeDocument(doc *goquery.Document, source parsedInput) (podscriber
 	if durationDisplay != "" {
 		extra["duration_display"] = durationDisplay
 	}
-	if publishedRaw != "" && publishedAt == nil {
+	// Retain the original spelling for compatibility transports and stable hashes.
+	if publishedRaw != "" {
 		extra["published_at_raw"] = publishedRaw
 	}
 	if len(extra) == 0 {
