@@ -44,7 +44,7 @@ func TestCanHandle(t *testing.T) {
 
 func TestExtractorDownloadsAudioAndMapsMetadata(t *testing.T) {
 	dir := t.TempDir()
-	audioPath := filepath.Join(dir, "abc.webm")
+	audioPath := filepath.Join(dir, "abc.mp3")
 	if err := os.WriteFile(audioPath, []byte("audio"), 0o600); err != nil {
 		t.Fatalf("os.WriteFile() error = %v", err)
 	}
@@ -59,16 +59,17 @@ func TestExtractorDownloadsAudioAndMapsMetadata(t *testing.T) {
 		ChannelURL:  "https://www.youtube.com/@example",
 		Uploader:    "Example",
 		Thumbnail:   "https://img.example.com/abc.jpg",
+		Filepath:    audioPath,
 	}
 	metadata.RequestedDownloads = append(metadata.RequestedDownloads, struct {
 		Filepath string `json:"filepath"`
-	}{Filepath: audioPath})
+	}{Filepath: filepath.Join(dir, "abc.webm")})
 	body, err := json.Marshal(metadata)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
 	}
 	runner := &fakeRunner{stdout: body}
-	extractor, err := newExtractor(Config{Executable: "/usr/bin/yt-dlp", OutputDir: dir}, runner)
+	extractor, err := newExtractor(Config{Executable: "/usr/bin/yt-dlp", OutputDir: dir, CookiesFromBrowser: " chrome "}, runner)
 	if err != nil {
 		t.Fatalf("newExtractor() error = %v", err)
 	}
@@ -80,7 +81,7 @@ func TestExtractorDownloadsAudioAndMapsMetadata(t *testing.T) {
 	if runner.name != "/usr/bin/yt-dlp" {
 		t.Fatalf("runner name = %q", runner.name)
 	}
-	for _, arg := range []string{"--no-playlist", "--no-simulate", "--dump-single-json", "bestaudio"} {
+	for _, arg := range []string{"--ignore-config", "--no-playlist", "--no-simulate", "--dump-single-json", "bestaudio/best", "--extract-audio", "mp3", "6", "ExtractAudio+ffmpeg_o:-ac 1", "--cookies-from-browser", "chrome", "--"} {
 		if !slices.Contains(runner.args, arg) {
 			t.Errorf("yt-dlp args %q do not contain %q", runner.args, arg)
 		}
@@ -96,6 +97,18 @@ func TestExtractorDownloadsAudioAndMapsMetadata(t *testing.T) {
 	}
 	if got.Metadata.Extra["video_id"] != "abc" {
 		t.Fatalf("extra = %#v", got.Metadata.Extra)
+	}
+
+	withoutCookies := &fakeRunner{stdout: body}
+	extractor, err = newExtractor(Config{Executable: "yt-dlp", OutputDir: dir}, withoutCookies)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := extractor.Extract(context.Background(), "https://youtu.be/abc"); err != nil {
+		t.Fatal(err)
+	}
+	if slices.Contains(withoutCookies.args, "--cookies-from-browser") {
+		t.Fatalf("cookie-free yt-dlp args = %q", withoutCookies.args)
 	}
 }
 

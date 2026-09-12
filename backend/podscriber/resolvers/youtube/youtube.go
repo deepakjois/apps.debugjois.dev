@@ -20,8 +20,9 @@ import (
 
 // Config locates yt-dlp and its caller-owned download directory.
 type Config struct {
-	Executable string
-	OutputDir  string
+	Executable         string
+	OutputDir          string
+	CookiesFromBrowser string
 }
 
 type commandRunner interface {
@@ -43,9 +44,10 @@ func (execRunner) Run(ctx context.Context, name string, args ...string) ([]byte,
 // Extractor uses a configured yt-dlp process and output directory. Callers own
 // the directory and are responsible for removing downloaded files.
 type Extractor struct {
-	executable string
-	outputDir  string
-	runner     commandRunner
+	executable         string
+	outputDir          string
+	cookiesFromBrowser string
+	runner             commandRunner
 }
 
 func New(config Config) (*Extractor, error) {
@@ -77,9 +79,10 @@ func newExtractor(config Config, runner commandRunner) (*Extractor, error) {
 		return nil, errors.New("configure YouTube extractor: output path is not a directory")
 	}
 	return &Extractor{
-		executable: config.Executable,
-		outputDir:  absDir,
-		runner:     runner,
+		executable:         config.Executable,
+		outputDir:          absDir,
+		cookiesFromBrowser: strings.TrimSpace(config.CookiesFromBrowser),
+		runner:             runner,
 	}, nil
 }
 
@@ -110,6 +113,7 @@ type ytMetadata struct {
 	Uploader           string  `json:"uploader"`
 	UploaderURL        string  `json:"uploader_url"`
 	Thumbnail          string  `json:"thumbnail"`
+	Filepath           string  `json:"filepath"`
 	Filename           string  `json:"_filename"`
 	RequestedDownloads []struct {
 		Filepath string `json:"filepath"`
@@ -147,15 +151,23 @@ func (e *Extractor) Extract(ctx context.Context, input string) (result podscribe
 	}()
 
 	args := []string{
+		"--ignore-config",
 		"--no-playlist",
 		"--no-simulate",
 		"--no-progress",
 		"--dump-single-json",
-		"--format", "bestaudio",
+		"--format", "bestaudio/best",
+		"--extract-audio",
+		"--audio-format", "mp3",
+		"--audio-quality", "6",
+		"--postprocessor-args", "ExtractAudio+ffmpeg_o:-ac 1",
 		"--paths", downloadDir,
 		"--output", "%(id)s.%(ext)s",
-		input,
 	}
+	if e.cookiesFromBrowser != "" {
+		args = append(args, "--cookies-from-browser", e.cookiesFromBrowser)
+	}
+	args = append(args, "--", input)
 	stdout, stderr, err := e.runner.Run(ctx, e.executable, args...)
 	if err != nil {
 		if ctxErr := ctx.Err(); ctxErr != nil {
@@ -214,6 +226,9 @@ func (e *Extractor) Extract(ctx context.Context, input string) (result podscribe
 }
 
 func downloadedPath(metadata ytMetadata) string {
+	if strings.TrimSpace(metadata.Filepath) != "" {
+		return metadata.Filepath
+	}
 	for _, download := range metadata.RequestedDownloads {
 		if strings.TrimSpace(download.Filepath) != "" {
 			return download.Filepath

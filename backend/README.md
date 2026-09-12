@@ -10,7 +10,9 @@ external-service adapters and transports.
 - `golangci-lint` on `PATH`
 - AWS credentials for transcript publishing or index generation with `--write`
 - Google Drive Application Default Credentials for daily logs
-- `yt-dlp` on `PATH` for YouTube transcription
+- A current `yt-dlp` on `PATH` for YouTube transcription
+- `ffmpeg` and `ffprobe` on `PATH` for YouTube audio conversion
+- Deno 2+ on `PATH` for yt-dlp's YouTube JavaScript challenges
 - `DEEPGRAM_API_KEY` for podcast transcription
 
 Configure local Google Drive access. Quote the full service-account email so the ADC impersonation URL is written correctly:
@@ -41,8 +43,9 @@ Dates and filenames use the `Europe/Berlin` timezone. A missing daily log reads 
 
 The podscriber resolves Podcast Addict episode links or share text, YouTube
 URLs, and direct HTTP(S) audio URLs before transcribing the audio with
-Deepgram. YouTube sources are downloaded with `yt-dlp` into a temporary
-directory that is removed after transcription.
+Deepgram. YouTube sources are downloaded with `yt-dlp`, converted to a mono
+VBR MP3 at audio quality 6, and placed in a temporary directory that is removed
+after transcription.
 
 The CLI accepts the payload as one argument or from stdin. With `-parse`, it
 only resolves the source and prints the internal JSON transcription input;
@@ -99,6 +102,69 @@ the CLI exits. Before splitting YouTube processing across asynchronous Lambda
 invocations, the queue stage must put the downloaded media in shared storage,
 or the worker stage must perform the `yt-dlp` resolution itself.
 
+## Local YouTube transcription and Lambda publishing
+
+`youtube-transcript` avoids downloading from YouTube inside Lambda. It accepts a
+YouTube URL as its argument, downloads and transcribes the video locally,
+removes the temporary media path from the completed result, and synchronously
+asks the backend Lambda to publish the transcript and refresh the index:
+
+```bash
+export DEEPGRAM_API_KEY='your-deepgram-api-key'
+export BACKEND_LAMBDA_FUNCTION_NAME='your-backend-function-name'
+go run ./cmd/youtube-transcript 'https://www.youtube.com/watch?v=example'
+```
+
+By default, the command asks `yt-dlp` to read cookies from the local Chrome
+profile. Cookie decryption requires running as the same desktop user with
+access to Chrome's profile and unlocked system keychain or keyring. To download
+without browser cookies instead:
+
+```bash
+go run ./cmd/youtube-transcript --no-cookies \
+  'https://www.youtube.com/watch?v=example'
+```
+
+The command uses the normal AWS credential and region chain and prints the
+Lambda response (`{"ok":true}`) after both the transcript upload and index
+refresh succeed. Local Deepgram requests use the same Nova 3 options as the
+backend and have a ten-minute timeout. The CLI generates the JSON action payload
+shown below; callers do not need to construct it themselves.
+
+The CLI invokes this direct Lambda action:
+
+```json
+{
+  "action": "publish-completed-transcription",
+  "transcription": {
+    "schema_version": 1,
+    "source": {
+      "type": "youtube",
+      "input": "https://youtu.be/example",
+      "url": "https://www.youtube.com/watch?v=example"
+    },
+    "metadata": {
+      "title": "Video title",
+      "published_date": "2026-09-10",
+      "series": { "title": "Channel", "url": "https://www.youtube.com/@channel" }
+    },
+    "transcript": {
+      "text": "Plain transcript text",
+      "provider": "deepgram",
+      "request_id": "request-id",
+      "raw": { "metadata": {}, "results": {} }
+    }
+  }
+}
+```
+
+The portable action contract deliberately contains no media URL or local file
+path. Lambda validates the schema, source identity, provider, and raw transcript
+JSON before writing the existing reader-compatible document to S3. The caller
+needs `lambda:InvokeFunction` permission for the backend function. As a direct
+synchronous Lambda invocation, the complete JSON request must fit AWS Lambda's
+request payload limit.
+
 ## Transcript index CLI
 
 Generate and print the transcript index from S3:
@@ -138,6 +204,9 @@ The external JSON contract remains compatible with `backend-old/`:
   and `podcast.episode` fields (including `episode.audio_url`). It returns and
   publishes `{"podcast":{...},"deepgram":{...}}`, then refreshes the transcript
   index. Publishing failures fail the invocation so AWS can retry.
+- `{"action":"publish-completed-transcription","transcription":{...}}` accepts
+  a completed, media-free local transcription, publishes the same compatible
+  document shape, refreshes the index, and returns `{"ok":true}`.
 
 Lambda queue input remains Podcast Addict-only. YouTube and direct audio input
 return an unsupported-source error at the Lambda transport boundary; support
