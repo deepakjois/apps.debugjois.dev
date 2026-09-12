@@ -127,10 +127,36 @@ type Transcript struct {
 	Raw       json.RawMessage `json:"raw"`
 }
 
-// TranscriptionResult combines the prepared input with its transcript.
+// TranscriptionResult is the portable output of a completed transcription. It
+// omits the media location because publishing no longer needs the audio.
 type TranscriptionResult struct {
-	Input      TranscriptionInput `json:"input"`
-	Transcript Transcript         `json:"transcript"`
+	SchemaVersion int        `json:"schema_version"`
+	Source        Source     `json:"source"`
+	Metadata      Metadata   `json:"metadata"`
+	Transcript    Transcript `json:"transcript"`
+}
+
+// Validate checks the portable publishing contract without requiring media.
+func (result TranscriptionResult) Validate() error {
+	if result.SchemaVersion != SchemaVersion {
+		return fmt.Errorf("unsupported schema version %d", result.SchemaVersion)
+	}
+	if strings.TrimSpace(string(result.Source.Type)) == "" {
+		return errors.New("source type is empty")
+	}
+	if strings.TrimSpace(result.Source.Input) == "" {
+		return errors.New("source input is empty")
+	}
+	if strings.TrimSpace(result.Source.URL) == "" {
+		return errors.New("canonical source URL is empty")
+	}
+	if strings.TrimSpace(result.Transcript.Provider) == "" {
+		return errors.New("transcript provider is empty")
+	}
+	if len(result.Transcript.Raw) == 0 || !json.Valid(result.Transcript.Raw) {
+		return errors.New("raw transcript is not valid JSON")
+	}
+	return nil
 }
 
 // Transcriber turns prepared media into a transcript.

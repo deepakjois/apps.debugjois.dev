@@ -57,7 +57,7 @@ func (p *Publisher) Publish(ctx context.Context, result podscriber.Transcription
 	if p == nil || p.client == nil || strings.TrimSpace(p.bucket) == "" {
 		return errors.New("publish transcript: S3 publisher is not configured")
 	}
-	if err := result.Input.Validate(); err != nil {
+	if err := result.Validate(); err != nil {
 		return fmt.Errorf("publish transcript: %w", err)
 	}
 
@@ -65,7 +65,7 @@ func (p *Publisher) Publish(ctx context.Context, result podscriber.Transcription
 	if err != nil {
 		return fmt.Errorf("encode transcript for publishing: %w", err)
 	}
-	key, err := objectKey(result.Input)
+	key, err := objectKey(result)
 	if err != nil {
 		return err
 	}
@@ -122,13 +122,13 @@ type episodeDocument struct {
 }
 
 func newDocument(result podscriber.TranscriptionResult) document {
-	metadata := result.Input.Metadata
+	metadata := result.Metadata
 	doc := document{
 		Podcast: podcastDocument{
 			Source: sourceDocument{
-				Type:       result.Input.Source.Type,
+				Type:       result.Source.Type,
 				ShareTitle: extraString(metadata.Extra, "share_title"),
-				EpisodeURL: result.Input.Source.URL,
+				EpisodeURL: result.Source.URL,
 			},
 			Episode: episodeDocument{
 				Title:           metadata.Title,
@@ -154,21 +154,25 @@ func extraString(extra map[string]any, key string) string {
 	return strings.TrimSpace(value)
 }
 
-func objectKey(input podscriber.TranscriptionInput) (string, error) {
-	payload, err := json.Marshal(input)
+func objectKey(result podscriber.TranscriptionResult) (string, error) {
+	payload, err := json.Marshal(struct {
+		SchemaVersion int                 `json:"schema_version"`
+		Source        podscriber.Source   `json:"source"`
+		Metadata      podscriber.Metadata `json:"metadata"`
+	}{result.SchemaVersion, result.Source, result.Metadata})
 	if err != nil {
 		return "", fmt.Errorf("encode transcript identity: %w", err)
 	}
 	sum := sha256.Sum256(payload)
-	return fmt.Sprintf("%s%s--%s.json", transcripts.ObjectPrefix, readableSlug(input), hex.EncodeToString(sum[:])), nil
+	return fmt.Sprintf("%s%s--%s.json", transcripts.ObjectPrefix, readableSlug(result), hex.EncodeToString(sum[:])), nil
 }
 
-func readableSlug(input podscriber.TranscriptionInput) string {
+func readableSlug(result podscriber.TranscriptionResult) string {
 	var parts []string
-	if input.Metadata.Series != nil {
-		parts = append(parts, slugPart(input.Metadata.Series.Title))
+	if result.Metadata.Series != nil {
+		parts = append(parts, slugPart(result.Metadata.Series.Title))
 	}
-	parts = append(parts, slugPart(input.Metadata.Title))
+	parts = append(parts, slugPart(result.Metadata.Title))
 
 	nonempty := parts[:0]
 	for _, part := range parts {
@@ -178,7 +182,7 @@ func readableSlug(input podscriber.TranscriptionInput) string {
 	}
 	slug := strings.Join(nonempty, "--")
 	if slug == "" {
-		slug = slugPart(input.Source.URL)
+		slug = slugPart(result.Source.URL)
 	}
 	if slug == "" {
 		slug = "podcast-transcript"

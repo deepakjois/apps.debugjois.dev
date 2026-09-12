@@ -70,7 +70,7 @@ func TestTranscribeRemoteURL(t *testing.T) {
 	if got.Transcript.Text != "Hello world." || got.Transcript.RequestID != "request-1" {
 		t.Fatalf("transcript = %#v", got.Transcript)
 	}
-	if len(got.Transcript.Raw) == 0 || got.Input.Metadata.Title != "Episode" {
+	if len(got.Transcript.Raw) == 0 || got.Metadata.Title != "Episode" {
 		t.Fatalf("result = %#v", got)
 	}
 }

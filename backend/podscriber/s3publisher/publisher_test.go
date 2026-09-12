@@ -2,6 +2,7 @@ package s3publisher
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -89,8 +90,10 @@ func TestPublishWritesCompatibleDocumentAndRefreshesIndex(t *testing.T) {
 	}
 
 	transcriptKey := aws.ToString(client.puts[0].Key)
-	if !strings.HasPrefix(transcriptKey, "transcripts/example-show--example-episode--") || !strings.HasSuffix(transcriptKey, ".json") {
-		t.Fatalf("transcript key = %q", transcriptKey)
+	identity := `{"schema_version":1,"source":{"type":"podcast_addict","input":"shared payload","url":"https://podcastaddict.com/show/episode/123"},"metadata":{"title":"Example Episode","published_date":"2026-09-09","series":{"title":"Example Show","url":"https://example.com/show"},"extra":{"duration_display":"42 mins","share_title":"Shared title"}}}`
+	wantKey := fmt.Sprintf("transcripts/example-show--example-episode--%x.json", sha256.Sum256([]byte(identity)))
+	if transcriptKey != wantKey {
+		t.Fatalf("transcript key = %q, want %q", transcriptKey, wantKey)
 	}
 	if got := aws.ToString(client.puts[0].ContentType); got != "application/json" {
 		t.Fatalf("content type = %q", got)
@@ -109,6 +112,10 @@ func TestPublishWritesCompatibleDocumentAndRefreshesIndex(t *testing.T) {
 	if string(published.Deepgram) != `{"metadata":{"created":"2026-09-10T12:00:00Z"}}` {
 		t.Fatalf("published Deepgram payload = %s", published.Deepgram)
 	}
+	wantBody := `{"podcast":{"source":{"type":"podcast_addict","share_title":"Shared title","episode_url":"https://podcastaddict.com/show/episode/123"},"podcast":{"title":"Example Show","url":"https://example.com/show"},"episode":{"title":"Example Episode","published_date":"2026-09-09","duration":"42 mins"}},"deepgram":{"metadata":{"created":"2026-09-10T12:00:00Z"}}}`
+	if got := client.objects[transcriptKey].body; got != wantBody {
+		t.Fatalf("published body = %s, want %s", got, wantBody)
+	}
 
 	var index transcripts.Index
 	if err := json.Unmarshal([]byte(client.objects[transcripts.IndexObjectKey].body), &index); err != nil {
@@ -121,8 +128,8 @@ func TestPublishWritesCompatibleDocumentAndRefreshesIndex(t *testing.T) {
 
 func TestNewDocumentPreservesYouTubeSourceType(t *testing.T) {
 	result := testResult()
-	result.Input.Source.Type = podscriber.SourceTypeYouTube
-	result.Input.Source.URL = "https://www.youtube.com/watch?v=example"
+	result.Source.Type = podscriber.SourceTypeYouTube
+	result.Source.URL = "https://www.youtube.com/watch?v=example"
 
 	got := newDocument(result)
 	if got.Podcast.Source.Type != podscriber.SourceTypeYouTube {
@@ -142,20 +149,17 @@ func TestPublishRejectsInvalidResult(t *testing.T) {
 
 func testResult() podscriber.TranscriptionResult {
 	return podscriber.TranscriptionResult{
-		Input: podscriber.TranscriptionInput{
-			SchemaVersion: podscriber.SchemaVersion,
-			Source: podscriber.Source{
-				Type:  podscriber.SourceTypePodcastAddict,
-				Input: "shared payload",
-				URL:   "https://podcastaddict.com/show/episode/123",
-			},
-			Media: podscriber.Media{Type: podscriber.MediaTypeRemoteURL, URL: "https://cdn.example.com/audio.mp3"},
-			Metadata: podscriber.Metadata{
-				Title:         "Example Episode",
-				PublishedDate: "2026-09-09",
-				Series:        &podscriber.Series{Title: "Example Show", URL: "https://example.com/show"},
-				Extra:         map[string]any{"share_title": "Shared title", "duration_display": "42 mins"},
-			},
+		SchemaVersion: podscriber.SchemaVersion,
+		Source: podscriber.Source{
+			Type:  podscriber.SourceTypePodcastAddict,
+			Input: "shared payload",
+			URL:   "https://podcastaddict.com/show/episode/123",
+		},
+		Metadata: podscriber.Metadata{
+			Title:         "Example Episode",
+			PublishedDate: "2026-09-09",
+			Series:        &podscriber.Series{Title: "Example Show", URL: "https://example.com/show"},
+			Extra:         map[string]any{"share_title": "Shared title", "duration_display": "42 mins"},
 		},
 		Transcript: podscriber.Transcript{
 			Text:     "Transcript text",

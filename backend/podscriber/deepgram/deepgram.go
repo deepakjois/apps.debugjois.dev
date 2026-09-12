@@ -97,7 +97,9 @@ func (t *Transcriber) Transcribe(ctx context.Context, input podscriber.Transcrip
 		requestID = response.Metadata.RequestID
 	}
 	return podscriber.TranscriptionResult{
-		Input: input,
+		SchemaVersion: input.SchemaVersion,
+		Source:        input.Source,
+		Metadata:      input.Metadata,
 		Transcript: podscriber.Transcript{
 			Text:      response.Results.Channels[0].Alternatives[0].Transcript,
 			Provider:  Provider,
