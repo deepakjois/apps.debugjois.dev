@@ -22,6 +22,7 @@ import (
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber"
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/deepgram"
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/resolvers/podcastaddict"
+	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/s3publisher"
 	"github.com/deepakjois/apps.debugjois.dev/backend/transcripts"
 )
 
@@ -79,6 +80,17 @@ type transcriptResponse struct {
 	Deepgram json.RawMessage `json:"deepgram"`
 }
 
+// publishCompletedTranscriptionRequest carries a media-free local result.
+type publishCompletedTranscriptionRequest struct {
+	Action        string                         `json:"action"`
+	Transcription podscriber.TranscriptionResult `json:"transcription"`
+}
+
+// completedTranscriptPublisher is the Lambda-owned publishing boundary.
+type completedTranscriptPublisher interface {
+	Publish(context.Context, podscriber.TranscriptionResult) error
+}
+
 var (
 	extractPodcast      = podcastaddict.New(nil).Extract
 	invokePodcastWorker = invokeSelfForPodcastTranscription
@@ -90,7 +102,10 @@ var (
 		return client.Transcribe(ctx, input)
 	}
 	persistPodcastTranscript = persistTranscript
-	newTranscriptS3Client    = func(ctx context.Context) (transcripts.S3Client, error) {
+	newCompletedPublisher    = func(ctx context.Context) (completedTranscriptPublisher, error) {
+		return s3publisher.New(ctx)
+	}
+	newTranscriptS3Client = func(ctx context.Context) (transcripts.S3Client, error) {
 		cfg, err := config.LoadDefaultConfig(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("load AWS config for transcript upload: %w", err)
@@ -103,6 +118,20 @@ var (
 		return s3.NewFromConfig(cfg), nil
 	}
 )
+
+func handlePublishCompletedTranscription(ctx context.Context, result podscriber.TranscriptionResult) (json.RawMessage, error) {
+	if err := result.Validate(); err != nil {
+		return nil, fmt.Errorf("validate completed transcription: %w", err)
+	}
+	publisher, err := newCompletedPublisher(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := publisher.Publish(ctx, result); err != nil {
+		return nil, err
+	}
+	return json.Marshal(map[string]bool{"ok": true})
+}
 
 func handleQueuePodcastTranscription(ctx context.Context, text string) (json.RawMessage, error) {
 	text = strings.TrimSpace(text)

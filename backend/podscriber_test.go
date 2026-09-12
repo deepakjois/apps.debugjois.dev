@@ -38,6 +38,13 @@ func (f invokeFunc) Invoke(_ context.Context, in *awslambda.InvokeInput, _ ...fu
 	return f(in)
 }
 
+// completedPublisherFunc captures portable results without AWS writes.
+type completedPublisherFunc func(context.Context, podscriber.TranscriptionResult) error
+
+func (f completedPublisherFunc) Publish(ctx context.Context, result podscriber.TranscriptionResult) error {
+	return f(ctx, result)
+}
+
 func TestQueueLegacyContract(t *testing.T) {
 	oldExtract, oldInvoke := extractPodcast, invokePodcastWorker
 	t.Cleanup(func() { extractPodcast, invokePodcastWorker = oldExtract, oldInvoke })
@@ -89,6 +96,38 @@ func TestQueueRejectsNonPodcastAddictSourcesBeforeResolution(t *testing.T) {
 		if err == nil || err.Error() != "unsupported Lambda transcription source: only Podcast Addict URLs are supported" {
 			t.Fatalf("input %q: error = %v", input, err)
 		}
+	}
+}
+
+func TestPublishCompletedTranscriptionAction(t *testing.T) {
+	oldFactory := newCompletedPublisher
+	t.Cleanup(func() { newCompletedPublisher = oldFactory })
+	var published podscriber.TranscriptionResult
+	newCompletedPublisher = func(context.Context) (completedTranscriptPublisher, error) {
+		return completedPublisherFunc(func(_ context.Context, result podscriber.TranscriptionResult) error {
+			published = result
+			return nil
+		}), nil
+	}
+	payload := `{"action":"publish-completed-transcription","transcription":{"schema_version":1,"source":{"type":"youtube","input":"https://youtu.be/example","url":"https://www.youtube.com/watch?v=example"},"metadata":{"title":"Video","published_date":"2026-09-10"},"transcript":{"text":"Transcript","provider":"deepgram","raw":{"results":{}}}}}`
+	body, err := dispatchBackendEvent(context.Background(), json.RawMessage(payload))
+	if err != nil || string(body) != `{"ok":true}` {
+		t.Fatalf("body=%s err=%v", body, err)
+	}
+	if published.Source.Type != podscriber.SourceTypeYouTube || published.Metadata.Title != "Video" || string(published.Transcript.Raw) != `{"results":{}}` {
+		t.Fatalf("published = %#v", published)
+	}
+
+	called := false
+	newCompletedPublisher = func(context.Context) (completedTranscriptPublisher, error) {
+		called = true
+		return nil, errors.New("must not be called")
+	}
+	if _, err := dispatchBackendEvent(context.Background(), json.RawMessage(`{"action":"publish-completed-transcription","transcription":{}}`)); err == nil || !strings.Contains(err.Error(), "unsupported schema version") {
+		t.Fatalf("invalid payload error = %v", err)
+	}
+	if called {
+		t.Fatal("created publisher for invalid payload")
 	}
 }
 

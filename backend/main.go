@@ -18,6 +18,7 @@ const (
 	actionPostDailyLog                = "post-daily-log"
 	actionQueuePodcastTranscription   = "queue-podcast-transcription"
 	actionProcessPodcastTranscription = "process-podcast-transcription"
+	actionPublishCompletedTranscript  = "publish-completed-transcription"
 )
 
 // directRequest reads the discriminator shared by every direct invocation.
@@ -105,6 +106,12 @@ func handleDirectLambdaEvent(ctx context.Context, payload json.RawMessage) (json
 			return nil, fmt.Errorf("unmarshal %s payload: %w", actionProcessPodcastTranscription, err)
 		}
 		return handleProcessPodcastTranscription(ctx, process)
+	case actionPublishCompletedTranscript:
+		var publish publishCompletedTranscriptionRequest
+		if err := json.Unmarshal(payload, &publish); err != nil {
+			return nil, fmt.Errorf("unmarshal %s payload: %w", actionPublishCompletedTranscript, err)
+		}
+		return handlePublishCompletedTranscription(ctx, publish.Transcription)
 	default:
 		return nil, errors.New("unknown direct invocation action")
 	}
