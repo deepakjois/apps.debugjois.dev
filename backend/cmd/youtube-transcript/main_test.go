@@ -112,7 +112,7 @@ func TestRunNoPublishPrintsPublishPayload(t *testing.T) {
 	}
 
 	var request publishRequest
-	if err := json.Unmarshal([]byte(stdout.String()), &request); err != nil {
+	if err := json.Unmarshal(stdout.Bytes(), &request); err != nil {
 		t.Fatalf("stdout is not the publish payload: %q", stdout.String())
 	}
 	if request.Action != publishAction || request.Transcription.Source.Type != podscriber.SourceTypeYouTube || request.Transcription.Transcript.Text != "Text" {
