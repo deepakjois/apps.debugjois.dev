@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 
 	deepgramapi "github.com/deepgram/deepgram-go-sdk/v3/pkg/api/listen/v1/rest"
 	deepgramresponse "github.com/deepgram/deepgram-go-sdk/v3/pkg/api/listen/v1/rest/interfaces"
@@ -19,8 +18,6 @@ import (
 )
 
 const Provider = "deepgram"
-
-var initOnce sync.Once
 
 type prerecordedClient interface {
 	FromFile(ctx context.Context, file string, options *deepgraminterfaces.PreRecordedTranscriptionOptions) (*deepgramresponse.PreRecordedResponse, error)
@@ -37,9 +34,9 @@ func New(apiKey string) (*Transcriber, error) {
 	if apiKey == "" {
 		return nil, errors.New("configure Deepgram: API key is empty")
 	}
-	initOnce.Do(func() {
-		deepgramclient.InitWithDefault()
-	})
+	// Deliberately skip deepgramclient.InitWithDefault(): the SDK's Init
+	// calls flag.Parse() on the global command line, which crashes CLI
+	// binaries that accept their own flags. klog's defaults are fine.
 	restClient := deepgramclient.NewREST(apiKey, &deepgraminterfaces.ClientOptions{})
 	return &Transcriber{client: deepgramapi.New(restClient)}, nil
 }

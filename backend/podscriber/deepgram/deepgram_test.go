@@ -3,6 +3,7 @@ package deepgram
 import (
 	"context"
 	"errors"
+	"flag"
 	"os"
 	"path/filepath"
 	"testing"
@@ -127,6 +128,17 @@ func TestNewRequiresAPIKey(t *testing.T) {
 	_, err := New(" ")
 	if err == nil {
 		t.Fatal("New() error = nil")
+	}
+}
+
+func TestNewDoesNotTouchGlobalFlags(t *testing.T) {
+	// The SDK's InitWithDefault() registers klog flags on flag.CommandLine and
+	// parses os.Args, which crashes CLI binaries that accept their own flags.
+	if _, err := New("api-key"); err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	if flag.Lookup("logtostderr") != nil {
+		t.Fatal("New() registered klog flags on the global command line")
 	}
 }
 
