@@ -1,1 +1,4 @@
 .amp/portals/*
+
+# Local secrets must never be committed
+.env

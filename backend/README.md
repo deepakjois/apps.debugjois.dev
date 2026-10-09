@@ -125,6 +125,24 @@ go run ./cmd/youtube-transcript --no-cookies \
   'https://www.youtube.com/watch?v=example'
 ```
 
+`--no-publish` skips the Lambda invocation and prints the generated publish
+payload to stdout instead. `-o <file>` implies `--no-publish` and writes the
+same payload to `<file>`. The dumped payload is byte-identical to what the
+publish mode would send, so it can be inspected with `jq` or replayed against
+the backend Lambda later:
+
+```bash
+go run ./cmd/youtube-transcript -o /tmp/payload.json \
+  'https://www.youtube.com/watch?v=example'
+jq '.transcription.transcript.text' /tmp/payload.json
+aws lambda invoke --function-name "$BACKEND_LAMBDA_FUNCTION_NAME" \
+  --cli-binary-format raw-in-base64-out \
+  --payload file:///tmp/payload.json /tmp/publish-response.json
+```
+
+`BACKEND_LAMBDA_FUNCTION_NAME` is required only when publishing; the
+`--no-publish` and `-o` modes need only `DEEPGRAM_API_KEY`.
+
 The command uses the normal AWS credential and region chain and prints the
 Lambda response (`{"ok":true}`) after both the transcript upload and index
 refresh succeed. Local Deepgram requests use the same Nova 3 options as the

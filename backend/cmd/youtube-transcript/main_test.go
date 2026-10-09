@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -74,11 +76,114 @@ func TestRunChecksEnvironmentBeforeTranscribing(t *testing.T) {
 	}
 }
 
+func TestRunRequiresLambdaNameOnlyWhenPublishing(t *testing.T) {
+	t.Setenv(deepgramAPIKeyEnv, "deepgram-key")
+	t.Setenv(backendLambdaNameEnv, "")
+	oldTranscribe := transcribeLocally
+	t.Cleanup(func() { transcribeLocally = oldTranscribe })
+	transcribeLocally = func(context.Context, string, string) (podscriber.TranscriptionResult, error) {
+		t.Fatal("transcribed before checking environment")
+		return podscriber.TranscriptionResult{}, nil
+	}
+
+	// Publishing still requires the backend Lambda target.
+	err := run(context.Background(), []string{"https://youtu.be/example"}, &bytes.Buffer{})
+	if err == nil || !strings.Contains(err.Error(), backendLambdaNameEnv) {
+		t.Fatalf("run() error = %v", err)
+	}
+}
+
+func TestRunNoPublishPrintsPublishPayload(t *testing.T) {
+	t.Setenv(deepgramAPIKeyEnv, "deepgram-key")
+	t.Setenv(backendLambdaNameEnv, "")
+	oldTranscribe, oldPublish := transcribeLocally, publishToLambda
+	t.Cleanup(func() { transcribeLocally, publishToLambda = oldTranscribe, oldPublish })
+	transcribeLocally = func(context.Context, string, string) (podscriber.TranscriptionResult, error) {
+		return completedResult(), nil
+	}
+	publishToLambda = func(context.Context, podscriber.TranscriptionResult) (json.RawMessage, error) {
+		t.Fatal("published despite --no-publish")
+		return nil, nil
+	}
+
+	var stdout bytes.Buffer
+	if err := run(context.Background(), []string{"--no-publish", "https://youtu.be/example"}, &stdout); err != nil {
+		t.Fatalf("run() error = %v", err)
+	}
+
+	var request publishRequest
+	if err := json.Unmarshal([]byte(stdout.String()), &request); err != nil {
+		t.Fatalf("stdout is not the publish payload: %q", stdout.String())
+	}
+	if request.Action != publishAction || request.Transcription.Source.Type != podscriber.SourceTypeYouTube || request.Transcription.Transcript.Text != "Text" {
+		t.Fatalf("request = %#v", request)
+	}
+	want, err := encodePublishRequest(completedResult())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stdout.String() != string(want)+"\n" {
+		t.Fatalf("stdout = %q", stdout.String())
+	}
+}
+
+func TestRunOutputFileWritesPublishPayload(t *testing.T) {
+	t.Setenv(deepgramAPIKeyEnv, "deepgram-key")
+	t.Setenv(backendLambdaNameEnv, "")
+	oldTranscribe, oldPublish := transcribeLocally, publishToLambda
+	t.Cleanup(func() { transcribeLocally, publishToLambda = oldTranscribe, oldPublish })
+	transcribeLocally = func(context.Context, string, string) (podscriber.TranscriptionResult, error) {
+		return completedResult(), nil
+	}
+	publishToLambda = func(context.Context, podscriber.TranscriptionResult) (json.RawMessage, error) {
+		t.Fatal("published despite -o output")
+		return nil, nil
+	}
+
+	outputPath := filepath.Join(t.TempDir(), "payload.json")
+	var stdout bytes.Buffer
+	if err := run(context.Background(), []string{"-o", outputPath, "https://youtu.be/example"}, &stdout); err != nil {
+		t.Fatalf("run() error = %v", err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q", stdout.String())
+	}
+	contents, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("read output file: %v", err)
+	}
+	want, err := encodePublishRequest(completedResult())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(contents) != string(want)+"\n" {
+		t.Fatalf("output file = %q", string(contents))
+	}
+}
+
 func TestParseArgsRejectsInvalidArguments(t *testing.T) {
-	for _, args := range [][]string{nil, {""}, {"one", "two"}, {"--unknown", "url"}} {
+	for _, args := range [][]string{nil, {""}, {"one", "two"}, {"--unknown", "url"}, {"-o"}, {"-o", "", "url"}, {"--no-publish"}} {
 		if _, err := parseArgs(args); err == nil {
 			t.Fatalf("parseArgs(%q) error = nil", args)
 		}
+	}
+}
+
+func TestParseArgsControlsPublishing(t *testing.T) {
+	publishing, err := parseArgs([]string{"https://youtu.be/example"})
+	if err != nil || publishing.noPublish || publishing.outputFile != "" {
+		t.Fatalf("default options = %#v, error = %v", publishing, err)
+	}
+	skipping, err := parseArgs([]string{"--no-publish", "https://youtu.be/example"})
+	if err != nil || !skipping.noPublish || skipping.outputFile != "" {
+		t.Fatalf("no-publish options = %#v, error = %v", skipping, err)
+	}
+	toFile, err := parseArgs([]string{"-o", " out.json ", "https://youtu.be/example"})
+	if err != nil || !toFile.noPublish || toFile.outputFile != "out.json" {
+		t.Fatalf("output options = %#v, error = %v", toFile, err)
+	}
+	if _, err := parseArgs([]string{"-o", "  ", "url"}); err == nil {
+		t.Fatal("blank output file accepted")
 	}
 }
 

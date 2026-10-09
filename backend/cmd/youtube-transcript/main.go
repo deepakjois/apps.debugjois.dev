@@ -26,10 +26,13 @@ const (
 	deepgramTimeout      = 10 * time.Minute
 )
 
-// cliOptions controls local source extraction before publishing.
+// cliOptions controls local source extraction and payload delivery.
+// OutputFile implies NoPublish because the payload is dumped instead of sent.
 type cliOptions struct {
 	sourceURL          string
 	cookiesFromBrowser string
+	noPublish          bool
+	outputFile         string
 }
 
 // publishRequest is the media-free direct Lambda invocation contract.
@@ -60,12 +63,15 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if err := validateEnvironment(); err != nil {
+	if err := validateEnvironment(!options.noPublish); err != nil {
 		return err
 	}
 	result, err := transcribeLocally(ctx, options.sourceURL, options.cookiesFromBrowser)
 	if err != nil {
 		return err
+	}
+	if options.noPublish {
+		return writePayload(options.outputFile, result, stdout)
 	}
 	response, err := publishToLambda(ctx, result)
 	if err != nil {
@@ -81,24 +87,73 @@ func parseArgs(args []string) (cliOptions, error) {
 	flags := flag.NewFlagSet("youtube-transcript", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	noCookies := flags.Bool("no-cookies", false, "download without Chrome cookies")
+	noPublish := flags.Bool("no-publish", false, "skip Lambda publishing and print the publish payload")
+	outputFile := flags.String("o", "", "write the publish payload to a file (implies --no-publish)")
 	if err := flags.Parse(args); err != nil {
 		return cliOptions{}, fmt.Errorf("parse flags: %w", err)
 	}
+	// Visit reports only flags that were set, so `-o ""` is rejected instead
+	// of silently behaving like an omitted flag.
+	var outputErr error
+	flags.Visit(func(f *flag.Flag) {
+		if f.Name == "o" && strings.TrimSpace(*outputFile) == "" {
+			outputErr = errors.New("output file path is empty")
+		}
+	})
+	if outputErr != nil {
+		return cliOptions{}, outputErr
+	}
 	if flags.NArg() != 1 || strings.TrimSpace(flags.Arg(0)) == "" {
-		return cliOptions{}, errors.New("usage: youtube-transcript [--no-cookies] <YouTube URL>")
+		return cliOptions{}, errors.New("usage: youtube-transcript [--no-cookies] [--no-publish] [-o <file>] <YouTube URL>")
 	}
 	cookies := chromeCookies
 	if *noCookies {
 		cookies = ""
 	}
-	return cliOptions{sourceURL: strings.TrimSpace(flags.Arg(0)), cookiesFromBrowser: cookies}, nil
+	return cliOptions{
+		sourceURL:          strings.TrimSpace(flags.Arg(0)),
+		cookiesFromBrowser: cookies,
+		noPublish:          *noPublish || strings.TrimSpace(*outputFile) != "",
+		outputFile:         strings.TrimSpace(*outputFile),
+	}, nil
 }
 
-func validateEnvironment() error {
-	for _, name := range []string{deepgramAPIKeyEnv, backendLambdaNameEnv} {
-		if strings.TrimSpace(os.Getenv(name)) == "" {
-			return fmt.Errorf("%s must be set", name)
+// validateEnvironment requires the backend Lambda target only when publishing.
+func validateEnvironment(publish bool) error {
+	if strings.TrimSpace(os.Getenv(deepgramAPIKeyEnv)) == "" {
+		return fmt.Errorf("%s must be set", deepgramAPIKeyEnv)
+	}
+	if publish && strings.TrimSpace(os.Getenv(backendLambdaNameEnv)) == "" {
+		return fmt.Errorf("%s must be set", backendLambdaNameEnv)
+	}
+	return nil
+}
+
+// encodePublishRequest builds the exact bytes the publish mode sends to the
+// backend Lambda. Dump modes reuse it so a saved payload is replayable as-is.
+func encodePublishRequest(result podscriber.TranscriptionResult) ([]byte, error) {
+	payload, err := json.Marshal(publishRequest{Action: publishAction, Transcription: result})
+	if err != nil {
+		return nil, fmt.Errorf("encode publish request: %w", err)
+	}
+	return payload, nil
+}
+
+// writePayload delivers the publish payload without invoking the Lambda. An
+// empty filePath writes to stdout; otherwise the payload goes to the file.
+func writePayload(filePath string, result podscriber.TranscriptionResult, stdout io.Writer) error {
+	payload, err := encodePublishRequest(result)
+	if err != nil {
+		return err
+	}
+	if filePath == "" {
+		if _, err := stdout.Write(append(payload, '\n')); err != nil {
+			return fmt.Errorf("write publish payload: %w", err)
 		}
+		return nil
+	}
+	if err := os.WriteFile(filePath, append(payload, '\n'), 0o644); err != nil {
+		return fmt.Errorf("write publish payload to %s: %w", filePath, err)
 	}
 	return nil
 }
@@ -152,9 +207,9 @@ func invokePublishAction(ctx context.Context, result podscriber.TranscriptionRes
 }
 
 func invokeLambda(ctx context.Context, client lambdaInvoker, functionName string, result podscriber.TranscriptionResult) (json.RawMessage, error) {
-	payload, err := json.Marshal(publishRequest{Action: publishAction, Transcription: result})
+	payload, err := encodePublishRequest(result)
 	if err != nil {
-		return nil, fmt.Errorf("encode Lambda request: %w", err)
+		return nil, err
 	}
 	output, err := client.Invoke(ctx, &awslambda.InvokeInput{FunctionName: &functionName, Payload: payload})
 	if err != nil {
