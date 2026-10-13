@@ -1,6 +1,6 @@
 module github.com/deepakjois/apps.debugjois.dev/backend-old
 
-go 1.26.8
+go 1.26.9
 
 require (
 	github.com/PuerkitoBio/goquery v1.12.0

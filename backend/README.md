@@ -6,7 +6,7 @@ external-service adapters and transports.
 
 ## Requirements
 
-- Go 1.26.8+
+- Go 1.26.9+
 - `golangci-lint` on `PATH`
 - AWS credentials for transcript publishing or index generation with `--write`
 - Google Drive Application Default Credentials for daily logs

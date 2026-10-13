@@ -4,7 +4,7 @@ set -euo pipefail
 # Pinned toolchains shared by the frontend, backend, and infrastructure projects.
 readonly NODE_VERSION="26.5.1"
 readonly NPM_VERSION="12.0.2"
-readonly GO_VERSION="1.26.8"
+readonly GO_VERSION="1.26.9"
 readonly GOLANGCI_LINT_VERSION="2.13.2"
 readonly YT_DLP_VERSION="2026.08.19"
 readonly DENO_VERSION="2.9.6"

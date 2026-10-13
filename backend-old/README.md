@@ -5,7 +5,7 @@ Previous Go backend retained for reference. The active backend is in
 
 ## Requirements
 
-- Go 1.26.8+
+- Go 1.26.9+
 - `golangci-lint` on `PATH` for linting backend code
 - AWS credentials for S3 transcript writes or index generation with `--write`
 - `DEEPGRAM_API_KEY` in `backend-old/.env` for local transcription
