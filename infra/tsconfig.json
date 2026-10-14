@@ -11,8 +11,11 @@
     // legacy `node10` resolver.
     "module": "Node16",
     "moduleResolution": "node16",
-    "outDir": "dist",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    // tsc only type-checks; tsx (esbuild) runs the CDK app file by file, so
+    // each file must be transpilable in isolation.
+    "noEmit": true,
+    "isolatedModules": true
   },
   "include": ["bin/**/*.ts", "lib/**/*.ts"]
 }

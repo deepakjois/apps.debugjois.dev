@@ -26,6 +26,8 @@ Synthesize all CloudFormation templates:
 npm run synth
 ```
 
+The CDK app command (`cdk.json`) runs `tsc` to type-check, then executes `bin/infra.ts` with [tsx](https://tsx.is/), matching the TypeScript template from `cdk init`. `ts-node` is not used because it is incompatible with TypeScript 7. `npm run build` only type-checks; it emits no files.
+
 # Deploy
 
 Default deploy reuses the currently deployed Lambda artifact and only updates infrastructure:
