@@ -1,4 +1,7 @@
 .amp/portals/*
 
+# Locally built backend CLI binaries
+backend/bin/
+
 # Local secrets must never be committed
 .env
