@@ -8,6 +8,7 @@ see README in the subfolders for more details.
 - `backend/` - Go backend Lambda and daily-log/podcast transcription/index CLIs
 - `backend-old/` - Previous Go backend retained for reference
 - `infra/` - AWS CDK infrastructure for the Nitro app
+- `mac-reader/` - Swift CLI that shows a text file full screen in a reading view (macOS)
 
 ## Development environment
 
