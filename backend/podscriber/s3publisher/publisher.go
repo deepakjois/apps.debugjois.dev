@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
+	"math"
 	"regexp"
 	"strings"
 	"time"
@@ -25,6 +27,13 @@ import (
 const maxSlugLength = 120
 
 var slugPattern = regexp.MustCompile(`[^a-z0-9]+`)
+
+// urlPattern finds bare HTTP(S) links in plain-text descriptions, excluding
+// trailing punctuation that usually ends the surrounding sentence.
+var urlPattern = regexp.MustCompile(`https?://[^\s<>"']+[^\s<>"'.,;:!?)\]]`)
+
+// paragraphBreakPattern splits plain-text descriptions on blank lines.
+var paragraphBreakPattern = regexp.MustCompile(`\n[ \t]*\n+`)
 
 // Publisher writes compatibility-shaped transcript documents and refreshes the index.
 type Publisher struct {
@@ -134,8 +143,8 @@ func newDocument(result podscriber.TranscriptionResult) document {
 				Title:           metadata.Title,
 				PublishedAt:     metadata.PublishedAt,
 				PublishedDate:   metadata.PublishedDate,
-				Duration:        extraString(metadata.Extra, "duration_display"),
-				DescriptionHTML: metadata.DescriptionHTML,
+				Duration:        durationDisplay(metadata),
+				DescriptionHTML: descriptionHTML(metadata),
 			},
 		},
 		Deepgram: result.Transcript.Raw,
@@ -144,6 +153,78 @@ func newDocument(result podscriber.TranscriptionResult) document {
 		doc.Podcast.Podcast = seriesDocument{Title: metadata.Series.Title, URL: metadata.Series.URL}
 	}
 	return doc
+}
+
+// durationDisplay prefers the provider's own label (Podcast Addict) and falls
+// back to formatting DurationSeconds (YouTube) in the same "N mins" style.
+func durationDisplay(metadata podscriber.Metadata) string {
+	if display := extraString(metadata.Extra, "duration_display"); display != "" {
+		return display
+	}
+	if metadata.DurationSeconds <= 0 {
+		return ""
+	}
+	totalSeconds := int(math.Round(metadata.DurationSeconds))
+	if totalSeconds < 60 {
+		return plural(totalSeconds, "sec")
+	}
+	totalMinutes := int(math.Round(float64(totalSeconds) / 60))
+	hours, minutes := totalMinutes/60, totalMinutes%60
+	switch {
+	case hours == 0:
+		return plural(minutes, "min")
+	case minutes == 0:
+		return fmt.Sprintf("%d hr", hours)
+	default:
+		return fmt.Sprintf("%d hr %s", hours, plural(minutes, "min"))
+	}
+}
+
+// plural formats a count with its unit, adding "s" unless the count is one.
+func plural(count int, unit string) string {
+	if count == 1 {
+		return fmt.Sprintf("%d %s", count, unit)
+	}
+	return fmt.Sprintf("%d %ss", count, unit)
+}
+
+// descriptionHTML prefers provider HTML and otherwise converts a plain-text
+// description (YouTube) into safe HTML for the reader's show notes. Blank
+// lines become paragraphs, single newlines become <br>, and bare URLs become
+// links. Every text and URL fragment is escaped because the reader renders the
+// result as raw HTML.
+func descriptionHTML(metadata podscriber.Metadata) string {
+	if strings.TrimSpace(metadata.DescriptionHTML) != "" {
+		return metadata.DescriptionHTML
+	}
+	text := strings.TrimSpace(strings.ReplaceAll(metadata.Description, "\r\n", "\n"))
+	if text == "" {
+		return ""
+	}
+	var builder strings.Builder
+	for _, paragraph := range paragraphBreakPattern.Split(text, -1) {
+		paragraph = strings.TrimSpace(paragraph)
+		if paragraph == "" {
+			continue
+		}
+		builder.WriteString("<p>")
+		// Links are located in the raw text so escaping cannot split or extend them.
+		last := 0
+		for _, match := range urlPattern.FindAllStringIndex(paragraph, -1) {
+			builder.WriteString(escapeLines(paragraph[last:match[0]]))
+			link := html.EscapeString(paragraph[match[0]:match[1]])
+			builder.WriteString(`<a href="` + link + `" target="_blank" rel="noreferrer">` + link + `</a>`)
+			last = match[1]
+		}
+		builder.WriteString(escapeLines(paragraph[last:]))
+		builder.WriteString("</p>")
+	}
+	return builder.String()
+}
+
+// escapeLines escapes plain text and preserves its single line breaks.
+func escapeLines(text string) string {
+	return strings.ReplaceAll(html.EscapeString(text), "\n", "<br>")
 }
 
 func extraString(extra map[string]any, key string) string {

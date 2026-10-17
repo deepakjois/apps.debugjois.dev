@@ -130,10 +130,40 @@ func TestNewDocumentPreservesYouTubeSourceType(t *testing.T) {
 	result := testResult()
 	result.Source.Type = podscriber.SourceTypeYouTube
 	result.Source.URL = "https://www.youtube.com/watch?v=example"
+	// YouTube supplies plain text and seconds rather than HTML and a display label.
+	result.Metadata.Extra = map[string]any{"video_id": "example"}
+	result.Metadata.DurationSeconds = 3725
+	result.Metadata.Description = "Intro <b>&</b> more\r\nSee \"https://example.com/a?x=1&y=2\".\n\n\nSponsor: https://sponsor.example/deal."
 
 	got := newDocument(result)
 	if got.Podcast.Source.Type != podscriber.SourceTypeYouTube {
 		t.Fatalf("source type = %q", got.Podcast.Source.Type)
+	}
+	if got.Podcast.Episode.Duration != "1 hr 2 mins" {
+		t.Fatalf("duration = %q", got.Podcast.Episode.Duration)
+	}
+	wantDescription := `<p>Intro &lt;b&gt;&amp;&lt;/b&gt; more<br>See &#34;<a href="https://example.com/a?x=1&amp;y=2" target="_blank" rel="noreferrer">https://example.com/a?x=1&amp;y=2</a>&#34;.</p>` +
+		`<p>Sponsor: <a href="https://sponsor.example/deal" target="_blank" rel="noreferrer">https://sponsor.example/deal</a>.</p>`
+	if got.Podcast.Episode.DescriptionHTML != wantDescription {
+		t.Fatalf("description HTML = %s\nwant %s", got.Podcast.Episode.DescriptionHTML, wantDescription)
+	}
+}
+
+func TestDurationDisplay(t *testing.T) {
+	for _, tc := range []struct {
+		metadata podscriber.Metadata
+		want     string
+	}{
+		{podscriber.Metadata{DurationSeconds: 45}, "45 secs"},
+		{podscriber.Metadata{DurationSeconds: 2550}, "43 mins"},
+		{podscriber.Metadata{DurationSeconds: 3599}, "1 hr"},
+		{podscriber.Metadata{DurationSeconds: 7260}, "2 hr 1 min"},
+		{podscriber.Metadata{DurationSeconds: 7260, Extra: map[string]any{"duration_display": "121 mins"}}, "121 mins"},
+		{podscriber.Metadata{}, ""},
+	} {
+		if got := durationDisplay(tc.metadata); got != tc.want {
+			t.Errorf("durationDisplay(%v) = %q, want %q", tc.metadata.DurationSeconds, got, tc.want)
+		}
 	}
 }
 
