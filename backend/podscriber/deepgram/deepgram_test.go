@@ -150,7 +150,7 @@ func assertOptions(t *testing.T, options *deepgraminterfaces.PreRecordedTranscri
 	if options.Model != "nova-3" || options.Language != "en" {
 		t.Fatalf("model/language = %q/%q", options.Model, options.Language)
 	}
-	if !options.Diarize || !options.Paragraphs || !options.Punctuate || !options.Numerals || !options.SmartFormat || !options.Utterances {
+	if !options.Diarize || !options.Paragraphs || !options.Punctuate || !options.Numerals || !options.SmartFormat || options.Utterances {
 		t.Fatalf("options = %#v", options)
 	}
 }
