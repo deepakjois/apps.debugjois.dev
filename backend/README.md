@@ -23,6 +23,41 @@ gcloud auth application-default login \
   --scopes='https://www.googleapis.com/auth/drive'
 ```
 
+In Amp orbs, use Workload Identity Federation instead; no `gcloud` login or
+Google secret is needed. `gcp-credentials-orb.json` is a non-secret
+external-account config whose executable source,
+`scripts/amp-gcp-token.sh`, mints a project-scoped Amp OIDC token with
+`amp orb id-token`. Google exchanges it through the `amp-orbs-pool` /
+`amp-orb-provider` pool and impersonates the same service account. Set these
+as Amp project environment variables:
+
+```bash
+GOOGLE_APPLICATION_CREDENTIALS=/home/user/workspace/repo/backend/gcp-credentials-orb.json
+GOOGLE_EXTERNAL_ACCOUNT_ALLOW_EXECUTABLES=1
+```
+
+The provider only accepts tokens from one Amp user in this repository's Amp
+project, and only that subject may impersonate the service account. It was
+created once by a GCP project owner:
+
+```bash
+gcloud iam workload-identity-pools create amp-orbs-pool \
+  --project=daily-notes-obsidian-gdrive --location=global --display-name='Amp orbs'
+
+gcloud iam workload-identity-pools providers create-oidc amp-orb-provider \
+  --project=daily-notes-obsidian-gdrive --location=global \
+  --workload-identity-pool=amp-orbs-pool \
+  --issuer-uri='https://ampcode.com/api/workload-identity' \
+  --attribute-mapping='google.subject=assertion.sub,attribute.project_id=assertion.project_id,attribute.user_id=assertion.user_id' \
+  --attribute-condition="assertion.project_id == '81f705c8-1f00-4378-b3da-3405d42d8959' && assertion.user_id == 'user_01JS1D88K42WE9W0P5QJY1P21S'"
+
+gcloud iam service-accounts add-iam-policy-binding \
+  gdrive-obsidian@daily-notes-obsidian-gdrive.iam.gserviceaccount.com \
+  --project=daily-notes-obsidian-gdrive \
+  --role=roles/iam.workloadIdentityUser \
+  --member='principal://iam.googleapis.com/projects/1016117555218/locations/global/workloadIdentityPools/amp-orbs-pool/subject/user:user_01JS1D88K42WE9W0P5QJY1P21S:project:81f705c8-1f00-4378-b3da-3405d42d8959'
+```
+
 ## Daily-log CLI
 
 Run from `backend/`. `read` prints today's raw Markdown log to stdout:
