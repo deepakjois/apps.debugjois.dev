@@ -5,7 +5,8 @@ Router and Query, Vite 8, Nitro, and experimental React Server Components.
 
 ## Development
 
-Use Node.js 24.15+ (24.x) or 26+ and npm. The upgraded Vitest/jsdom tooling
+Use Node.js 24.15+ (24.x) or 26+ and npm; the repository's Nix flake provides
+them (see the root README). The upgraded Vitest/jsdom tooling
 requires a recent Node version; this foundation was verified on Node 26.5.1.
 
 ```sh

@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Builds the flake's tool profile (packages.default) into the out-link that
+# .agents/nix-env.sh puts on PATH. With --if-changed, skips the build when
+# flake.nix and flake.lock match the last successful build, which keeps
+# .agents/resume within its time budget.
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=.agents/nix-env.sh
+source "$repo_root/.agents/nix-env.sh"
+
+# Fingerprint of the inputs that determine the profile, recorded after each build.
+stamp="$APPS_DEBUGJOIS_DEV_TOOLS.stamp"
+fingerprint="$(cat "$repo_root/flake.nix" "$repo_root/flake.lock" | sha256sum | cut -d' ' -f1)"
+
+if [[ "${1-}" == "--if-changed" && -d "$APPS_DEBUGJOIS_DEV_TOOLS/bin" ]] &&
+  [[ "$(cat "$stamp" 2>/dev/null)" == "$fingerprint" ]]; then
+  exit 0
+fi
+
+mkdir -p "$(dirname "$APPS_DEBUGJOIS_DEV_TOOLS")"
+nix --extra-experimental-features 'nix-command flakes' build \
+  --out-link "$APPS_DEBUGJOIS_DEV_TOOLS" "$repo_root#default"
+printf '%s\n' "$fingerprint" >"$stamp"

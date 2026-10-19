@@ -5,3 +5,6 @@ backend/bin/
 
 # Local secrets must never be committed
 .env
+
+# direnv / nix-direnv cache
+.direnv/

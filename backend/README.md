@@ -6,6 +6,8 @@ external-service adapters and transports.
 
 ## Requirements
 
+The tools below come from the repository's Nix flake; see the root README.
+
 - Go 1.26.9+
 - `golangci-lint` on `PATH`
 - AWS credentials for transcript publishing or index generation with `--write`
