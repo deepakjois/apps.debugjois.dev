@@ -53,6 +53,9 @@ Use `--markdown` for stdin and `--plain` to opt out.
 The reader opens on the display the mouse pointer is on. The menu bar and Dock
 auto-hide while it is frontmost; move the pointer to the top of the screen to
 get the menu bar back. ⌘-Tab to another app drops it behind that app as usual.
+If that display is showing a full-screen app, the reader opens in a full-screen
+Space of its own instead, since macOS does not let a normal window sit over
+another app's full-screen Space. Escape closes it as usual.
 
 ## Development
 
