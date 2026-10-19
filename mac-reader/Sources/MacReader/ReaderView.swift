@@ -11,8 +11,14 @@ final class ReaderTextView: NSTextView {
 /// Owns the thin overlay scroller and all keyboard scrolling behaviour.
 final class ReaderView: NSScrollView {
     let textView: ReaderTextView
+    /// One-line scroll step: the body line height. Taken from the body font, not
+    /// `textView.font`, which reports the first character's font (a heading or code block
+    /// in Markdown).
+    private let lineStep: CGFloat
 
-    init(frame: NSRect, text: String, font: NSFont) {
+    /// `document` is shown as-is; `bodyFont` only sets the scroll step.
+    init(frame: NSRect, document: NSAttributedString, bodyFont: NSFont) {
+        lineStep = bodyFont.pointSize * Typography.leading
         let container = NSTextContainer(
             size: NSSize(width: Typography.measure, height: CGFloat.greatestFiniteMagnitude))
         container.widthTracksTextView = false
@@ -20,7 +26,7 @@ final class ReaderView: NSScrollView {
 
         let layoutManager = NSLayoutManager()
         layoutManager.addTextContainer(container)
-        let storage = NSTextStorage(attributedString: Typography.styled(text, font: font))
+        let storage = NSTextStorage(attributedString: document)
         storage.addLayoutManager(layoutManager)
 
         textView = ReaderTextView(frame: frame, textContainer: container)
@@ -106,9 +112,7 @@ final class ReaderView: NSScrollView {
         let docHeight = textView.frame.height
         let maxY = max(0, docHeight - visible.height)
         let page = visible.height * 0.85
-        // Scroll steps follow the body line height so single-step scrolling
-        // moves exactly one line.
-        let line = (textView.font?.pointSize ?? 20) * Typography.leading
+        let line = lineStep
 
         func scroll(to y: CGFloat) {
             let target = NSPoint(x: 0, y: min(max(0, y), maxY))

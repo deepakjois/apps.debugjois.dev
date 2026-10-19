@@ -7,15 +7,13 @@ guard let options = Options.parse(Array(CommandLine.arguments.dropFirst())) else
     exit(64)  // EX_USAGE
 }
 
-let rawText: String
+let text: String
 do {
-    rawText = try TextLoader.load(options.path)
+    text = try TextLoader.load(options.path)
 } catch {
     FileHandle.standardError.write("mac-reader: \(error)\n".data(using: .utf8)!)
     exit(66)  // EX_NOINPUT
 }
-
-let text = options.reflow ? Reflow.reflow(rawText) : rawText
 
 let app = NSApplication.shared
 // Regular policy so the app can become active and own key focus when

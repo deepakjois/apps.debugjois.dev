@@ -1,5 +1,14 @@
 import Foundation
 
+/// How the loaded text becomes the displayed document. Chosen once in `Options.parse`;
+/// `Typography.document` is the only code that interprets it.
+enum TextMode: Equatable {
+    /// Body styling; `reflow` joins hard-wrapped lines.
+    case plain(reflow: Bool)
+    /// The source verbatim with its Markdown syntax coloured in place. Never reflowed.
+    case markdown
+}
+
 /// Parsed command-line options. See `usage` for the flags.
 /// FILE may be `-` to read from standard input.
 struct Options {
@@ -8,12 +17,14 @@ struct Options {
     var fontName: String?
     /// Body text size in points.
     var fontSize: CGFloat = 20
-    /// Whether to join hard-wrapped lines into flowing paragraphs.
-    var reflow = true
+    var mode: TextMode = .plain(reflow: true)
     /// Opacity of the dark backdrop tint, 0 (clear) to 1 (solid).
     var opacity: CGFloat = 0.80
     /// Whether to blur what is behind the window.
     var blur = true
+
+    /// Lowercased extensions that open in Markdown mode unless --plain is given.
+    static let markdownExtensions: Set<String> = ["md", "markdown", "mdown", "mkd"]
 
     static let usage = """
         usage: mac-reader [options] FILE
@@ -23,8 +34,10 @@ struct Options {
           --size POINTS   body text size in points (default: 20)
           --opacity N     backdrop opacity from 0 to 1 (default: 0.8)
           --no-blur       do not blur what is behind the window
+          --markdown      show FILE as Markdown (default for .md .markdown .mdown .mkd)
+          --plain         show FILE as plain text, even with a Markdown extension
           --no-reflow     keep the file's own line breaks instead of reflowing
-                          hard-wrapped paragraphs
+                          hard-wrapped paragraphs (Markdown is never reflowed)
 
         Press Escape, ⌘W or ⌘Q to close.
         """
@@ -35,6 +48,7 @@ struct Options {
         var fontName: String?
         var fontSize: CGFloat = 20
         var reflow = true
+        var markdown: Bool?
         var opacity: CGFloat = 0.80
         var blur = true
         var path: String?
@@ -62,6 +76,12 @@ struct Options {
                 blur = false
             case "--no-reflow":
                 reflow = false
+            case "--markdown", "--plain":
+                let wantsMarkdown = arg == "--markdown"
+                if markdown == !wantsMarkdown {
+                    return fail("--markdown and --plain are mutually exclusive")
+                }
+                markdown = wantsMarkdown
             case "-":
                 path = arg
             default:
@@ -72,9 +92,11 @@ struct Options {
         }
 
         guard let path else { return fail("no file given") }
+        let isMarkdown =
+            markdown ?? markdownExtensions.contains((path as NSString).pathExtension.lowercased())
         return Options(
-            path: path, fontName: fontName, fontSize: fontSize, reflow: reflow,
-            opacity: opacity, blur: blur)
+            path: path, fontName: fontName, fontSize: fontSize,
+            mode: isMarkdown ? .markdown : .plain(reflow: reflow), opacity: opacity, blur: blur)
     }
 
     private static func fail(_ message: String) -> Options? {
