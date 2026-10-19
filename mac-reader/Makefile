@@ -2,7 +2,7 @@
 PREFIX ?= $(HOME)/bin
 BIN = .build/release/mac-reader
 
-.PHONY: build debug install fmt lint clean
+.PHONY: build debug install test fmt lint clean
 
 build:
 	swift build -c release
@@ -14,11 +14,14 @@ install: build
 	mkdir -p $(PREFIX)
 	cp $(BIN) $(PREFIX)/mac-reader
 
+test:
+	swift test
+
 fmt:
-	swift format -i -r Sources Package.swift
+	swift format -i -r Sources Tests Package.swift
 
 lint:
-	swift format lint -r -s Sources Package.swift
+	swift format lint -r -s Sources Tests Package.swift
 
 clean:
 	rm -rf .build
