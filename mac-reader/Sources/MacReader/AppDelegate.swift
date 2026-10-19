@@ -22,7 +22,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.presentationOptions = [.autoHideMenuBar, .autoHideDock]
 
         let screen = Self.targetScreen()
-        let window = ReaderWindow(screen: screen, opacity: options.opacity, blur: options.blur)
+        let spaceMode = SpaceMode.forScreen(screen)
+        let window = ReaderWindow(
+            screen: screen, opacity: options.opacity, blur: options.blur, spaceMode: spaceMode)
         let font = Typography.bodyFont(name: options.fontName, size: options.fontSize)
         let reader = ReaderView(
             frame: NSRect(origin: .zero, size: screen.frame.size),
@@ -33,7 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // navigation keys scroll instead of moving an invisible caret.
         window.keyHandler = { [weak self] event in self?.handle(event) ?? false }
         window.setFrame(screen.frame, display: true)
-        window.makeKeyAndOrderFront(nil)
+        window.present()
         window.makeFirstResponder(reader.textView)
         reader.scrollToTop()
         self.window = window
@@ -46,7 +48,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSRunningApplication.current.activate(options: [.activateIgnoringOtherApps])
         if ProcessInfo.processInfo.environment["MAC_READER_DEBUG"] != nil {
             FileHandle.standardError.write(
-                "screen \(screen.frame) window \(window.frame)\n".data(using: .utf8)!)
+                "screen \(screen.frame) window \(window.frame) space \(spaceMode)\n".data(
+                    using: .utf8)!)
         }
     }
 
