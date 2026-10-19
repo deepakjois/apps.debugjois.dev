@@ -1,0 +1,39 @@
+name: Toolchain Validation
+
+on:
+  pull_request:
+    paths:
+      - "flake.nix"
+      - "flake.lock"
+      - ".agents/**"
+      - "scripts/install-go-tools.sh"
+      - ".github/actions/**"
+      - ".github/scripts/setup-ci.sh"
+      - ".github/workflows/**"
+  push:
+    branches: [main]
+    paths:
+      - "flake.nix"
+      - "flake.lock"
+      - ".agents/**"
+      - "scripts/install-go-tools.sh"
+      - ".github/actions/**"
+      - ".github/scripts/setup-ci.sh"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-tools
+        with:
+          go-tools: golangci-lint govulncheck
+      - name: Check flake
+        run: nix flake check
+      - uses: ./.github/actions/app-lint-test-build
+      - uses: ./.github/actions/backend-go-lint-test-build
+      - uses: ./.github/actions/infra-lint-build

@@ -3,11 +3,11 @@ name: App Test and Deploy
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
-      - 'app/**'
-      - '.github/workflows/app-test-deploy.yml'
-      - '.github/actions/app-lint-test-build/**'
+      - "app/**"
+      - ".github/workflows/app-test-deploy.yml"
+      - ".github/actions/app-lint-test-build/**"
 
 concurrency:
   group: apps-debugjois-dev-deploy
@@ -22,26 +22,17 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: |
-            app/package-lock.json
-            infra/package-lock.json
+      - uses: ./.github/actions/setup-tools
 
       - name: Lint, test, build app
         uses: ./.github/actions/app-lint-test-build
         with:
           # deploy.sh --with-artifact rebuilds the app itself
-          build: 'false'
+          build: "false"
 
       - name: Install infra dependencies
         working-directory: infra
         run: npm ci
-
-      - name: Install AWS CDK CLI
-        run: npm install -g aws-cdk
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6

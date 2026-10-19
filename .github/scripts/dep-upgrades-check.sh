@@ -19,7 +19,7 @@ PROJECT_DIR="$1"
 REPORT_FILE="$2"
 
 # Ensure the report file starts empty so "no upgrades" can be detected by size.
-: > "$REPORT_FILE"
+: >"$REPORT_FILE"
 
 cd "$PROJECT_DIR"
 
@@ -46,14 +46,14 @@ locked_tagged_versions() {
 TAGGED_BEFORE=$(locked_tagged_versions)
 
 # Capture human-readable upgrade report (shows package old → new).
-NCU_REPORT=$(npx npm-check-updates 2>/dev/null || true)
+NCU_REPORT=$(npm-check-updates 2>/dev/null || true)
 
 # Detect whether any semver upgrades are available (empty object means none).
-UPGRADES=$(npx npm-check-updates --jsonUpgraded 2>/dev/null || echo '{}')
+UPGRADES=$(npm-check-updates --jsonUpgraded 2>/dev/null || echo '{}')
 NCU_UPDATED=false
 if [ "$UPGRADES" != '{}' ] && [ -n "$UPGRADES" ]; then
   # Apply upgrades to package.json and refresh the lockfile.
-  npx npm-check-updates -u
+  npm-check-updates -u
   npm install
   NCU_UPDATED=true
 fi
@@ -70,7 +70,7 @@ if [ "${#TAGGED[@]}" -gt 0 ]; then
 fi
 
 # Report dist-tag dependencies whose locked version changed, as "name  old → new".
-TAGGED_REPORT=$(join <(sort <<< "$TAGGED_BEFORE") <(locked_tagged_versions | sort) |
+TAGGED_REPORT=$(join <(sort <<<"$TAGGED_BEFORE") <(locked_tagged_versions | sort) |
   awk '$2 != $3 { printf " %s  %s  →  %s\n", $1, $2, $3 }')
 
 if [ "$NCU_UPDATED" = "false" ] && [ -z "$TAGGED_REPORT" ]; then
@@ -86,4 +86,4 @@ fi
     echo "Dist-tag dependencies refreshed in the lockfile:"
     printf '%s\n' "$TAGGED_REPORT"
   fi
-} > "$REPORT_FILE"
+} >"$REPORT_FILE"

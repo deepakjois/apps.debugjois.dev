@@ -44,23 +44,15 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
       type: "String",
     });
 
-    const backendLambdaFunctionName = new cdk.CfnParameter(
-      this,
-      "BackendLambdaFunctionName",
-      {
-        description: "Backend Lambda function name invoked by Nitro server functions",
-        type: "String",
-      },
-    );
+    const backendLambdaFunctionName = new cdk.CfnParameter(this, "BackendLambdaFunctionName", {
+      description: "Backend Lambda function name invoked by Nitro server functions",
+      type: "String",
+    });
 
-    const hostedZone = route53.HostedZone.fromHostedZoneAttributes(
-      this,
-      "HostedZone",
-      {
-        hostedZoneId: props.hostedZoneId,
-        zoneName: props.hostedZoneName,
-      },
-    );
+    const hostedZone = route53.HostedZone.fromHostedZoneAttributes(this, "HostedZone", {
+      hostedZoneId: props.hostedZoneId,
+      zoneName: props.hostedZoneName,
+    });
 
     const certificate = acm.Certificate.fromCertificateArn(
       this,
@@ -74,15 +66,11 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
       artifactBucketName.valueAsString,
     );
 
-    const linkPreviewAPIKeySecret = new secretsmanager.CfnSecret(
-      this,
-      "LinkPreviewAPIKeySecret",
-      {
-        description: "LinkPreview API key for logger URL title fetching",
-        name: linkPreviewAPIKeySecretName,
-        secretString: "replace-me-with-linkpreview-key",
-      },
-    );
+    const linkPreviewAPIKeySecret = new secretsmanager.CfnSecret(this, "LinkPreviewAPIKeySecret", {
+      description: "LinkPreview API key for logger URL title fetching",
+      name: linkPreviewAPIKeySecretName,
+      secretString: "replace-me-with-linkpreview-key",
+    });
     linkPreviewAPIKeySecret.applyRemovalPolicy(cdk.RemovalPolicy.RETAIN);
 
     // Holds static frontend files uploaded separately from CloudFormation.
@@ -107,7 +95,8 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
       },
       handler: "server/index.handler",
       memorySize: 1024,
-      runtime: lambda.Runtime.NODEJS_22_X,
+      // Node 26 is preview-only on Lambda; use the latest production runtime.
+      runtime: lambda.Runtime.NODEJS_24_X,
       timeout: cdk.Duration.seconds(30),
     });
     siteLambda.node.addDependency(linkPreviewAPIKeySecret);
@@ -195,8 +184,7 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
         cachePolicy: apiCachePolicy,
         compress: true,
         origin: apiOrigin,
-        originRequestPolicy:
-          cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+        originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
       additionalBehaviors: staticBehaviors,
@@ -208,17 +196,13 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
 
     new route53.ARecord(this, "AliasRecord", {
       recordName: "apps",
-      target: route53.RecordTarget.fromAlias(
-        new route53Targets.CloudFrontTarget(distribution),
-      ),
+      target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(distribution)),
       zone: hostedZone,
     });
 
     new route53.AaaaRecord(this, "AliasRecordIpv6", {
       recordName: "apps",
-      target: route53.RecordTarget.fromAlias(
-        new route53Targets.CloudFrontTarget(distribution),
-      ),
+      target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(distribution)),
       zone: hostedZone,
     });
 

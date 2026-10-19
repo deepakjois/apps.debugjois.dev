@@ -2,7 +2,7 @@ name: Dependency Upgrades
 
 on:
   schedule:
-    - cron: '22 10 * * 1'
+    - cron: "22 10 * * 1"
   workflow_dispatch:
 
 jobs:
@@ -14,13 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: |
-            app/package-lock.json
-            infra/package-lock.json
+      - uses: ./.github/actions/setup-tools
 
       - name: Install app dependencies
         working-directory: app
@@ -38,13 +32,13 @@ jobs:
         if: steps.upgrades.outputs.app_updated == 'true'
         uses: ./.github/actions/app-lint-test-build
         with:
-          install: 'false'
+          install: "false"
 
       - name: Validate infra
         if: steps.upgrades.outputs.infra_updated == 'true'
         uses: ./.github/actions/infra-lint-build
         with:
-          install: 'false'
+          install: "false"
 
       - name: Create Pull Request
         if: steps.upgrades.outputs.has_updates == 'true'

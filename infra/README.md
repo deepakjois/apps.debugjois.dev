@@ -14,11 +14,16 @@ This CDK app is used only to synthesize CloudFormation templates. It uses `Legac
 
 # Getting Started
 
-Install dependencies:
+Enter the [repository Nix environment](../README.md#development-environment),
+then install locked dependencies from `infra/`:
 
 ```bash
-npm install
+npm ci
 ```
+
+The CDK CLI is a local dev dependency used by npm scripts and `deploy.sh`;
+do not install a separate global copy. AWS CLI comes from the flake. Docker
+with buildx is required separately only for backend container builds.
 
 Synthesize all CloudFormation templates:
 
@@ -121,6 +126,7 @@ The deploy script passes the backend Lambda function name into the site stack. T
   ```
 
   Redeploy the site stack after changing the secret value so the Lambda environment variable is refreshed from the versionless CloudFormation dynamic reference.
+
 - Frontend Lambda artifacts are stored in a versioned S3 bucket and the site stack is deployed with both the object key and object version.
 - Backend Lambda images are stored in the `apps-debugjois-dev-backend` ECR repository and the backend stack is deployed with a digest-pinned image URI.
 - Static frontend assets are uploaded outside CloudFormation by `infra/deploy.sh --with-artifact`.

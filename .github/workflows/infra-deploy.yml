@@ -16,18 +16,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: infra/package-lock.json
+      - uses: ./.github/actions/setup-tools
 
       - name: Install infra dependencies
         working-directory: infra
         run: npm ci
-
-      - name: Install AWS CDK CLI
-        run: npm install -g aws-cdk
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6

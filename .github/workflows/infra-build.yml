@@ -2,11 +2,11 @@ name: Infra Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
-      - 'infra/**'
-      - '.github/workflows/infra-build.yml'
-      - '.github/actions/infra-lint-build/**'
+      - "infra/**"
+      - ".github/workflows/infra-build.yml"
+      - ".github/actions/infra-lint-build/**"
 
 jobs:
   build:
@@ -16,11 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: infra/package-lock.json
+      - uses: ./.github/actions/setup-tools
 
       - name: Build and synth infra
         uses: ./.github/actions/infra-lint-build

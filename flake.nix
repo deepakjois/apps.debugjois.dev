@@ -6,54 +6,75 @@
   outputs =
     { self, nixpkgs }:
     let
-      # Platforms the development environment is expected to work on.
+      # Current nixpkgs supports Linux and Apple Silicon, not Intel macOS.
       systems = [
         "x86_64-linux"
         "aarch64-linux"
-        "x86_64-darwin"
         "aarch64-darwin"
       ];
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
     in
     {
-      # Every toolchain and CLI as one profile. Bundling them in a buildEnv keeps
-      # propagated build inputs (e.g. awscli2's PYTHONPATH) out of the shell, and
-      # lets Amp orbs put a single bin/ directory on PATH. npm and Go modules
-      # stay managed by their lockfiles, not Nix.
-      packages = forAllSystems (pkgs: {
-        default = pkgs.buildEnv {
-          name = "apps-debugjois-dev-tools";
-          paths = with pkgs; [
-            # Go backend. nixpkgs' default `go` can lag behind backend/go.mod, so use the newest release.
-            go_latest
-            gopls
-            golangci-lint
-            govulncheck
-
-            # Node app and CDK infra (npm ships with Node.js).
-            nodejs_latest
-
-            # Cloud CLIs used for deploys and Google Drive Workload Identity setup.
-            awscli2
-            google-cloud-sdk
-
-            # Podcast transcription: yt-dlp needs ffmpeg/ffprobe and Deno for YouTube challenges.
-            yt-dlp
-            ffmpeg-headless
-            deno
-
-            # Scripting helpers used by deploy and dependency-upgrade scripts.
-            gh
-            jq
-            perl # shasum in infra/deploy.sh
-            zip
-            unzip
-
-            # Version control used for local development.
-            jujutsu
-          ];
-        };
-      });
+      # Profiles share toolchains; CI omits local media and Google Drive tools.
+      # Application dependencies stay in npm/Go lockfiles. Go helpers are built
+      # with go install by scripts/install-go-tools.sh, not by Nix.
+      packages = forAllSystems (
+        pkgs:
+        let
+          node = pkgs.nodejs-slim_latest;
+          # npm releases independently of Node's bundled version.
+          npm = pkgs.stdenvNoCC.mkDerivation rec {
+            pname = "npm";
+            version = "12.2.0";
+            src = pkgs.fetchurl {
+              url = "https://registry.npmjs.org/npm/-/npm-${version}.tgz";
+              hash = "sha512-ZsJjKpTnlmSXOLLXiU1xDCzC4Wlok4IwZmh/aw2KUuXytU7q6qMv/cUT7MoeSf95Slwuw/lRXYefGzGCspHPNQ==";
+            };
+            nativeBuildInputs = [ pkgs.makeWrapper ];
+            dontBuild = true;
+            installPhase = ''
+              runHook preInstall
+              mkdir -p "$out/lib/node_modules/npm"
+              cp -r . "$out/lib/node_modules/npm/"
+              for command in npm npx; do
+                makeWrapper ${node}/bin/node "$out/bin/$command" \
+                  --add-flags "$out/lib/node_modules/npm/bin/$command-cli.js"
+              done
+              runHook postInstall
+            '';
+          };
+          ci = pkgs.buildEnv {
+            name = "apps-debugjois-dev-ci-tools";
+            paths = with pkgs; [
+              go_latest
+              node
+              npm
+              npm-check-updates
+              awscli2
+              gh
+              git
+              jq
+              perl # shasum in infra/deploy.sh
+              zip
+              unzip
+            ];
+          };
+        in
+        {
+          inherit ci;
+          default = pkgs.buildEnv {
+            name = "apps-debugjois-dev-tools";
+            paths = with pkgs; [
+              ci
+              google-cloud-sdk
+              yt-dlp
+              ffmpeg-headless
+              deno
+              jujutsu
+            ];
+          };
+        }
+      );
 
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShellNoCC {
@@ -62,6 +83,10 @@
           # Fail instead of letting `go` download a toolchain behind Nix's back.
           # Keep in sync with .agents/nix-env.sh, which exports the same for orbs.
           GOTOOLCHAIN = "local";
+          shellHook = ''
+            export GOBIN="$HOME/.cache/apps-debugjois-dev/go-tools/bin"
+            export PATH="$GOBIN:$PATH"
+          '';
         };
       });
 

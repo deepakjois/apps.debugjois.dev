@@ -2,7 +2,7 @@ name: Go Major Version Upgrades
 
 on:
   schedule:
-    - cron: '30 10 1 * *'
+    - cron: "30 10 1 * *"
   workflow_dispatch:
 
 jobs:
@@ -14,14 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v7
+      - uses: ./.github/actions/setup-tools
         with:
-          go-version-file: backend/go.mod
-          cache: true
-          cache-dependency-path: backend/go.sum
-
-      - name: Install gomajor
-        run: go install github.com/icholy/gomajor@latest
+          go-tools: gomajor
 
       - name: Check for major version upgrades
         id: upgrades

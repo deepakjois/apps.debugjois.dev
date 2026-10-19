@@ -38,12 +38,13 @@ REPOSITORY_URI="$(aws ecr describe-repositories \
   --output text)"
 IMAGE_REF="${REPOSITORY_URI}:${IMAGE_TAG}"
 
-aws ecr get-login-password --region "${AWS_REGION}" \
-  | docker login --username AWS --password-stdin "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" >/dev/null
+aws ecr get-login-password --region "${AWS_REGION}" |
+  docker login --username AWS --password-stdin "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" >/dev/null
 
 # Build an immutable Lambda container image for the Go backend.
 docker buildx build \
   --platform linux/amd64 \
+  --build-arg "GO_VERSION=$(go env GOVERSION | sed 's/^go//')" \
   --provenance=false \
   --push \
   -t "${IMAGE_REF}" \

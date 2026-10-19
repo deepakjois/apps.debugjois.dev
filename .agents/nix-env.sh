@@ -19,3 +19,7 @@ fi
 
 # Mirrors devShells.default in flake.nix.
 export GOTOOLCHAIN=local
+export GOBIN="$HOME/.cache/apps-debugjois-dev/go-tools/bin"
+if [[ ":$PATH:" != *":$GOBIN:"* ]]; then
+  export PATH="$GOBIN:$PATH"
+fi

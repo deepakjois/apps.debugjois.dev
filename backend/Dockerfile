@@ -1,4 +1,8 @@
-FROM golang:1.26.9-alpine AS builder
+# The build script supplies the active flake Go version; there is no second pin.
+ARG GO_VERSION
+FROM golang:${GO_VERSION}-alpine AS builder
+
+ENV GOTOOLCHAIN=local
 
 WORKDIR /src
 

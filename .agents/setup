@@ -50,6 +50,7 @@ timed "Persisting login-shell hook" "$repo_root/.agents/profile-hook"
 source "$repo_root/.agents/nix-env.sh"
 printf '\nUsing %s, node %s, npm %s\n' "$(go version)" "$(node --version)" "$(npm --version)"
 
+timed "Installing Go helper tools" "$repo_root/scripts/install-go-tools.sh"
 timed "Installing npm dependencies" install_npm_dependencies
 timed "Downloading Go modules" download_go_modules
 

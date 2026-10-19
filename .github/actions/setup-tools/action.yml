@@ -1,0 +1,39 @@
+name: Set up pinned CI tools
+description: Install the flake toolchains, restore caches, and build selected Go helpers
+
+inputs:
+  go-tools:
+    description: Space-separated helper names from scripts/install-go-tools.sh
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - uses: nixbuild/nix-quick-install-action@v35
+      with:
+        nix_conf: |
+          experimental-features = nix-command flakes
+          keep-env-derivations = true
+          keep-outputs = true
+
+    - uses: nix-community/cache-nix-action@v7
+      with:
+        primary-key: nix-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('flake.nix', 'flake.lock') }}
+        restore-prefixes-first-match: nix-${{ runner.os }}-${{ runner.arch }}-
+
+    - uses: actions/cache@v5
+      with:
+        path: |
+          ~/.npm
+          ~/go/pkg/mod
+          ~/.cache/go-build
+          ~/.cache/apps-debugjois-dev/go-tools
+        key: deps-${{ runner.os }}-${{ runner.arch }}-${{ github.workflow }}-${{ github.job }}-${{ hashFiles('flake.nix', 'flake.lock', 'scripts/install-go-tools.sh', '**/package-lock.json', 'backend/go.sum') }}
+        restore-keys: |
+          deps-${{ runner.os }}-${{ runner.arch }}-${{ github.workflow }}-${{ github.job }}-
+
+    - name: Activate toolchains and install Go helpers
+      shell: bash
+      env:
+        GO_TOOLS: ${{ inputs.go-tools }}
+      run: .github/scripts/setup-ci.sh
