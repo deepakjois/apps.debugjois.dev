@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber"
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/deepgram"
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/resolvers"
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/resolvers/audiourl"
@@ -68,9 +69,9 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer) 
 	}
 	extractors := []resolvers.Extractor{podcastaddict.New(nil)}
 	// Miniflux entry URLs are recognized only when an API token is configured.
+	var minifluxClient *miniflux.Client
 	if strings.TrimSpace(os.Getenv(miniflux.TokenEnv)) != "" {
-		minifluxClient, err := miniflux.NewFromEnv(nil)
-		if err != nil {
+		if minifluxClient, err = miniflux.NewFromEnv(nil); err != nil {
 			return err
 		}
 		extractors = append(extractors, miniflux.NewExtractor(minifluxClient))
@@ -107,6 +108,13 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer) 
 		}
 		if err := publisher.Publish(ctx, result); err != nil {
 			return err
+		}
+		// Like the Lambda worker, unstar a published Miniflux entry. The
+		// transcript is already published, so a failure is only a warning.
+		if prepared.Source.Type == podscriber.SourceTypeMiniflux && minifluxClient != nil {
+			if _, err := minifluxClient.UnstarEntryURL(ctx, prepared.Source.Input); err != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "warning: %v\n", err)
+			}
 		}
 	}
 	return writeTranscript(stdout, options.output, result.Transcript.Text)

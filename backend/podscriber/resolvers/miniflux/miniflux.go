@@ -174,10 +174,44 @@ func (c *Client) StarredEntries(ctx context.Context) ([]Entry, error) {
 	}
 }
 
+// Unstar removes the star from entry id and reports whether it was starred.
+// Miniflux only offers a star toggle, so the current state is read first to
+// avoid re-starring an entry that was already unstarred (for example when a
+// Lambda retry repeats a successful transcription).
+func (c *Client) Unstar(ctx context.Context, id int64) (bool, error) {
+	entry, err := c.Entry(ctx, id)
+	if err != nil {
+		return false, err
+	}
+	if !entry.Starred {
+		return false, nil
+	}
+	if err := c.do(ctx, http.MethodPut, "/v1/entries/"+strconv.FormatInt(id, 10)+"/bookmark", nil, nil); err != nil {
+		return false, fmt.Errorf("unstar Miniflux entry %d: %w", id, err)
+	}
+	return true, nil
+}
+
+// UnstarEntryURL unstars the entry identified by a web UI or API entry URL
+// on this instance, such as a Miniflux transcription's source input.
+func (c *Client) UnstarEntryURL(ctx context.Context, entryURL string) (bool, error) {
+	id, ok := c.EntryID(entryURL)
+	if !ok {
+		return false, fmt.Errorf("unstar Miniflux entry: not an entry URL on %s: %q", c.baseURL.Host, entryURL)
+	}
+	return c.Unstar(ctx, id)
+}
+
 func (c *Client) get(ctx context.Context, apiPath string, query url.Values, target any) error {
+	return c.do(ctx, http.MethodGet, apiPath, query, target)
+}
+
+// do sends an authenticated API request and decodes a JSON response into
+// target. A nil target expects an empty success response, such as 204.
+func (c *Client) do(ctx context.Context, method, apiPath string, query url.Values, target any) error {
 	endpoint := c.baseURL.JoinPath(apiPath)
 	endpoint.RawQuery = query.Encode()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, method, endpoint.String(), nil)
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}
@@ -189,7 +223,7 @@ func (c *Client) get(ctx context.Context, apiPath string, query url.Values, targ
 		return fmt.Errorf("request %s: %w", apiPath, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		// Miniflux reports API failures as {"error_message": "..."}.
 		var apiErr struct {
 			Message string `json:"error_message"`
@@ -199,6 +233,9 @@ func (c *Client) get(ctx context.Context, apiPath string, query url.Values, targ
 			return fmt.Errorf("request %s: unexpected status %d: %s", apiPath, resp.StatusCode, apiErr.Message)
 		}
 		return fmt.Errorf("request %s: unexpected status %d", apiPath, resp.StatusCode)
+	}
+	if target == nil {
+		return nil
 	}
 	if err := json.NewDecoder(resp.Body).Decode(target); err != nil {
 		return fmt.Errorf("decode %s response: %w", apiPath, err)

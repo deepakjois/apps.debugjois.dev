@@ -111,7 +111,17 @@ var (
 	extractPodcast      = extractQueueSource
 	newMinifluxClient   = func() (*miniflux.Client, error) { return miniflux.NewFromEnv(nil) }
 	invokePodcastWorker = invokeSelfForPodcastTranscription
-	transcriptExists    = func(ctx context.Context, key string) (bool, error) {
+	// unstarMinifluxEntry removes the star from a transcribed Miniflux entry,
+	// identified by its source input URL.
+	unstarMinifluxEntry = func(ctx context.Context, entryURL string) error {
+		client, err := newMinifluxClient()
+		if err != nil {
+			return err
+		}
+		_, err = client.UnstarEntryURL(ctx, entryURL)
+		return err
+	}
+	transcriptExists = func(ctx context.Context, key string) (bool, error) {
 		client, err := newTranscriptS3Client(ctx)
 		if err != nil {
 			return false, err
@@ -267,6 +277,14 @@ func handleProcessPodcastTranscription(ctx context.Context, request processPodca
 	}
 	if err := persistPodcastTranscript(ctx, request.Action, request.Podcast, body); err != nil {
 		return nil, err
+	}
+	if publishedPodcast.Source.Type == podscriber.SourceTypeMiniflux {
+		// The transcript is already published, so an unstar failure is only
+		// logged: failing would make AWS retry and transcribe the episode
+		// again. A still-starred entry is skipped later by skip_existing.
+		if err := unstarMinifluxEntry(ctx, request.Podcast.Source.Input); err != nil {
+			log.Printf("unstar transcribed Miniflux entry %s: %v", request.Podcast.Source.Input, err)
+		}
 	}
 	return body, nil
 }

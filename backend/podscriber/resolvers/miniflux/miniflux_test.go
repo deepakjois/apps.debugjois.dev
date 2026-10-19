@@ -180,3 +180,36 @@ func TestStarredEntriesPaginates(t *testing.T) {
 		t.Fatalf("unauthorized error = %v", err)
 	}
 }
+
+// TestUnstar checks that Unstar reads the star state before using Miniflux's
+// toggle, so a repeated call never re-stars the entry.
+func TestUnstar(t *testing.T) {
+	starred, toggles := true, 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/entries/42":
+			_ = json.NewEncoder(w).Encode(Entry{ID: 42, Starred: starred})
+		case r.Method == http.MethodPut && r.URL.Path == "/v1/entries/42/bookmark":
+			starred = !starred
+			toggles++
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			t.Errorf("unexpected request %s %s", r.Method, r.URL)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+	client := newTestClient(t, server.URL)
+
+	changed, err := client.UnstarEntryURL(context.Background(), server.URL+"/starred/entry/42")
+	if err != nil || !changed || starred || toggles != 1 {
+		t.Fatalf("first unstar: changed=%v err=%v starred=%v toggles=%d", changed, err, starred, toggles)
+	}
+	changed, err = client.Unstar(context.Background(), 42)
+	if err != nil || changed || starred || toggles != 1 {
+		t.Fatalf("repeat unstar: changed=%v err=%v starred=%v toggles=%d", changed, err, starred, toggles)
+	}
+	if _, err := client.UnstarEntryURL(context.Background(), "https://other.example.com/starred/entry/42"); err == nil {
+		t.Fatal("unstarred an entry URL on another host")
+	}
+}

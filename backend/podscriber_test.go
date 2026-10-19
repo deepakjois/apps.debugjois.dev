@@ -150,10 +150,10 @@ func TestQueueMinifluxStarredLoop(t *testing.T) {
 	t.Cleanup(server.Close)
 
 	oldClient, oldDispatcher, oldInvoke, oldExists := newMinifluxClient, newSelfQueueDispatcher, invokePodcastWorker, transcriptExists
-	oldTranscribe, oldPersist := transcribePodcast, persistPodcastTranscript
+	oldTranscribe, oldPersist, oldUnstar := transcribePodcast, persistPodcastTranscript, unstarMinifluxEntry
 	t.Cleanup(func() {
 		newMinifluxClient, newSelfQueueDispatcher, invokePodcastWorker, transcriptExists = oldClient, oldDispatcher, oldInvoke, oldExists
-		transcribePodcast, persistPodcastTranscript = oldTranscribe, oldPersist
+		transcribePodcast, persistPodcastTranscript, unstarMinifluxEntry = oldTranscribe, oldPersist, oldUnstar
 	})
 	newMinifluxClient = func() (*miniflux.Client, error) {
 		return miniflux.New(miniflux.Config{BaseURL: server.URL, Token: "secret"})
@@ -223,8 +223,21 @@ func TestQueueMinifluxStarredLoop(t *testing.T) {
 		published[key] = true
 		return err
 	}
+	var unstarred []string
+	unstarMinifluxEntry = func(_ context.Context, entryURL string) error {
+		if len(published) != 1 {
+			t.Fatal("unstarred before the transcript was persisted")
+		}
+		unstarred = append(unstarred, entryURL)
+		return errors.New("Miniflux unavailable")
+	}
+	// An unstar failure must not fail the worker, which would make AWS retry
+	// and transcribe the episode again.
 	if _, err := dispatchBackendEvent(context.Background(), workerEvent); err != nil || len(published) != 1 {
 		t.Fatalf("worker err=%v published=%v", err, published)
+	}
+	if len(unstarred) != 1 || unstarred[0] != entryURL {
+		t.Fatalf("unstarred = %q, want [%s]", unstarred, entryURL)
 	}
 
 	report = runStarred()
@@ -277,8 +290,14 @@ func TestPublishCompletedTranscriptionAction(t *testing.T) {
 }
 
 func TestWorkerLegacyContract(t *testing.T) {
-	oldTranscribe, oldPersist := transcribePodcast, persistPodcastTranscript
-	t.Cleanup(func() { transcribePodcast, persistPodcastTranscript = oldTranscribe, oldPersist })
+	oldTranscribe, oldPersist, oldUnstar := transcribePodcast, persistPodcastTranscript, unstarMinifluxEntry
+	t.Cleanup(func() {
+		transcribePodcast, persistPodcastTranscript, unstarMinifluxEntry = oldTranscribe, oldPersist, oldUnstar
+	})
+	unstarMinifluxEntry = func(context.Context, string) error {
+		t.Fatal("unstarred a Podcast Addict episode")
+		return nil
+	}
 	transcribePodcast = func(_ context.Context, input podscriber.TranscriptionInput) (podscriber.TranscriptionResult, error) {
 		if err := input.Validate(); err != nil {
 			t.Fatal(err)

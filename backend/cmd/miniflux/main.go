@@ -26,7 +26,8 @@ const backendLambdaNameEnv = "BACKEND_LAMBDA_FUNCTION_NAME"
 const usage = `usage:
   miniflux entry [-url instance] <entry-URL-or-ID>   print one entry's transcription input
   miniflux starred [-url instance]                   print every starred entry
-  miniflux queue-starred [-url instance] [-dry-run]  queue starred episodes on the backend Lambda`
+  miniflux queue-starred [-url instance] [-dry-run]  queue starred episodes on the backend Lambda
+  miniflux unstar [-url instance] <entry-URL-or-ID>  remove an entry's star`
 
 func main() {
 	if err := run(context.Background(), os.Args[1:], os.Stdout, os.Stderr); err != nil {
@@ -89,9 +90,38 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 			return err
 		}
 		return queueStarred(ctx, client, dryRun, stdout, stderr)
+	case command == "unstar" && flags.NArg() == 1:
+		client, err := newClient()
+		if err != nil {
+			return err
+		}
+		return unstar(ctx, client, flags.Arg(0), stdout)
 	default:
 		return errors.New(usage)
 	}
+}
+
+// unstar removes the star from one entry URL or bare entry ID.
+func unstar(ctx context.Context, client *miniflux.Client, input string, stdout io.Writer) error {
+	input = strings.TrimSpace(input)
+	var (
+		changed bool
+		err     error
+	)
+	if id, convErr := strconv.ParseInt(input, 10, 64); convErr == nil {
+		changed, err = client.Unstar(ctx, id)
+	} else {
+		changed, err = client.UnstarEntryURL(ctx, input)
+	}
+	if err != nil {
+		return err
+	}
+	message := "unstarred"
+	if !changed {
+		message = "already not starred"
+	}
+	_, err = fmt.Fprintln(stdout, message)
+	return err
 }
 
 // printEntry prints the transcription input for one entry URL or bare entry ID.
