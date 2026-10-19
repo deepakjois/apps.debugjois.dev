@@ -51,10 +51,13 @@ to build backend images with `infra/deploy.sh --with-backend-image`.
 
 Fresh Amp orbs run `.agents/setup`, which installs Nix if it is missing, builds
 the flake's tool profile (`packages.default`) into
-`~/.cache/apps-debugjois-dev/nix-tools`, adds a `~/.bash_profile` hook that
-puts it on `PATH` for login shells inside the repository, and installs the
-locked npm and Go dependencies. `.agents/resume` rebuilds the tool profile
-when `flake.nix` or `flake.lock` changed since the last build. After editing
+`~/.cache/apps-debugjois-dev/nix-tools`, adds a `~/.bash_profile` hook
+(`.agents/profile-hook`) that puts it on `PATH` for login shells inside the
+repository, and installs the locked npm and Go dependencies. `.agents/resume`
+rebuilds the tool profile when `flake.nix` or `flake.lock` changed since the
+last build, and moves the hook back to the end of `~/.bash_profile`: Amp
+appends a block there on activation that sources `~/.env`, whose `PATH` would
+otherwise hide the Nix tools. After editing
 the flake in an orb, refresh the tools with:
 
 ```sh

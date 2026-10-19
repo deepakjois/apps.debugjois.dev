@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Keeps a login-shell hook that activates the Nix tool profile inside the
+# repository as the last block of ~/.bash_profile. Amp appends its own block
+# after setup on every orb activation; that block sources ~/.env, whose literal
+# PATH would otherwise drop the tool profile. Run by .agents/setup and
+# .agents/resume (which runs after Amp rewrites the profile); a no-op when the
+# hook is already last.
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+profile="$HOME/.bash_profile"
+marker="# apps.debugjois.dev Nix tools"
+
+# The hook block; it ends at the first line that is exactly "fi".
+hook="$marker
+if [[ ( \"\$PWD\" == \"$repo_root\" || \"\$PWD\" == \"$repo_root/\"* ) && -r \"$repo_root/.agents/nix-env.sh\" ]]; then
+  source \"$repo_root/.agents/nix-env.sh\"
+fi"
+
+touch "$profile"
+
+# Profile contents without any existing hook block. Blank lines are held back
+# and printed only before the next kept line, so removing the block does not
+# leave a stray blank line behind.
+rest="$(awk -v marker="$marker" '
+  $0 == marker { skip = 1; blanks = 0; next }
+  skip { if ($0 == "fi") skip = 0; next }
+  $0 == "" { blanks++; next }
+  { while (blanks > 0 && printed) { print ""; blanks-- } blanks = 0; print; printed = 1 }
+' "$profile")"
+
+desired="${rest:+$rest$'\n\n'}$hook"
+if [[ "$(cat "$profile")" != "$desired" ]]; then
+  printf '%s\n' "$desired" >"$profile"
+fi

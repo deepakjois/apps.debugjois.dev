@@ -30,21 +30,6 @@ install_nix() {
   curl -fsSL https://nixos.org/nix/install | sh -s -- --no-daemon --yes
 }
 
-# Adds a login-shell hook that activates the tool profile inside the repository.
-persist_profile_hook() {
-  local marker="# apps.debugjois.dev Nix tools"
-  if grep -Fqx "$marker" "$HOME/.bash_profile" 2>/dev/null; then
-    return
-  fi
-  cat >>"$HOME/.bash_profile" <<EOF
-
-$marker
-if [[ ( "\$PWD" == "$repo_root" || "\$PWD" == "$repo_root/"* ) && -r "$repo_root/.agents/nix-env.sh" ]]; then
-  source "$repo_root/.agents/nix-env.sh"
-fi
-EOF
-}
-
 install_npm_dependencies() {
   # Each lockfile owns an independent dependency tree.
   local project
@@ -59,7 +44,7 @@ download_go_modules() {
 
 timed "Installing Nix" install_nix
 timed "Building Nix tool profile" "$repo_root/.agents/nix-tools"
-timed "Persisting login-shell hook" persist_profile_hook
+timed "Persisting login-shell hook" "$repo_root/.agents/profile-hook"
 
 # shellcheck source=.agents/nix-env.sh
 source "$repo_root/.agents/nix-env.sh"
