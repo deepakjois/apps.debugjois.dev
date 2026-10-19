@@ -3,6 +3,7 @@ import AppKit
 /// Wires the window, menus and the global key handling together.
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    /// The loaded file, unmodified; `Typography.document` applies the mode.
     private let text: String
     private let options: Options
     private var window: ReaderWindow?
@@ -24,7 +25,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let window = ReaderWindow(screen: screen, opacity: options.opacity, blur: options.blur)
         let font = Typography.bodyFont(name: options.fontName, size: options.fontSize)
         let reader = ReaderView(
-            frame: NSRect(origin: .zero, size: screen.frame.size), text: text, font: font)
+            frame: NSRect(origin: .zero, size: screen.frame.size),
+            document: Typography.document(text, mode: options.mode, font: font), bodyFont: font)
         window.readerView = reader
         window.title = (options.path as NSString).lastPathComponent
         // Intercept key presses before the text view sees them so that
