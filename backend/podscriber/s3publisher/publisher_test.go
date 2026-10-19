@@ -161,8 +161,8 @@ func TestDurationDisplay(t *testing.T) {
 		{podscriber.Metadata{DurationSeconds: 7260, Extra: map[string]any{"duration_display": "121 mins"}}, "121 mins"},
 		{podscriber.Metadata{}, ""},
 	} {
-		if got := durationDisplay(tc.metadata); got != tc.want {
-			t.Errorf("durationDisplay(%v) = %q, want %q", tc.metadata.DurationSeconds, got, tc.want)
+		if got := DurationDisplay(tc.metadata); got != tc.want {
+			t.Errorf("DurationDisplay(%v) = %q, want %q", tc.metadata.DurationSeconds, got, tc.want)
 		}
 	}
 }

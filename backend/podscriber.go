@@ -7,7 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
+	"path"
 	"regexp"
 	"strings"
 	"time"
@@ -21,8 +23,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber"
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/deepgram"
+	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/resolvers"
+	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/resolvers/miniflux"
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/resolvers/podcastaddict"
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/s3publisher"
+	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/starred"
 	"github.com/deepakjois/apps.debugjois.dev/backend/transcripts"
 )
 
@@ -60,6 +65,15 @@ type podcastEpisode struct {
 // queuePodcastTranscriptionRequest is the input carried by the queue action.
 type queuePodcastTranscriptionRequest struct {
 	Text string `json:"text"`
+	// SkipExisting returns an already-published transcript instead of
+	// transcribing the episode again; queue-miniflux-starred sets it.
+	SkipExisting bool `json:"skip_existing"`
+}
+
+// queueMinifluxStarredRequest is the input of the starred-entries queue action.
+type queueMinifluxStarredRequest struct {
+	// DryRun lists the entries that would be queued without queueing them.
+	DryRun bool `json:"dry_run"`
 }
 
 // processPodcastTranscriptionRequest preserves the asynchronous worker envelope.
@@ -68,10 +82,12 @@ type processPodcastTranscriptionRequest struct {
 	Podcast podcastPayload `json:"podcast"`
 }
 
-// queuedResponse is the accepted response consumed by the admin UI.
+// queuedResponse is the accepted response consumed by the admin UI. Exactly
+// one of TranscriptionLambdaID and ExistingTranscript is set.
 type queuedResponse struct {
 	Podcast               podcastPayload `json:"podcast"`
-	TranscriptionLambdaID string         `json:"transcription_lambda_id"`
+	TranscriptionLambdaID string         `json:"transcription_lambda_id,omitempty"`
+	ExistingTranscript    string         `json:"existing_transcript,omitempty"`
 }
 
 // transcriptResponse is both the worker response and the persisted document.
@@ -92,9 +108,30 @@ type completedTranscriptPublisher interface {
 }
 
 var (
-	extractPodcast      = podcastaddict.New(nil).Extract
+	extractPodcast      = extractQueueSource
+	newMinifluxClient   = func() (*miniflux.Client, error) { return miniflux.NewFromEnv(nil) }
 	invokePodcastWorker = invokeSelfForPodcastTranscription
-	transcribePodcast   = func(ctx context.Context, input podscriber.TranscriptionInput) (podscriber.TranscriptionResult, error) {
+	transcriptExists    = func(ctx context.Context, key string) (bool, error) {
+		client, err := newTranscriptS3Client(ctx)
+		if err != nil {
+			return false, err
+		}
+		return transcripts.ObjectExists(ctx, client, transcripts.BucketName, key)
+	}
+	// newSelfQueueDispatcher sends each starred entry back to this function's
+	// single-URL queue action.
+	newSelfQueueDispatcher = func(ctx context.Context) (starred.Dispatcher, error) {
+		functionName := strings.TrimSpace(os.Getenv("AWS_LAMBDA_FUNCTION_NAME"))
+		if functionName == "" {
+			return nil, errors.New("AWS_LAMBDA_FUNCTION_NAME must be set in Lambda")
+		}
+		cfg, err := config.LoadDefaultConfig(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("load AWS config for Lambda invoke: %w", err)
+		}
+		return starred.LambdaDispatcher(awslambda.NewFromConfig(cfg), functionName), nil
+	}
+	transcribePodcast = func(ctx context.Context, input podscriber.TranscriptionInput) (podscriber.TranscriptionResult, error) {
 		client, err := deepgram.New(os.Getenv("DEEPGRAM_API_KEY"))
 		if err != nil {
 			return podscriber.TranscriptionResult{}, err
@@ -133,26 +170,83 @@ func handlePublishCompletedTranscription(ctx context.Context, result podscriber.
 	return json.Marshal(map[string]bool{"ok": true})
 }
 
-func handleQueuePodcastTranscription(ctx context.Context, text string) (json.RawMessage, error) {
-	text = strings.TrimSpace(text)
+// errUnsupportedQueueSource rejects inputs the Lambda queue cannot resolve.
+var errUnsupportedQueueSource = errors.New("unsupported Lambda transcription source: only Podcast Addict and Miniflux entry URLs are supported")
+
+// extractQueueSource resolves the remote-audio sources Lambda queues. The CLI
+// owns resolution for additional source types such as YouTube and audio URLs.
+// Miniflux is available only when MINIFLUX_API_TOKEN is configured.
+func extractQueueSource(ctx context.Context, text string) (podscriber.TranscriptionInput, error) {
+	extractors := []resolvers.Extractor{podcastaddict.New(nil)}
+	client, minifluxErr := newMinifluxClient()
+	if minifluxErr == nil {
+		extractors = append(extractors, miniflux.NewExtractor(client))
+	}
+	input, err := resolvers.New(extractors...).Resolve(ctx, text)
+	if errors.Is(err, resolvers.ErrUnsupportedSource) {
+		if minifluxErr != nil {
+			return podscriber.TranscriptionInput{}, fmt.Errorf("%w (Miniflux unavailable: %w)", errUnsupportedQueueSource, minifluxErr)
+		}
+		return podscriber.TranscriptionInput{}, errUnsupportedQueueSource
+	}
+	return input, err
+}
+
+func handleQueuePodcastTranscription(ctx context.Context, request queuePodcastTranscriptionRequest) (json.RawMessage, error) {
+	text := strings.TrimSpace(request.Text)
 	if text == "" {
 		return nil, errors.New("text parameter is required")
-	}
-	// Lambda queues only the deployed Podcast Addict workflow. The CLI owns
-	// resolution for additional source types such as YouTube and audio URLs.
-	if !podcastaddict.New(nil).CanHandle(text) {
-		return nil, errors.New("unsupported Lambda transcription source: only Podcast Addict URLs are supported")
 	}
 	input, err := extractPodcast(ctx, text)
 	if err != nil {
 		return nil, err
 	}
 	podcast := podcastFromInput(input)
+	if request.SkipExisting {
+		// The worker persists under this key, derived from the same payload.
+		key, err := transcriptObjectKey(actionProcessPodcastTranscription, podcast)
+		if err != nil {
+			return nil, err
+		}
+		exists, err := transcriptExists(ctx, key)
+		if err != nil {
+			return nil, err
+		}
+		if exists {
+			return json.Marshal(queuedResponse{Podcast: podcast, ExistingTranscript: transcripts.LocationPrefix + path.Base(key)})
+		}
+	}
 	id, err := invokePodcastWorker(ctx, podcast)
 	if err != nil {
 		return nil, err
 	}
 	return json.Marshal(queuedResponse{Podcast: podcast, TranscriptionLambdaID: id})
+}
+
+// handleQueueMinifluxStarred sends every starred Miniflux podcast entry back
+// to this function's queue-podcast-transcription action, one URL per call,
+// skipping episodes that already have a transcript.
+func handleQueueMinifluxStarred(ctx context.Context, request queueMinifluxStarredRequest) (json.RawMessage, error) {
+	client, err := newMinifluxClient()
+	if err != nil {
+		return nil, err
+	}
+	var dispatch starred.Dispatcher
+	if !request.DryRun {
+		if dispatch, err = newSelfQueueDispatcher(ctx); err != nil {
+			return nil, err
+		}
+	}
+	report, err := starred.Queue(ctx, client, dispatch)
+	if err != nil {
+		return nil, err
+	}
+	for _, entry := range report.Entries {
+		if entry.Status == starred.StatusFailed {
+			log.Printf("queue Miniflux entry %d (%s) failed: %s", entry.EntryID, entry.URL, entry.Error)
+		}
+	}
+	return json.Marshal(report)
 }
 
 func handleProcessPodcastTranscription(ctx context.Context, request processPodcastTranscriptionRequest) (json.RawMessage, error) {
@@ -180,7 +274,8 @@ func handleProcessPodcastTranscription(ctx context.Context, request processPodca
 func podcastFromInput(input podscriber.TranscriptionInput) podcastPayload {
 	metadata := input.Metadata
 	shareTitle, _ := metadata.Extra["share_title"].(string)
-	duration, _ := metadata.Extra["duration_display"].(string)
+	// Podcast Addict supplies its own label; Miniflux only has DurationSeconds.
+	duration := s3publisher.DurationDisplay(metadata)
 	publishedAt, _ := metadata.Extra["published_at_raw"].(string)
 	if publishedAt == "" && metadata.PublishedAt != nil {
 		publishedAt = metadata.PublishedAt.Format(time.RFC3339Nano)

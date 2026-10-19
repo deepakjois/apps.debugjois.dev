@@ -1,0 +1,42 @@
+{
+  "id": 219276503,
+  "feed_id": 786478,
+  "status": "read",
+  "hash": "6a7f57468a5801fc90a3924bfc98eb87ed4b6631d7aa032b9dc002f8a161c3ab",
+  "title": "Anatomy of a movie market",
+  "url": "https://www.npr.org/2026/10/16/nx-s1-6005392/sundance-hollywood-movies-apple-disney",
+  "comments_url": "",
+  "language": "en",
+  "published_at": "2026-10-16T23:30:00+02:00",
+  "created_at": "2026-10-17T01:53:25.384025+02:00",
+  "changed_at": "2026-10-17T18:36:40.418984+02:00",
+  "content": "Before an independent movie makes it to a streaming platform or a theater near you, it first needs to survive an artistic and economic gauntlet. And even for those movies that make it into elite film festivals like Sundance – it can take everything from performance stunts to corporate spycraft to seal the deal. Today on the show, we follow the ‘King of Sundance’ as he and his team try to sell their slate of movies to distributors like Netflix and Sony and Apple. We hear the behind the scenes stories about how films like <em>Little Miss Sunshine</em>, <em>Napoleon Dynamite</em> and <em>Precious</em> got sold. And we learn the strategies that might make the difference in whether or not a film makes it onto screens around the world. <br/><br/><em>For more episodes about the entertainment industry: </em> <br/><br/>",
+  "author": "NPR",
+  "share_code": "",
+  "starred": true,
+  "reading_time": 32,
+  "enclosures": [
+    {
+      "id": 7260989109,
+      "url": "https://reader.miniflux.app/proxy/ap7-OEPWcsPpmPYz0zV_NcY-2j2jQMadXS3n3x3G4oc=/aHR0cHM6Ly9ucHIuYnJpZ2h0c3BvdGNkbi5jb20vZGltczMvZGVmYXVsdC9zdHJpcC9mYWxzZS9jcm9wLzMzNzd4MTkwMCswKzAvcmVzaXplLzEyODAvcXVhbGl0eS82Ni9mb3JtYXQvanBnLz91cmw9aHR0cCUzQSUyRiUyRm5wci1icmlnaHRzcG90LnMzLmFtYXpvbmF3cy5jb20lMkY1ZSUyRmY1JTJGY2ZkNjE0NTI0YWFhYjMxZTRkNmVlYzQwNzFlYiUyRjdlZjE0MmViLTE1MjctNDIwMS1iOTYzLWU0YzkzMTRkYzIyMy5wbmc=",
+      "mime_type": "image/*",
+      "size": 0
+    },
+    {
+      "id": 7260989110,
+      "url": "https://tracking.swap.fm/track/XvDEoI11TR00olTUO8US/prfx.byspotify.com/e/play.podtrac.com/npr-510289/npr.simplecastaudio.com/43b5acee-463e-4612-95ad-d2596d9dd337/episodes/080b75be-92f2-4af7-b874-89008175bcd2/audio/128/default.mp3?awCollectionId=43b5acee-463e-4612-95ad-d2596d9dd337&awEpisodeId=080b75be-92f2-4af7-b874-89008175bcd2&feed=hvWWWzRv&t=podcast&e=nx-s1-6005392&p=510289&d=1929&size=30878911",
+      "mime_type": "audio/mpeg",
+      "size": 30878911
+    }
+  ],
+  "feed": {
+    "id": 786478,
+    "title": "Planet Money",
+    "site_url": "https://www.npr.org/podcasts/510289/planet-money",
+    "feed_url": "https://feeds.npr.org/510289/podcast.xml"
+  },
+  "tags": [
+    "Business",
+    "News"
+  ]
+}

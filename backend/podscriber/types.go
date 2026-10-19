@@ -19,6 +19,7 @@ const (
 	SourceTypePodcastAddict SourceType = "podcast_addict"
 	SourceTypeYouTube       SourceType = "youtube"
 	SourceTypeAudioURL      SourceType = "audio_url"
+	SourceTypeMiniflux      SourceType = "miniflux"
 )
 
 // MediaType describes how Deepgram can access media.

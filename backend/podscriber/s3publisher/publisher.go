@@ -143,7 +143,7 @@ func newDocument(result podscriber.TranscriptionResult) document {
 				Title:           metadata.Title,
 				PublishedAt:     metadata.PublishedAt,
 				PublishedDate:   metadata.PublishedDate,
-				Duration:        durationDisplay(metadata),
+				Duration:        DurationDisplay(metadata),
 				DescriptionHTML: descriptionHTML(metadata),
 			},
 		},
@@ -155,9 +155,9 @@ func newDocument(result podscriber.TranscriptionResult) document {
 	return doc
 }
 
-// durationDisplay prefers the provider's own label (Podcast Addict) and falls
+// DurationDisplay prefers the provider's own label (Podcast Addict) and falls
 // back to formatting DurationSeconds (YouTube) in the same "N mins" style.
-func durationDisplay(metadata podscriber.Metadata) string {
+func DurationDisplay(metadata podscriber.Metadata) string {
 	if display := extraString(metadata.Extra, "duration_display"); display != "" {
 		return display
 	}

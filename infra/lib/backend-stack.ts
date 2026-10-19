@@ -6,6 +6,9 @@ import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
 
 const deepgramAPIKeySecretName = "apps-debugjois-dev/deepgram-api-key";
+// Created outside this stack (see infra README) so the Lambda's dynamic
+// reference never resolves a new, still-empty secret on first deploy.
+const minifluxAPITokenSecretName = "apps-debugjois-dev/miniflux-api-token";
 const transcriptBucketArn = "arn:aws:s3:::debugjois-dev-site";
 
 export class AppDebugJoisDevBackendStack extends cdk.Stack {
@@ -56,6 +59,7 @@ export class AppDebugJoisDevBackendStack extends cdk.Stack {
         variables: {
           DEEPGRAM_API_KEY: `{{resolve:secretsmanager:${deepgramAPIKeySecretName}}}`,
           GOOGLE_APPLICATION_CREDENTIALS: "/gcp-credentials.json",
+          MINIFLUX_API_TOKEN: `{{resolve:secretsmanager:${minifluxAPITokenSecretName}}}`,
         },
       },
       memorySize: 1024,
@@ -65,7 +69,8 @@ export class AppDebugJoisDevBackendStack extends cdk.Stack {
     });
     backendLambda.node.addDependency(deepgramAPIKeySecret);
 
-    // queue-podcast-transcription self-invokes this Lambda asynchronously.
+    // queue-podcast-transcription self-invokes this Lambda asynchronously, and
+    // queue-miniflux-starred synchronously invokes queue-podcast-transcription.
     new iam.Policy(this, "BackendLambdaSelfInvokePolicy", {
       roles: [backendRole],
       statements: [
@@ -99,6 +104,10 @@ export class AppDebugJoisDevBackendStack extends cdk.Stack {
     new cdk.CfnOutput(this, "DeepgramAPIKeySecretName", {
       value: deepgramAPIKeySecretName,
       description: "Secrets Manager name for the Deepgram API key",
+    });
+    new cdk.CfnOutput(this, "MinifluxAPITokenSecretName", {
+      value: minifluxAPITokenSecretName,
+      description: "Secrets Manager name for the Miniflux API token",
     });
   }
 }

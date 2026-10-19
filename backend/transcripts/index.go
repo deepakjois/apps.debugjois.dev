@@ -362,3 +362,25 @@ func isConditionalWriteConflict(err error) bool {
 		return false
 	}
 }
+
+// ObjectExists reports whether key is present in bucketName. It requests a
+// single byte so checking a large transcript does not download it.
+func ObjectExists(ctx context.Context, client S3Client, bucketName, key string) (bool, error) {
+	output, err := client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(key),
+		Range:  aws.String("bytes=0-0"),
+	})
+	if err != nil {
+		if isMissingObjectError(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("check s3://%s/%s: %w", bucketName, key, err)
+	}
+	if output.Body != nil {
+		if err := output.Body.Close(); err != nil {
+			return false, fmt.Errorf("close s3://%s/%s: %w", bucketName, key, err)
+		}
+	}
+	return true, nil
+}

@@ -13,6 +13,7 @@ import (
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/deepgram"
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/resolvers"
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/resolvers/audiourl"
+	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/resolvers/miniflux"
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/resolvers/podcastaddict"
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/resolvers/youtube"
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/s3publisher"
@@ -65,11 +66,18 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer) 
 	if err != nil {
 		return err
 	}
-	resolver := resolvers.New(
-		podcastaddict.New(nil),
-		youtubeExtractor,
-		audiourl.New(),
-	)
+	extractors := []resolvers.Extractor{podcastaddict.New(nil)}
+	// Miniflux entry URLs are recognized only when an API token is configured.
+	if strings.TrimSpace(os.Getenv(miniflux.TokenEnv)) != "" {
+		minifluxClient, err := miniflux.NewFromEnv(nil)
+		if err != nil {
+			return err
+		}
+		extractors = append(extractors, miniflux.NewExtractor(minifluxClient))
+	}
+	// The generic audio URL extractor must stay last.
+	extractors = append(extractors, youtubeExtractor, audiourl.New())
+	resolver := resolvers.New(extractors...)
 
 	prepared, err := resolver.Resolve(ctx, options.input)
 	if err != nil {

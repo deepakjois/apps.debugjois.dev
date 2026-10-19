@@ -94,7 +94,19 @@ All behaviors use CloudFront's native `redirect-to-https` policy.
 
 # Backend Lambda
 
-`AppDebugJoisDevBackendStack` deploys the Go backend as a Lambda container image with no API Gateway. It supports direct Lambda invocation actions such as `get-daily-log`, `post-daily-log`, `queue-podcast-transcription`, and `process-podcast-transcription`. The backend Lambda receives `DEEPGRAM_API_KEY` through a CloudFormation Secrets Manager dynamic reference to the `apps-debugjois-dev/deepgram-api-key` secret, writes transcripts to the existing `debugjois-dev-site` transcript bucket, and uses Google Drive for daily-log load/save actions.
+`AppDebugJoisDevBackendStack` deploys the Go backend as a Lambda container image with no API Gateway. It supports direct Lambda invocation actions such as `get-daily-log`, `post-daily-log`, `queue-podcast-transcription`, `queue-miniflux-starred`, and `process-podcast-transcription`. The backend Lambda receives `DEEPGRAM_API_KEY` through a CloudFormation Secrets Manager dynamic reference to the `apps-debugjois-dev/deepgram-api-key` secret and `MINIFLUX_API_TOKEN` from the `apps-debugjois-dev/miniflux-api-token` secret, writes transcripts to the existing `debugjois-dev-site` transcript bucket, and uses Google Drive for daily-log load/save actions.
+
+The Miniflux secret is not created by the stack: a stack-created secret would still be empty when the Lambda's dynamic reference resolves on first deploy. Create it once before deploying the backend stack (deploys fail while it is missing):
+
+```bash
+aws secretsmanager create-secret \
+  --region us-west-2 \
+  --name apps-debugjois-dev/miniflux-api-token \
+  --description 'Miniflux API token for the apps.debugjois.dev backend' \
+  --secret-string 'your-miniflux-api-token'
+```
+
+Rotate it with `aws secretsmanager put-secret-value --secret-id apps-debugjois-dev/miniflux-api-token --secret-string '...'`, then redeploy the backend stack to refresh the Lambda environment variable.
 
 The backend Lambda execution role has the stable name `apps-debugjois-dev-backend-lambda-role` so GCP Workload Identity Federation can trust it by role subject.
 

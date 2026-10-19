@@ -8,15 +8,22 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
+	"os"
+	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
 
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	awslambda "github.com/aws/aws-sdk-go-v2/service/lambda"
 	"github.com/aws/aws-sdk-go-v2/service/lambda/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber"
+	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/resolvers/miniflux"
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/resolvers/podcastaddict"
+	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/starred"
 	"github.com/deepakjois/apps.debugjois.dev/backend/transcripts"
 )
 
@@ -70,32 +77,170 @@ func TestQueueLegacyContract(t *testing.T) {
 	if err != nil || string(body) != want {
 		t.Fatalf("got %s err=%v; want %s", body, err, want)
 	}
-	if _, err := handleQueuePodcastTranscription(context.Background(), "  "); err == nil {
+	if _, err := handleQueuePodcastTranscription(context.Background(), queuePodcastTranscriptionRequest{Text: "  "}); err == nil {
 		t.Fatal("accepted empty text")
 	}
 	wantErr := errors.New("invoke failed")
 	invokePodcastWorker = func(context.Context, podcastPayload) (string, error) { return "", wantErr }
-	if _, err := handleQueuePodcastTranscription(context.Background(), "https://podcastaddict.com/show/episode/123"); !errors.Is(err, wantErr) {
+	if _, err := handleQueuePodcastTranscription(context.Background(), queuePodcastTranscriptionRequest{Text: "https://podcastaddict.com/show/episode/123"}); !errors.Is(err, wantErr) {
 		t.Fatalf("lost invoke error: %v", err)
 	}
 }
 
-func TestQueueRejectsNonPodcastAddictSourcesBeforeResolution(t *testing.T) {
-	oldExtract := extractPodcast
-	t.Cleanup(func() { extractPodcast = oldExtract })
-	extractPodcast = func(context.Context, string) (podscriber.TranscriptionInput, error) {
-		t.Fatal("resolved an unsupported Lambda source")
-		return podscriber.TranscriptionInput{}, nil
+func TestQueueRejectsUnsupportedSourcesBeforeFetching(t *testing.T) {
+	oldClient := newMinifluxClient
+	t.Cleanup(func() { newMinifluxClient = oldClient })
+	// Any request means an unsupported input reached a network fetch.
+	noNetwork := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		t.Fatalf("fetched %s for an unsupported source", r.URL)
+		return nil, nil
+	})}
+	newMinifluxClient = func() (*miniflux.Client, error) {
+		return miniflux.New(miniflux.Config{BaseURL: "https://reader.example.com", Token: "secret", HTTPClient: noNetwork})
 	}
 
 	for _, input := range []string{
 		"https://www.youtube.com/watch?v=example",
 		"https://cdn.example.com/episode.mp3",
+		"https://reader.example.com/feed/3",
+		"https://other.example.com/feed/3/entry/7",
 	} {
-		_, err := handleQueuePodcastTranscription(context.Background(), input)
-		if err == nil || err.Error() != "unsupported Lambda transcription source: only Podcast Addict URLs are supported" {
+		_, err := handleQueuePodcastTranscription(context.Background(), queuePodcastTranscriptionRequest{Text: input})
+		if !errors.Is(err, errUnsupportedQueueSource) {
 			t.Fatalf("input %q: error = %v", input, err)
 		}
+	}
+
+	// Without a token, Miniflux URLs are unsupported and the error says why.
+	t.Setenv(miniflux.TokenEnv, "")
+	newMinifluxClient = oldClient
+	_, err := handleQueuePodcastTranscription(context.Background(), queuePodcastTranscriptionRequest{Text: "https://reader.miniflux.app/starred/entry/7"})
+	if !errors.Is(err, errUnsupportedQueueSource) || !strings.Contains(err.Error(), miniflux.TokenEnv) {
+		t.Fatalf("unconfigured Miniflux error = %v", err)
+	}
+}
+
+// TestQueueMinifluxStarredLoop runs queue-miniflux-starred, whose dispatcher
+// sends each entry URL back through this Lambda's queue action, then checks
+// that a published transcript is skipped on the next run.
+func TestQueueMinifluxStarredLoop(t *testing.T) {
+	fixture, err := os.ReadFile("podscriber/resolvers/miniflux/testdata/planet-money-entry.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var podcastEntry miniflux.Entry
+	if err := json.Unmarshal(fixture, &podcastEntry); err != nil {
+		t.Fatal(err)
+	}
+	// An article without enclosures must never be sent to the queue action.
+	article := miniflux.Entry{ID: 5, FeedID: 9, Title: "An article", URL: "https://example.com/article"}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Header.Get("X-Auth-Token") != "secret":
+			w.WriteHeader(http.StatusUnauthorized)
+		case r.URL.Path == "/v1/entries" && r.URL.Query().Get("starred") == "true":
+			_ = json.NewEncoder(w).Encode(map[string]any{"total": 2, "entries": []miniflux.Entry{podcastEntry, article}})
+		case r.URL.Path == fmt.Sprintf("/v1/entries/%d", podcastEntry.ID):
+			_, _ = w.Write(fixture)
+		default:
+			t.Errorf("unexpected Miniflux request %s", r.URL)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	oldClient, oldDispatcher, oldInvoke, oldExists := newMinifluxClient, newSelfQueueDispatcher, invokePodcastWorker, transcriptExists
+	oldTranscribe, oldPersist := transcribePodcast, persistPodcastTranscript
+	t.Cleanup(func() {
+		newMinifluxClient, newSelfQueueDispatcher, invokePodcastWorker, transcriptExists = oldClient, oldDispatcher, oldInvoke, oldExists
+		transcribePodcast, persistPodcastTranscript = oldTranscribe, oldPersist
+	})
+	newMinifluxClient = func() (*miniflux.Client, error) {
+		return miniflux.New(miniflux.Config{BaseURL: server.URL, Token: "secret"})
+	}
+	// Simulate synchronous self-invocation by dispatching the payload in-process.
+	var selfPayloads []string
+	newSelfQueueDispatcher = func(context.Context) (starred.Dispatcher, error) {
+		return starred.LambdaDispatcher(invokeFunc(func(in *awslambda.InvokeInput) (*awslambda.InvokeOutput, error) {
+			selfPayloads = append(selfPayloads, string(in.Payload))
+			body, err := dispatchBackendEvent(context.Background(), in.Payload)
+			if err != nil {
+				return &awslambda.InvokeOutput{FunctionError: aws.String("Unhandled"), Payload: []byte(strconv.Quote(err.Error()))}, nil
+			}
+			return &awslambda.InvokeOutput{Payload: body}, nil
+		}), "backend"), nil
+	}
+	var queued []podcastPayload
+	invokePodcastWorker = func(_ context.Context, podcast podcastPayload) (string, error) {
+		queued = append(queued, podcast)
+		return "worker-1", nil
+	}
+	published := map[string]bool{}
+	transcriptExists = func(_ context.Context, key string) (bool, error) { return published[key], nil }
+
+	runStarred := func() starred.Report {
+		t.Helper()
+		body, err := dispatchBackendEvent(context.Background(), json.RawMessage(`{"action":"queue-miniflux-starred"}`))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var report starred.Report
+		if err := json.Unmarshal(body, &report); err != nil {
+			t.Fatal(err)
+		}
+		return report
+	}
+
+	report := runStarred()
+	entryURL := fmt.Sprintf("%s/feed/%d/entry/%d", server.URL, podcastEntry.FeedID, podcastEntry.ID)
+	wantSelf := `{"action":"queue-podcast-transcription","text":"` + entryURL + `","skip_existing":true}`
+	if len(selfPayloads) != 1 || selfPayloads[0] != wantSelf {
+		t.Fatalf("self invocations = %q, want [%s]", selfPayloads, wantSelf)
+	}
+	if report.Counts[starred.StatusQueued] != 1 || report.Counts[starred.StatusNoAudio] != 1 || report.Entries[0].TranscriptionLambdaID != "worker-1" {
+		t.Fatalf("first report = %+v", report)
+	}
+	if len(queued) != 1 {
+		t.Fatalf("queued %d workers", len(queued))
+	}
+	podcast := queued[0]
+	if podcast.Source.Type != podscriber.SourceTypeMiniflux || podcast.Source.Input != entryURL || podcast.Podcast.Title != "Planet Money" ||
+		!strings.HasPrefix(podcast.Episode.AudioURL, "https://tracking.swap.fm/") || podcast.Episode.Duration != "32 mins" {
+		t.Fatalf("queued podcast = %+v", podcast)
+	}
+
+	// Run the worker on the exact event invokeWorker sends, recording the key
+	// persistTranscript would write, so the skip check is tied to real storage.
+	workerEvent, err := json.Marshal(processPodcastTranscriptionRequest{Action: actionProcessPodcastTranscription, Podcast: podcast})
+	if err != nil {
+		t.Fatal(err)
+	}
+	transcribePodcast = func(context.Context, podscriber.TranscriptionInput) (podscriber.TranscriptionResult, error) {
+		return podscriber.TranscriptionResult{Transcript: podscriber.Transcript{Raw: json.RawMessage(`{}`)}}, nil
+	}
+	persistPodcastTranscript = func(_ context.Context, action string, p podcastPayload, _ []byte) error {
+		key, err := transcriptObjectKey(action, p)
+		published[key] = true
+		return err
+	}
+	if _, err := dispatchBackendEvent(context.Background(), workerEvent); err != nil || len(published) != 1 {
+		t.Fatalf("worker err=%v published=%v", err, published)
+	}
+
+	report = runStarred()
+	if len(queued) != 1 || report.Counts[starred.StatusAlreadyTranscribed] != 1 ||
+		!strings.HasPrefix(report.Entries[0].ExistingTranscript, transcripts.LocationPrefix+"planet-money--anatomy-of-a-movie-market--") {
+		t.Fatalf("second run queued=%d report=%+v", len(queued), report)
+	}
+
+	// A dry run lists the podcast entry without invoking anything.
+	newSelfQueueDispatcher = func(context.Context) (starred.Dispatcher, error) {
+		t.Fatal("dry run created a dispatcher")
+		return nil, nil
+	}
+	body, err := dispatchBackendEvent(context.Background(), json.RawMessage(`{"action":"queue-miniflux-starred","dry_run":true}`))
+	if err != nil || !strings.Contains(string(body), `"counts":{"dry_run":1,"no_audio":1}`) {
+		t.Fatalf("dry run body=%s err=%v", body, err)
 	}
 }
 

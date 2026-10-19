@@ -19,6 +19,7 @@ const (
 	actionQueuePodcastTranscription   = "queue-podcast-transcription"
 	actionProcessPodcastTranscription = "process-podcast-transcription"
 	actionPublishCompletedTranscript  = "publish-completed-transcription"
+	actionQueueMinifluxStarred        = "queue-miniflux-starred"
 )
 
 // directRequest reads the discriminator shared by every direct invocation.
@@ -99,7 +100,13 @@ func handleDirectLambdaEvent(ctx context.Context, payload json.RawMessage) (json
 		if err := json.Unmarshal(payload, &queue); err != nil {
 			return nil, fmt.Errorf("unmarshal %s payload: %w", actionQueuePodcastTranscription, err)
 		}
-		return handleQueuePodcastTranscription(ctx, queue.Text)
+		return handleQueuePodcastTranscription(ctx, queue)
+	case actionQueueMinifluxStarred:
+		var queue queueMinifluxStarredRequest
+		if err := json.Unmarshal(payload, &queue); err != nil {
+			return nil, fmt.Errorf("unmarshal %s payload: %w", actionQueueMinifluxStarred, err)
+		}
+		return handleQueueMinifluxStarred(ctx, queue)
 	case actionProcessPodcastTranscription:
 		var process processPodcastTranscriptionRequest
 		if err := json.Unmarshal(payload, &process); err != nil {

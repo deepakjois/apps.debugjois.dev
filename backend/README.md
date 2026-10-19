@@ -40,15 +40,17 @@ AWS resources; they are not verification steps.
 
 ## Authentication and runtime setup
 
-| Operation                                  | Requirements                                                                                            |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| Daily-log CLI                              | Google Drive Application Default Credentials (ADC)                                                      |
-| `podscriber -parse`                        | No Deepgram key; source resolution may access the network                                               |
-| Transcription                              | `DEEPGRAM_API_KEY`                                                                                      |
-| `podscriber -publish`                      | AWS credentials with transcript S3 read/write permissions                                               |
-| `podcast-index` (including read-only mode) | AWS credentials with transcript S3 read/list permissions; `--write` also needs write permission         |
-| `youtube-transcript` publishing            | AWS credentials/region, `BACKEND_LAMBDA_FUNCTION_NAME`, and `lambda:InvokeFunction` on that function    |
-| Image push / deployment                    | AWS credentials authorized for ECR / infrastructure deployment; Docker with buildx installed separately |
+| Operation                                   | Requirements                                                                                                         |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Daily-log CLI                               | Google Drive Application Default Credentials (ADC)                                                                   |
+| `podscriber -parse`                         | No Deepgram key; source resolution may access the network                                                            |
+| Transcription                               | `DEEPGRAM_API_KEY`                                                                                                   |
+| `podscriber -publish`                       | AWS credentials with transcript S3 read/write permissions                                                            |
+| Miniflux entries (`miniflux`, `podscriber`) | `MINIFLUX_API_TOKEN` (Miniflux Settings → API Keys); optional `MINIFLUX_URL` (default `https://reader.miniflux.app`) |
+| `miniflux queue-starred`                    | Miniflux token plus AWS credentials/region, `BACKEND_LAMBDA_FUNCTION_NAME`, and `lambda:InvokeFunction`              |
+| `podcast-index` (including read-only mode)  | AWS credentials with transcript S3 read/list permissions; `--write` also needs write permission                      |
+| `youtube-transcript` publishing             | AWS credentials/region, `BACKEND_LAMBDA_FUNCTION_NAME`, and `lambda:InvokeFunction` on that function                 |
+| Image push / deployment                     | AWS credentials authorized for ECR / infrastructure deployment; Docker with buildx installed separately              |
 
 AWS clients use the normal credential and region chain. YouTube downloads need
 current `yt-dlp`, `ffmpeg`/`ffprobe`, and Deno on `PATH`, supplied by the flake.
@@ -102,8 +104,8 @@ newline and is created only on write.
 
 ### Podscriber
 
-Accepts Podcast Addict episode URLs or share text, YouTube URLs, and direct
-HTTP(S) audio URLs. Pass one quoted argument (including any share-text newlines)
+Accepts Podcast Addict episode URLs or share text, Miniflux entry URLs (when
+`MINIFLUX_API_TOKEN` is set), YouTube URLs, and direct HTTP(S) audio URLs. Pass one quoted argument (including any share-text newlines)
 or pipe input through stdin. Put flags before the argument.
 
 ```bash
@@ -122,6 +124,42 @@ cannot be combined with `-publish` or `-output`. It is not the Lambda queue
 envelope. YouTube resolution still downloads and converts audio to mono VBR
 MP3 (quality 6); its temporary files are removed when the command exits, so a
 parse-only local media path cannot be replayed later or sent to a worker.
+
+### Miniflux
+
+Miniflux entries are read through the REST API with `MINIFLUX_API_TOKEN`
+(`X-Auth-Token`). The instance defaults to `https://reader.miniflux.app`; set
+`MINIFLUX_URL` or pass `-url` for a self-hosted one (a trailing `/v1` is fine).
+Entry URLs are any web UI route ending in `/entry/<id>` (for example
+`/starred/entry/<id>` or `/feed/<feed>/entry/<id>`) or `/v1/entries/<id>` on
+that host.
+
+```bash
+export MINIFLUX_API_TOKEN='your-miniflux-api-token'
+go run ./cmd/miniflux entry 'https://reader.miniflux.app/starred/entry/123'
+go run ./cmd/miniflux entry 123            # bare entry ID
+go run ./cmd/miniflux starred              # every starred entry
+go run ./cmd/miniflux queue-starred -dry-run
+go run ./cmd/miniflux queue-starred        # writes to AWS
+go run ./cmd/podscriber -parse 'https://reader.miniflux.app/starred/entry/123'
+```
+
+- `entry` prints the same transcription input as `podscriber -parse`: the
+  entry title, feed (series), show notes (HTML and plain text), publish date,
+  duration, and the first audio enclosure (cover-image enclosures are skipped
+  and Miniflux media-proxy URLs are decoded to the original audio URL). The
+  duration is Miniflux's `reading_time`, which for podcast feeds is
+  `itunes:duration` truncated to minutes.
+- `starred` prints every starred entry, parsing those with audio. It exits
+  non-zero only if a podcast entry fails to parse; articles are listed with
+  `has_audio: false`.
+- `queue-starred` runs the same iteration as the Lambda's
+  `queue-miniflux-starred` action: each starred entry with audio is sent, one
+  URL per call, to the Lambda's `queue-podcast-transcription` action with
+  `skip_existing`, so episodes that already have a transcript are not
+  transcribed again. It prints a per-entry report (`queued`,
+  `already_transcribed`, `no_audio`, `dry_run`, `failed`) and exits non-zero
+  if any entry failed. `-dry-run` lists entries without AWS access.
 
 ### Local YouTube transcription → Lambda publishing
 
@@ -181,21 +219,34 @@ Unknown direct actions fail.
 
 ### Direct invocation contracts
 
-| Action                            | Input and result                                                                                                                                                                                                                                  |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `health-check`                    | Returns `{"ok":true}`                                                                                                                                                                                                                             |
-| `get-daily-log`                   | Returns `{"title":"YYYY-MM-DD.md","contents":"<base64>"}`                                                                                                                                                                                         |
-| `post-daily-log`                  | Takes `title` and base64 `contents`; validates today's Berlin filename, saves decoded bytes, and echoes the trimmed title and original base64 string                                                                                              |
-| `queue-podcast-transcription`     | Takes `text` (Podcast Addict URL/share text); returns `{"podcast":{...},"transcription_lambda_id":"<AWS request ID>"}` and asynchronously self-invokes the worker                                                                                 |
-| `process-podcast-transcription`   | Takes nested `podcast.source`, `podcast.podcast`, and `podcast.episode` (including `audio_url`); transcribes without re-fetching the episode page, publishes `{"podcast":{...},"deepgram":{...}}`, refreshes the index, and returns that document |
-| `publish-completed-transcription` | Takes `transcription`, the media-free completed result generated by `youtube-transcript`; validates schema/source/provider/raw transcript JSON, publishes, refreshes the index, and returns `{"ok":true}`                                         |
+| Action                            | Input and result                                                                                                                                                                                                                                                                                                                                 |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `health-check`                    | Returns `{"ok":true}`                                                                                                                                                                                                                                                                                                                            |
+| `get-daily-log`                   | Returns `{"title":"YYYY-MM-DD.md","contents":"<base64>"}`                                                                                                                                                                                                                                                                                        |
+| `post-daily-log`                  | Takes `title` and base64 `contents`; validates today's Berlin filename, saves decoded bytes, and echoes the trimmed title and original base64 string                                                                                                                                                                                             |
+| `queue-podcast-transcription`     | Takes `text` (Podcast Addict URL/share text or Miniflux entry URL) and optional `skip_existing`; returns `{"podcast":{...},"transcription_lambda_id":"<AWS request ID>"}` and asynchronously self-invokes the worker. With `skip_existing: true`, an episode already published returns `{"podcast":{...},"existing_transcript":"<URL>"}` instead |
+| `queue-miniflux-starred`          | Takes optional `dry_run`; sends each starred Miniflux entry with audio to `queue-podcast-transcription` (synchronous self-invocation, `skip_existing: true`) and returns `{"entries":[...],"counts":{...}}`. Per-entry failures are reported and logged, not raised                                                                              |
+| `process-podcast-transcription`   | Takes nested `podcast.source`, `podcast.podcast`, and `podcast.episode` (including `audio_url`); transcribes without re-fetching the episode page, publishes `{"podcast":{...},"deepgram":{...}}`, refreshes the index, and returns that document                                                                                                |
+| `publish-completed-transcription` | Takes `transcription`, the media-free completed result generated by `youtube-transcript`; validates schema/source/provider/raw transcript JSON, publishes, refreshes the index, and returns `{"ok":true}`                                                                                                                                        |
 
 Each direct request includes `"action":"<action-name>"`. The queue accepts
-**only Podcast Addict**, not YouTube or direct audio URLs. The queue sends
+**only Podcast Addict and Miniflux entry URLs**, not YouTube or direct audio
+URLs; Miniflux requires `MINIFLUX_API_TOKEN` in the Lambda environment. The queue sends
 `{"action":"process-podcast-transcription","podcast":{...}}` to the same
 function. Successful worker and completed-result actions always publish;
 publishing failures fail the invocation so AWS can retry. The Lambda preserves
 the deployed reader-compatible document format and object identity.
+
+Queue starred Miniflux episodes from the deployed function (this writes to
+AWS; use `{"action":"queue-miniflux-starred","dry_run":true}` to preview):
+
+```bash
+aws lambda invoke --function-name "$BACKEND_LAMBDA_FUNCTION_NAME" \
+  --cli-binary-format raw-in-base64-out \
+  --cli-read-timeout 900 \
+  --payload '{"action":"queue-miniflux-starred"}' /tmp/starred-response.json
+jq '.counts' /tmp/starred-response.json
+```
 
 ### Runtime configuration
 
@@ -205,7 +256,7 @@ federation config at `/gcp-credentials.json`. It does not contain the local
 YouTube download tools or Google service-account keys.
 
 The backend stack sets `GOOGLE_APPLICATION_CREDENTIALS=/gcp-credentials.json`
-and injects `DEEPGRAM_API_KEY` from Secrets Manager. Lambda provides ambient AWS
+and injects `DEEPGRAM_API_KEY` and `MINIFLUX_API_TOKEN` from Secrets Manager. Lambda provides ambient AWS
 credentials/region and `AWS_LAMBDA_FUNCTION_NAME` for self-invocation. Its role
 needs self-invoke and transcript S3 access; the Google federation provider must
 authorize that AWS role to impersonate the Drive service account. See the
