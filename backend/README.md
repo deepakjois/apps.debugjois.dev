@@ -221,6 +221,23 @@ go run ./cmd/podcast-index
 go run ./cmd/podcast-index --write
 ```
 
+### Transcript reader
+
+`transcript-reader` reads the public index at
+`https://www.debugjois.dev/transcripts/transcripts.json`, which needs no
+credentials. It lists the transcripts newest first in a terminal picker. Press
+`/` to filter, `enter` to apply the filter, and `enter` again to choose. It
+then prints the chosen transcript as Markdown on stdout. The picker draws on
+stderr, so pipe stdout to a viewer:
+
+```bash
+go run ./cmd/transcript-reader > /tmp/transcript.md
+go install ./cmd/transcript-reader
+transcript-reader | open -f -a 'Your Markdown App'
+```
+
+Quitting without a choice (`q` or `esc`) exits non-zero and prints nothing.
+
 ## Lambda runtime
 
 `main.go` starts the Lambda runtime, not a local HTTP server. Use the CLIs for
