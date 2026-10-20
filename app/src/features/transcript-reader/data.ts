@@ -67,12 +67,6 @@ export type TranscriptPayload = {
   };
 };
 
-export type ResolvedTranscript = {
-  item: TranscriptIndexItem | null;
-  canonicalHash: string | null;
-  shouldRedirect: boolean;
-};
-
 async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(url);
 
@@ -148,45 +142,6 @@ export function findTranscriptByHashPrefix(
   }
 
   return null;
-}
-
-export function resolveTranscript(
-  items: TranscriptIndexItem[],
-  requestedHash: string | undefined,
-): ResolvedTranscript {
-  if (items.length === 0) {
-    return {
-      item: null,
-      canonicalHash: null,
-      shouldRedirect: false,
-    };
-  }
-
-  if (!requestedHash) {
-    const latestTranscript = items[0];
-
-    return {
-      item: latestTranscript,
-      canonicalHash: canonicalHashForTranscript(latestTranscript) || null,
-      shouldRedirect: false,
-    };
-  }
-
-  const matchedTranscript = findTranscriptByHashPrefix(items, requestedHash);
-
-  if (!matchedTranscript) {
-    return {
-      item: null,
-      canonicalHash: null,
-      shouldRedirect: true,
-    };
-  }
-
-  return {
-    item: matchedTranscript,
-    canonicalHash: canonicalHashForTranscript(matchedTranscript) || null,
-    shouldRedirect: false,
-  };
 }
 
 export function formatTranscriptDate(value: string | undefined): string | undefined {

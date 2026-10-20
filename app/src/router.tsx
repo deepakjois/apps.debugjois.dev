@@ -5,6 +5,10 @@ import { routeTree } from "./routeTree.gen";
 
 export function getRouter() {
   const queryClient = new QueryClient();
+  // Transcript locations are content-addressed, so a fetched transcript never
+  // changes. Defaults rather than query options also cover transcripts
+  // hydrated from SSR, which hydration builds without query options.
+  queryClient.setQueryDefaults(["transcripts", "item"], { staleTime: Infinity, gcTime: Infinity });
 
   const router = createTanStackRouter({
     routeTree,

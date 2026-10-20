@@ -2,25 +2,23 @@ import type { QueryClient } from "@tanstack/react-query";
 import { redirect } from "@tanstack/react-router";
 import {
   canonicalHashForTranscript,
+  findTranscriptByHashPrefix,
   getTranscriptPageTitle,
-  resolveTranscript,
   transcriptIndexQueryOptions,
   transcriptQueryOptions,
 } from "../features/transcript-reader/data";
 import type { TranscriptIndexItem, TranscriptPayload } from "../features/transcript-reader/data";
 
-export type TranscriptReaderLoaderData = {
-  transcriptList: TranscriptIndexItem[];
-  selectedLocation: string | null;
-  transcript: TranscriptPayload | null;
-  pageTitle: string;
-};
+export type TranscriptReaderLoaderData =
+  | { transcriptList: TranscriptIndexItem[]; pageTitle: string }
+  | { transcript: TranscriptPayload; pageTitle: string };
 
 type TranscriptReaderCacheHeaders = {
   "Cache-Control": string;
 };
 
-const LATEST_CACHE_CONTROL = "public, max-age=0, s-maxage=60, stale-while-revalidate=300";
+const TRANSCRIPT_LIST_LIMIT = 50;
+const LIST_CACHE_CONTROL = "public, max-age=0, s-maxage=60, stale-while-revalidate=300";
 const HASH_CACHE_CONTROL = "public, max-age=60, s-maxage=31536000, stale-while-revalidate=86400";
 
 export function getTranscriptReaderCacheHeaders(
@@ -31,7 +29,7 @@ export function getTranscriptReaderCacheHeaders(
   }
 
   return {
-    "Cache-Control": loaderData.selectedLocation ? HASH_CACHE_CONTROL : LATEST_CACHE_CONTROL,
+    "Cache-Control": "transcript" in loaderData ? HASH_CACHE_CONTROL : LIST_CACHE_CONTROL,
   };
 }
 
@@ -40,46 +38,27 @@ export async function loadTranscriptReaderData(
   requestedHash: string | undefined,
 ): Promise<TranscriptReaderLoaderData> {
   const transcriptList = await queryClient.ensureQueryData(transcriptIndexQueryOptions());
-  const latestTranscript = transcriptList[0] ?? null;
-  const latestCanonicalHash = canonicalHashForTranscript(latestTranscript) || undefined;
 
-  if (!requestedHash && latestCanonicalHash) {
-    throw redirect({
-      to: "/transcript-reader",
-      search: { t: latestCanonicalHash },
-      replace: true,
-      headers: { "Cache-Control": LATEST_CACHE_CONTROL },
-    });
-  }
-
-  const resolvedTranscript = resolveTranscript(transcriptList, requestedHash);
-
-  if (resolvedTranscript.shouldRedirect) {
-    throw redirect({
-      to: "/transcript-reader",
-      search: latestCanonicalHash ? { t: latestCanonicalHash } : undefined,
-      replace: true,
-      headers: { "Cache-Control": LATEST_CACHE_CONTROL },
-    });
-  }
-
-  if (!resolvedTranscript.item) {
+  if (!requestedHash) {
     return {
-      transcriptList,
-      selectedLocation: null,
-      transcript: null,
+      transcriptList: transcriptList
+        .filter((item) => canonicalHashForTranscript(item))
+        .slice(0, TRANSCRIPT_LIST_LIMIT),
       pageTitle: "Transcript Reader",
     };
   }
 
-  const transcript = await queryClient.ensureQueryData(
-    transcriptQueryOptions(resolvedTranscript.item.location),
-  );
+  const item = findTranscriptByHashPrefix(transcriptList, requestedHash);
 
-  return {
-    transcriptList,
-    selectedLocation: resolvedTranscript.item.location,
-    transcript,
-    pageTitle: getTranscriptPageTitle(transcript),
-  };
+  if (!item) {
+    throw redirect({
+      to: "/transcript-reader",
+      replace: true,
+      headers: { "Cache-Control": LIST_CACHE_CONTROL },
+    });
+  }
+
+  const transcript = await queryClient.ensureQueryData(transcriptQueryOptions(item.location));
+
+  return { transcript, pageTitle: getTranscriptPageTitle(transcript) };
 }

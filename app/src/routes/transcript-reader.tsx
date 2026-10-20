@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { TranscriptReader } from "../features/transcript-reader";
+import { TranscriptList, TranscriptReader } from "../features/transcript-reader";
 import TranscriptArticleSkeleton from "../features/transcript-reader/TranscriptArticleSkeleton";
-import { TRANSCRIPT_SWITCH_SKELETON_DELAY_MS } from "../features/transcript-reader/constants";
 import { normalizeTranscriptHash } from "../features/transcript-reader/data";
 import transcriptReaderStylesHref from "../features/transcript-reader/styles.css?url";
 import {
@@ -18,7 +17,7 @@ export const Route = createFileRoute("/transcript-reader")({
     t: normalizeTranscriptHash(search.t),
   }),
   pendingComponent: TranscriptReaderPending,
-  pendingMinMs: TRANSCRIPT_SWITCH_SKELETON_DELAY_MS,
+  pendingMinMs: 200,
   pendingMs: 0,
   loaderDeps: ({ search }) => ({
     requestedHash: search.t,
@@ -41,26 +40,29 @@ export const Route = createFileRoute("/transcript-reader")({
 });
 
 function TranscriptReaderRoute() {
-  const { selectedLocation, transcript, transcriptList } = Route.useLoaderData();
+  const loaderData = Route.useLoaderData();
 
-  return (
-    <TranscriptReader
-      key={selectedLocation ?? "transcript-empty"}
-      selectedLocation={selectedLocation}
-      transcript={transcript}
-      transcriptList={transcriptList}
-    />
+  return "transcript" in loaderData ? (
+    <TranscriptReader transcript={loaderData.transcript} />
+  ) : (
+    <TranscriptList transcriptList={loaderData.transcriptList} />
   );
 }
 
 function TranscriptReaderPending() {
+  const { t } = Route.useSearch();
+
+  if (!t) {
+    return <div className="transcript-reader-page" />;
+  }
+
   return (
     <div className="transcript-reader-page">
       <div className="toolbar">
-        <div aria-hidden="true" className="search-trigger" />
+        <div aria-hidden="true" className="back-link" />
       </div>
       <main className="content content-pending">
-        <TranscriptArticleSkeleton dense />
+        <TranscriptArticleSkeleton />
       </main>
     </div>
   );

@@ -1,120 +1,94 @@
 "use client";
 
-import { startTransition, useEffect, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useCanGoBack, useRouter } from "@tanstack/react-router";
+import type { MouseEvent } from "react";
 import TranscriptArticle from "./TranscriptArticle";
-import TranscriptArticleSkeleton from "./TranscriptArticleSkeleton";
-import TranscriptSearchModal from "./TranscriptSearchModal";
-import { TRANSCRIPT_SWITCH_SKELETON_DELAY_MS } from "./constants";
-import { canonicalHashForTranscript, transcriptQueryOptions } from "./data";
+import { canonicalHashForTranscript, formatTranscriptDate } from "./data";
 import type { TranscriptIndexItem, TranscriptPayload } from "./data";
 
-type TranscriptReaderProps = {
-  transcriptList: TranscriptIndexItem[];
-  transcript: TranscriptPayload | null;
-  selectedLocation: string | null;
-};
+export function TranscriptList({ transcriptList }: { transcriptList: TranscriptIndexItem[] }) {
+  return (
+    <div className="transcript-reader-page">
+      <main className="content">
+        <h1 className="transcript-list-heading">Recent transcripts</h1>
 
-export function TranscriptReader({
-  transcriptList,
-  transcript,
-  selectedLocation,
-}: TranscriptReaderProps) {
-  const navigate = useNavigate({ from: "/transcript-reader" });
-  const queryClient = useQueryClient();
-  const [pendingLocation, setPendingLocation] = useState<string | null>(null);
-  const [showTransitionSkeleton, setShowTransitionSkeleton] = useState(false);
-  const transitionSequenceRef = useRef(0);
-  const skeletonTimerRef = useRef<number | null>(null);
+        {transcriptList.length === 0 ? (
+          <p className="status">No transcripts available yet.</p>
+        ) : (
+          <ol className="transcript-list">
+            {transcriptList.map((item) => {
+              const date = formatTranscriptDate(item.date);
 
-  function clearSkeletonTimer() {
-    if (skeletonTimerRef.current === null) {
+              return (
+                <li key={item.location}>
+                  <Link
+                    className="transcript-list-link"
+                    preload={false}
+                    search={{ t: canonicalHashForTranscript(item) }}
+                    to="/transcript-reader"
+                  >
+                    <span className="transcript-list-title">{item.title || "Untitled"}</span>
+                    {date ? <span className="transcript-list-date">{date}</span> : null}
+                  </Link>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </main>
+    </div>
+  );
+}
+
+export function TranscriptReader({ transcript }: { transcript: TranscriptPayload }) {
+  const router = useRouter();
+  const canGoBack = useCanGoBack();
+
+  // Returning through history restores the list's scroll position and avoids
+  // stacking list entries. Without in-app history, as on a shared permalink,
+  // the link navigates to the list.
+  function handleBackClick(event: MouseEvent<HTMLAnchorElement>) {
+    if (
+      !canGoBack ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
       return;
     }
 
-    window.clearTimeout(skeletonTimerRef.current);
-    skeletonTimerRef.current = null;
+    event.preventDefault();
+    router.history.back();
   }
-
-  useEffect(() => {
-    return () => {
-      clearSkeletonTimer();
-    };
-  }, []);
-
-  function selectTranscript(item: TranscriptIndexItem) {
-    const canonicalHash = canonicalHashForTranscript(item);
-
-    if (!canonicalHash) {
-      return;
-    }
-
-    const nextLocation = item.location;
-
-    if (nextLocation === selectedLocation) {
-      void navigate({
-        to: "/transcript-reader",
-        search: { t: canonicalHash },
-        replace: true,
-      });
-      return;
-    }
-
-    const transitionSequence = transitionSequenceRef.current + 1;
-
-    transitionSequenceRef.current = transitionSequence;
-    clearSkeletonTimer();
-    setPendingLocation(nextLocation);
-    setShowTransitionSkeleton(false);
-
-    skeletonTimerRef.current = window.setTimeout(() => {
-      if (transitionSequenceRef.current === transitionSequence) {
-        setShowTransitionSkeleton(true);
-      }
-    }, TRANSCRIPT_SWITCH_SKELETON_DELAY_MS);
-
-    void queryClient
-      .ensureQueryData(transcriptQueryOptions(nextLocation))
-      .catch(() => undefined)
-      .finally(() => {
-        if (transitionSequenceRef.current !== transitionSequence) {
-          return;
-        }
-
-        clearSkeletonTimer();
-
-        startTransition(() => {
-          setPendingLocation(null);
-          setShowTransitionSkeleton(false);
-
-          void navigate({
-            to: "/transcript-reader",
-            search: { t: canonicalHash },
-          });
-        });
-      });
-  }
-
-  const shouldShowSkeleton = showTransitionSkeleton && pendingLocation !== null;
 
   return (
     <div className="transcript-reader-page">
-      <TranscriptSearchModal
-        onSelectTranscript={selectTranscript}
-        transcriptList={transcriptList}
-      />
+      <div className="toolbar">
+        <Link
+          aria-label="Back to transcripts"
+          className="back-link"
+          onClick={handleBackClick}
+          to="/transcript-reader"
+        >
+          <svg
+            aria-hidden="true"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="1.8"
+            viewBox="0 0 24 24"
+          >
+            <path d="M19 12H5" />
+            <path d="M11 6L5 12L11 18" />
+          </svg>
+        </Link>
+      </div>
 
-      <main aria-busy={pendingLocation !== null} className="content">
-        {shouldShowSkeleton ? (
-          <TranscriptArticleSkeleton />
-        ) : transcript ? (
-          <div className="transcript-article-frame" key={selectedLocation ?? "transcript-empty"}>
-            <TranscriptArticle transcript={transcript} />
-          </div>
-        ) : (
-          <p className="status">No transcripts available yet.</p>
-        )}
+      <main className="content">
+        <TranscriptArticle transcript={transcript} />
       </main>
     </div>
   );

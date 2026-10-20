@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   canonicalHashForTranscript,
   extractFullHash,
+  findTranscriptByHashPrefix,
   formatTranscriptDate,
   getTranscriptDisplayParagraphs,
   getTranscriptPageTitle,
   normalizeTranscriptHash,
-  resolveTranscript,
 } from "./data";
 import type { TranscriptIndexItem, TranscriptPayload } from "./data";
 
@@ -32,26 +32,12 @@ describe("transcript identity", () => {
     );
   });
 
-  it("resolves valid prefixes and sends malformed or absent selections to the right state", () => {
-    expect(resolveTranscript([ITEM_A, ITEM_B], undefined)).toMatchObject({
-      item: ITEM_A,
-      shouldRedirect: false,
-    });
-    expect(resolveTranscript([ITEM_A, ITEM_B], "12345678")).toMatchObject({
-      item: ITEM_B,
-      canonicalHash: "1234567890abcdef",
-      shouldRedirect: false,
-    });
-    expect(resolveTranscript([ITEM_A, ITEM_B], "xyz!")).toEqual({
-      item: null,
-      canonicalHash: null,
-      shouldRedirect: true,
-    });
-    expect(resolveTranscript([], "12345678")).toEqual({
-      item: null,
-      canonicalHash: null,
-      shouldRedirect: false,
-    });
+  it("matches case-insensitive hash prefixes and rejects malformed or unknown ones", () => {
+    expect(findTranscriptByHashPrefix([ITEM_A, ITEM_B], "12345678")).toBe(ITEM_B);
+    expect(findTranscriptByHashPrefix([ITEM_A, ITEM_B], "ABCDEF01")).toBe(ITEM_A);
+    expect(findTranscriptByHashPrefix([ITEM_A, ITEM_B], "abc")).toBeNull();
+    expect(findTranscriptByHashPrefix([ITEM_A, ITEM_B], "xyz!")).toBeNull();
+    expect(findTranscriptByHashPrefix([ITEM_A, ITEM_B], "ffff")).toBeNull();
   });
 });
 

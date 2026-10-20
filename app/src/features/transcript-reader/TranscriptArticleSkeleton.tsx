@@ -1,12 +1,6 @@
-type TranscriptArticleSkeletonProps = {
-  dense?: boolean;
-};
-
-export default function TranscriptArticleSkeleton({
-  dense = false,
-}: TranscriptArticleSkeletonProps) {
+export default function TranscriptArticleSkeleton() {
   return (
-    <div aria-hidden="true" className={`article-skeleton${dense ? " article-skeleton-dense" : ""}`}>
+    <div aria-hidden="true" className="article-skeleton">
       <div className="episode-header episode-header-skeleton">
         <div className="skeleton-line skeleton-line-kicker" />
         <div className="skeleton-line skeleton-line-title skeleton-line-title-wide" />
@@ -39,16 +33,6 @@ export default function TranscriptArticleSkeleton({
             <div className="skeleton-line skeleton-line-body skeleton-line-body-short" />
           </div>
         </div>
-
-        {dense ? null : (
-          <div className="transcript-paragraph transcript-paragraph-skeleton">
-            <div className="skeleton-line skeleton-line-speaker" />
-            <div className="skeleton-block">
-              <div className="skeleton-line skeleton-line-body" />
-              <div className="skeleton-line skeleton-line-body skeleton-line-body-mid" />
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

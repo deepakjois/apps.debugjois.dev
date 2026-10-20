@@ -6,8 +6,9 @@ Components. Run the commands below from `app/` unless noted.
 
 ## Pages
 
-- `/transcript-reader` reads public transcripts from `www.debugjois.dev`. It
-  needs no credentials and no backend. `/` redirects here.
+- `/transcript-reader` lists the 50 latest public transcripts from
+  `www.debugjois.dev`. Each links to a `?t=<hash>` permalink that loads that
+  transcript. It needs no credentials and no backend. `/` redirects here.
 - `/admin/logger` edits today's Berlin-date Markdown note in Google Drive.
 - `/admin/podscriber` queues podcast transcriptions from Podcast Addict share
   text or Miniflux entry URLs. `/admin` redirects to the logger.
