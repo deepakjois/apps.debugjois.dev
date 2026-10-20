@@ -7,7 +7,6 @@ Frontend, Go backend, and AWS infrastructure for `apps.debugjois.dev`.
 - `app/` - TanStack Start/Nitro app for `apps.debugjois.dev`
 - `backend/` - Go backend Lambda and daily-log/podcast transcription/index CLIs
 - `infra/` - AWS CDK infrastructure for the Nitro app
-- `mac-reader/` - Swift CLI that shows a text file full screen in a reading view (macOS)
 
 ## Development environment
 
