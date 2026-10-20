@@ -10,10 +10,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-
 	"github.com/deepakjois/apps.debugjois.dev/backend/transcripts"
 )
 
@@ -46,7 +42,12 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	index, err := transcripts.BuildIndex(ctx, client, transcripts.BucketName)
+	var index transcripts.Index
+	if options.write {
+		index, err = transcripts.RefreshIndex(ctx, client, transcripts.BucketName)
+	} else {
+		index, err = buildIndex(ctx, client)
+	}
 	if err != nil {
 		return err
 	}
@@ -54,12 +55,6 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	body, err := transcripts.MarshalIndex(index)
 	if err != nil {
 		return err
-	}
-
-	if options.write {
-		if err := transcripts.WriteIndex(ctx, client, transcripts.BucketName, body); err != nil {
-			return err
-		}
 	}
 
 	if err := writeIndentedJSON(stdout, body); err != nil {
@@ -85,19 +80,16 @@ func parseArgs(args []string) (cliOptions, error) {
 	return cliOptions{write: *write}, nil
 }
 
+func buildIndex(ctx context.Context, client transcripts.S3Client) (transcripts.Index, error) {
+	snapshot, err := transcripts.ReadIndex(ctx, client, transcripts.BucketName)
+	if err != nil {
+		return transcripts.Index{}, err
+	}
+	return transcripts.BuildIndex(ctx, client, transcripts.BucketName, snapshot.Index)
+}
+
 func newTranscriptIndexS3Client(ctx context.Context, bucketName string) (transcripts.S3Client, error) {
-	cfg, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("load AWS config for transcript index: %w", err)
-	}
-
-	region, err := manager.GetBucketRegion(ctx, s3.NewFromConfig(cfg), bucketName)
-	if err != nil {
-		return nil, fmt.Errorf("resolve transcript bucket region for %q: %w", bucketName, err)
-	}
-	cfg.Region = region
-
-	return s3.NewFromConfig(cfg), nil
+	return transcripts.NewS3Client(ctx, bucketName)
 }
 
 func writeIndentedJSON(w io.Writer, body []byte) error {

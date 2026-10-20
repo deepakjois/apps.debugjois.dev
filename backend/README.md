@@ -214,7 +214,10 @@ publishing returns `{"ok":true}` after the upload and the index refresh.
 ### Transcript index
 
 Both commands read S3 and print the generated index. Only `--write` updates
-`transcripts/transcripts.json` in the bucket:
+`transcripts/transcripts.json` in the bucket. It writes conditionally on the
+index's ETag and retries once on a conflict. A rebuild keeps each item's
+optional `archived` flag from the current index, since transcript objects do
+not record it:
 
 ```bash
 go run ./cmd/podcast-index
@@ -237,6 +240,27 @@ transcript-reader | open -f -a 'Your Markdown App'
 ```
 
 Quitting without a choice (`q` or `esc`) exits non-zero and prints nothing.
+
+`--edit` reads the index from S3 instead, so it needs AWS credentials, and
+writes to production when you save:
+
+```bash
+go run ./cmd/transcript-reader --edit
+```
+
+Press `a` to mark the selected transcript for archiving and `d` to mark it for
+deletion. The two marks replace each other, and pressing a key again clears its
+mark. `a` on an archived transcript marks it for unarchiving. Marked
+transcripts show a colored label: `▣ archive`, `✗ delete`, or `□ unarchive`.
+Archived ones show `▣ archived` in both modes. A dimmed status line counts the
+pending changes. `enter` saves them and `q` quits without saving.
+
+Saving sets `"archived": true` on archived items in the index and removes
+deleted items. The index write is conditional on the ETag read at startup. If
+anything else wrote the index since then, nothing is saved, and you must rerun.
+After the index is written, the deleted transcripts' JSON objects are removed
+from the bucket, so a later rebuild does not list them again. Consumers treat
+`archived` as optional. Unarchived items omit it.
 
 ## Lambda runtime
 

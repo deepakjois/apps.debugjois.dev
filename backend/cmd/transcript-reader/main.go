@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
 
@@ -27,13 +28,22 @@ const (
 
 func main() {
 	flag.Usage = func() {
-		_, _ = fmt.Fprintf(flag.CommandLine.Output(), "Usage: transcript-reader\n\n"+
+		_, _ = fmt.Fprintf(flag.CommandLine.Output(), "Usage: transcript-reader [--edit]\n\n"+
 			"Pick a published transcript and print it as Markdown on stdout.\n"+
-			"The picker draws on stderr, so stdout can be piped.\n")
+			"The picker draws on stderr, so stdout can be piped.\n\n"+
+			"With --edit, mark transcripts to archive or delete instead, and save\n"+
+			"the marks to the index in S3. This needs AWS credentials.\n")
 	}
+	edit := flag.Bool("edit", false, "archive or delete transcripts instead of reading one")
 	flag.Parse()
 
-	if err := run(context.Background(), os.Stdout); err != nil {
+	var err error
+	if *edit {
+		err = runEditor(context.Background())
+	} else {
+		err = run(context.Background(), os.Stdout)
+	}
+	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -111,12 +121,7 @@ func nonEmpty(values ...string) []string {
 	return out
 }
 
-type picker struct {
-	list   list.Model
-	chosen *transcripts.ListItem
-}
-
-func pick(ctx context.Context, items []transcripts.ListItem) (*transcripts.ListItem, error) {
+func newList(items []transcripts.ListItem, marks map[string]transcripts.ItemState) list.Model {
 	// Dates are YYYY-MM-DD, so string order is chronological order.
 	items = slices.Clone(items)
 	slices.SortStableFunc(items, func(a, b transcripts.ListItem) int {
@@ -128,12 +133,22 @@ func pick(ctx context.Context, items []transcripts.ListItem) (*transcripts.ListI
 		listItems[i] = entry{item}
 	}
 
-	l := list.New(listItems, list.NewDefaultDelegate(), 0, 0)
+	l := list.New(listItems, newMarkDelegate(false, marks), 0, 0)
 	l.Title = "Transcripts"
 	l.SetStatusBarItemName("transcript", "transcripts")
+	// bubbles v2.2.1 binds quit to "v" and labels it "select".
+	l.KeyMap.Quit = key.NewBinding(key.WithKeys("q", "esc"), key.WithHelp("q", "quit"))
+	return l
+}
 
+type picker struct {
+	list   list.Model
+	chosen *transcripts.ListItem
+}
+
+func pick(ctx context.Context, items []transcripts.ListItem) (*transcripts.ListItem, error) {
 	// The picker draws on stderr so that stdout carries only the Markdown.
-	final, err := tea.NewProgram(picker{list: l}, tea.WithContext(ctx), tea.WithOutput(os.Stderr)).Run()
+	final, err := tea.NewProgram(picker{list: newList(items, nil)}, tea.WithContext(ctx), tea.WithOutput(os.Stderr)).Run()
 	if err != nil {
 		return nil, fmt.Errorf("run picker: %w", err)
 	}
@@ -145,9 +160,7 @@ func (p picker) Init() tea.Cmd { return tea.RequestBackgroundColor }
 func (p picker) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.BackgroundColorMsg:
-		delegate := list.NewDefaultDelegate()
-		delegate.Styles = list.NewDefaultItemStyles(msg.IsDark())
-		p.list.SetDelegate(delegate)
+		p.list.SetDelegate(newMarkDelegate(msg.IsDark(), nil))
 		p.list.Styles = list.DefaultStyles(msg.IsDark())
 	case tea.WindowSizeMsg:
 		p.list.SetSize(msg.Width, msg.Height)

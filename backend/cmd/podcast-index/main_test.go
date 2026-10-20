@@ -74,6 +74,10 @@ func TestRunWritesTranscriptIndexWhenRequested(t *testing.T) {
 			Contents: newS3Objects("transcripts/example-episode.json"),
 		}},
 		objects: map[string]fakeS3Object{
+			transcripts.IndexObjectKey: {
+				body: `{"transcripts":[{"location":"` + transcripts.LocationPrefix + `example-episode.json","archived":true}]}`,
+				etag: `"etag-1"`,
+			},
 			"transcripts/example-episode.json": {
 				body: mustMarshalTranscriptJSON(t, map[string]any{
 					"podcast": map[string]any{
@@ -111,7 +115,7 @@ func TestRunWritesTranscriptIndexWhenRequested(t *testing.T) {
 	if err := json.Unmarshal(client.putBody, &written); err != nil {
 		t.Fatalf("unmarshal written body: %v", err)
 	}
-	if len(written.Transcripts) != 1 || written.Transcripts[0].Title != "Example Episode" {
+	if len(written.Transcripts) != 1 || written.Transcripts[0].Title != "Example Episode" || !written.Transcripts[0].Archived {
 		t.Fatalf("unexpected written transcripts %#v", written.Transcripts)
 	}
 

@@ -3,6 +3,7 @@ package transcripts
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -43,6 +44,7 @@ type fakeClient struct {
 	indexPutCalls       int
 	lastIfMatch         string
 	lastIfNoneMatch     string
+	deletedKeys         []string
 }
 
 type fakeObject struct {
@@ -95,6 +97,13 @@ func (f *fakeClient) PutObject(_ context.Context, input *s3.PutObjectInput, _ ..
 	return &s3.PutObjectOutput{}, nil
 }
 
+func (f *fakeClient) DeleteObject(_ context.Context, input *s3.DeleteObjectInput, _ ...func(*s3.Options)) (*s3.DeleteObjectOutput, error) {
+	key := aws.ToString(input.Key)
+	f.deletedKeys = append(f.deletedKeys, key)
+	delete(f.objects, key)
+	return &s3.DeleteObjectOutput{}, nil
+}
+
 func TestBuildIndexPrefersEpisodeTitleAndPublishedDate(t *testing.T) {
 	client := &fakeClient{
 		listOutputs: []*s3.ListObjectsV2Output{{
@@ -114,7 +123,7 @@ func TestBuildIndexPrefersEpisodeTitleAndPublishedDate(t *testing.T) {
 		},
 	}
 
-	index, err := BuildIndex(context.Background(), client, "debugjois-dev-site")
+	index, err := BuildIndex(context.Background(), client, "debugjois-dev-site", Index{})
 	if err != nil {
 		t.Fatalf("BuildIndex returned error: %v", err)
 	}
@@ -157,7 +166,7 @@ func TestBuildIndexReadsBackendV2Payload(t *testing.T) {
 		},
 	}
 
-	index, err := BuildIndex(context.Background(), client, BucketName)
+	index, err := BuildIndex(context.Background(), client, BucketName, Index{})
 	if err != nil {
 		t.Fatalf("BuildIndex() error = %v", err)
 	}
@@ -187,7 +196,7 @@ func TestBuildIndexFallsBackToDeepgramCreatedDate(t *testing.T) {
 		},
 	}
 
-	index, err := BuildIndex(context.Background(), client, "debugjois-dev-site")
+	index, err := BuildIndex(context.Background(), client, "debugjois-dev-site", Index{})
 	if err != nil {
 		t.Fatalf("BuildIndex returned error: %v", err)
 	}
@@ -228,7 +237,7 @@ func TestBuildIndexSortsByDateStringDescending(t *testing.T) {
 		},
 	}
 
-	index, err := BuildIndex(context.Background(), client, BucketName)
+	index, err := BuildIndex(context.Background(), client, BucketName, Index{})
 	if err != nil {
 		t.Fatalf("BuildIndex returned error: %v", err)
 	}
@@ -265,7 +274,7 @@ func TestRefreshIndexUsesIfNoneMatchWhenIndexMissing(t *testing.T) {
 		},
 	}
 
-	if err := RefreshIndex(context.Background(), client, "debugjois-dev-site"); err != nil {
+	if _, err := RefreshIndex(context.Background(), client, "debugjois-dev-site"); err != nil {
 		t.Fatalf("RefreshIndex returned error: %v", err)
 	}
 
@@ -299,7 +308,7 @@ func TestRefreshIndexRetriesConditionalConflictOnce(t *testing.T) {
 		conditionalFailures: 1,
 	}
 
-	if err := RefreshIndex(context.Background(), client, "debugjois-dev-site"); err != nil {
+	if _, err := RefreshIndex(context.Background(), client, "debugjois-dev-site"); err != nil {
 		t.Fatalf("RefreshIndex returned error: %v", err)
 	}
 
@@ -333,12 +342,117 @@ func TestRefreshIndexFailsAfterSecondConditionalConflict(t *testing.T) {
 		conditionalFailures: 2,
 	}
 
-	err := RefreshIndex(context.Background(), client, "debugjois-dev-site")
+	_, err := RefreshIndex(context.Background(), client, "debugjois-dev-site")
 	if err == nil {
 		t.Fatal("expected RefreshIndex to fail")
 	}
 	if !strings.Contains(err.Error(), "after retry") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestRefreshIndexKeepsArchivedFlags(t *testing.T) {
+	episode := func(title string) fakeObject {
+		return fakeObject{body: mustMarshalDoc(t, map[string]any{
+			"podcast": map[string]any{"episode": map[string]any{"title": title, "published_date": "2026-04-06"}},
+		})}
+	}
+	client := &fakeClient{
+		listOutputs: []*s3.ListObjectsV2Output{{
+			Contents: []s3types.Object{{Key: aws.String("transcripts/a.json")}, {Key: aws.String("transcripts/b.json")}},
+		}},
+		objects: map[string]fakeObject{
+			IndexObjectKey: {
+				body: `{"transcripts":[{"title":"A","location":"` + LocationPrefix + `a.json","date":"2026-04-06"},` +
+					`{"title":"B","location":"` + LocationPrefix + `b.json","date":"2026-04-06","archived":true}]}`,
+				etag: `"etag-1"`,
+			},
+			"transcripts/a.json": episode("A"),
+			"transcripts/b.json": episode("B"),
+		},
+	}
+
+	if _, err := RefreshIndex(context.Background(), client, "debugjois-dev-site"); err != nil {
+		t.Fatalf("RefreshIndex returned error: %v", err)
+	}
+
+	written := client.objects[IndexObjectKey].body
+	if strings.Contains(written, `"archived":false`) {
+		t.Fatalf("unarchived items should omit the field: %s", written)
+	}
+	var index Index
+	if err := json.Unmarshal([]byte(written), &index); err != nil {
+		t.Fatalf("unmarshal written index: %v", err)
+	}
+	archived := map[string]bool{}
+	for _, item := range index.Transcripts {
+		archived[item.Title] = item.Archived
+	}
+	if len(archived) != 2 || archived["A"] || !archived["B"] {
+		t.Fatalf("unexpected archived flags %v", archived)
+	}
+}
+
+func editFixture() (*fakeClient, IndexSnapshot) {
+	items := []ListItem{
+		{Title: "Keep", Location: LocationPrefix + "keep.json"},
+		{Title: "Archive", Location: LocationPrefix + "archive.json"},
+		{Title: "Unarchive", Location: LocationPrefix + "unarchive.json", Archived: true},
+		{Title: "Delete", Location: LocationPrefix + "delete.json", Archived: true},
+	}
+	objects := map[string]fakeObject{IndexObjectKey: {body: "{}", etag: `"etag-1"`}}
+	for _, item := range items {
+		objects[ObjectPrefix+strings.TrimPrefix(item.Location, LocationPrefix)] = fakeObject{body: "{}"}
+	}
+	return &fakeClient{objects: objects}, IndexSnapshot{Index: Index{Transcripts: items}, ETag: `"etag-1"`, Exists: true}
+}
+
+var editChanges = map[string]ItemState{
+	LocationPrefix + "archive.json":   Archived,
+	LocationPrefix + "unarchive.json": Active,
+	LocationPrefix + "delete.json":    Deleted,
+}
+
+func TestEditIndexArchivesUnarchivesAndDeletes(t *testing.T) {
+	client, snapshot := editFixture()
+
+	if _, err := EditIndex(context.Background(), client, "debugjois-dev-site", snapshot, editChanges); err != nil {
+		t.Fatalf("EditIndex returned error: %v", err)
+	}
+
+	if client.lastIfMatch != `"etag-1"` {
+		t.Fatalf("expected If-Match on the snapshot ETag, got %q", client.lastIfMatch)
+	}
+	var index Index
+	if err := json.Unmarshal([]byte(client.objects[IndexObjectKey].body), &index); err != nil {
+		t.Fatalf("unmarshal written index: %v", err)
+	}
+	got := map[string]bool{}
+	for _, item := range index.Transcripts {
+		got[item.Title] = item.Archived
+	}
+	want := map[string]bool{"Keep": false, "Archive": true, "Unarchive": false}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("written index archived flags = %v, want %v", got, want)
+	}
+	if fmt.Sprint(client.deletedKeys) != "[transcripts/delete.json]" {
+		t.Fatalf("unexpected deleted keys %v", client.deletedKeys)
+	}
+}
+
+func TestEditIndexWritesNothingWhenIndexChanged(t *testing.T) {
+	client, snapshot := editFixture()
+	client.conditionalFailures = 1
+
+	_, err := EditIndex(context.Background(), client, "debugjois-dev-site", snapshot, editChanges)
+	if !errors.Is(err, ErrIndexChanged) {
+		t.Fatalf("expected ErrIndexChanged, got %v", err)
+	}
+	if client.objects[IndexObjectKey].body != "{}" {
+		t.Fatalf("index was overwritten: %s", client.objects[IndexObjectKey].body)
+	}
+	if len(client.deletedKeys) != 0 {
+		t.Fatalf("deleted %v after a conflict", client.deletedKeys)
 	}
 }
 

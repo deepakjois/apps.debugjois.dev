@@ -86,7 +86,7 @@ func (p *Publisher) Publish(ctx context.Context, result podscriber.Transcription
 		return fmt.Errorf("publish transcript to s3://%s/%s: %w", p.bucket, key, err)
 	}
 
-	if err := transcripts.RefreshIndex(ctx, p.client, p.bucket); err != nil {
+	if _, err := transcripts.RefreshIndex(ctx, p.client, p.bucket); err != nil {
 		return fmt.Errorf("publish transcript index: %w", err)
 	}
 	return nil

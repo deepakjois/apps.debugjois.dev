@@ -389,5 +389,6 @@ func persistTranscript(ctx context.Context, action string, podcast podcastPayloa
 	if err != nil {
 		return fmt.Errorf("write transcript to s3://%s/%s: %w", transcripts.BucketName, key, err)
 	}
-	return transcripts.RefreshIndex(ctx, client, transcripts.BucketName)
+	_, err = transcripts.RefreshIndex(ctx, client, transcripts.BucketName)
+	return err
 }
