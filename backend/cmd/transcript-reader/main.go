@@ -138,6 +138,8 @@ func newList(items []transcripts.ListItem, marks map[string]transcripts.ItemStat
 	l.SetStatusBarItemName("transcript", "transcripts")
 	// bubbles v2.2.1 binds quit to "v" and labels it "select".
 	l.KeyMap.Quit = key.NewBinding(key.WithKeys("q", "esc"), key.WithHelp("q", "quit"))
+	l.KeyMap.PrevPage = key.NewBinding(key.WithKeys("ctrl+b", "ctrl+u", "pgup", "left"), key.WithHelp("ctrl+b/pgup", "prev page"))
+	l.KeyMap.NextPage = key.NewBinding(key.WithKeys("ctrl+f", "ctrl+d", "pgdown", "right"), key.WithHelp("ctrl+f/pgdn", "next page"))
 	return l
 }
 

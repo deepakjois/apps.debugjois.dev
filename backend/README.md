@@ -228,10 +228,11 @@ go run ./cmd/podcast-index --write
 
 `transcript-reader` reads the public index at
 `https://www.debugjois.dev/transcripts/transcripts.json`, which needs no
-credentials. It lists the transcripts newest first in a terminal picker. Press
-`/` to filter, `enter` to apply the filter, and `enter` again to choose. It
-then prints the chosen transcript as Markdown on stdout. The picker draws on
-stderr, so pipe stdout to a viewer:
+credentials. It lists the transcripts newest first in a terminal picker. Move
+with `j`/`k`, page with `ctrl+f`/`ctrl+b` (or `ctrl+d`/`ctrl+u`), and jump with
+`g`/`G`. Press `/` to filter, `enter` to apply the filter, and `enter` again to
+choose. It then prints the chosen transcript as Markdown on stdout. The picker
+draws on stderr, so pipe stdout to a viewer:
 
 ```bash
 go run ./cmd/transcript-reader > /tmp/transcript.md
@@ -248,7 +249,7 @@ writes to production when you save:
 go run ./cmd/transcript-reader --edit
 ```
 
-Press `a` to mark the selected transcript for archiving and `d` to mark it for
+Press `a` to mark the selected transcript for archiving and `x` to mark it for
 deletion. The two marks replace each other, and pressing a key again clears its
 mark. `a` on an archived transcript marks it for unarchiving. Marked
 transcripts show a colored label: `▣ archive`, `✗ delete`, or `□ unarchive`.

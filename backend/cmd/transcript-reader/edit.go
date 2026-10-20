@@ -17,7 +17,7 @@ import (
 
 var (
 	archiveKey = key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "archive"))
-	deleteKey  = key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete"))
+	deleteKey  = key.NewBinding(key.WithKeys("x"), key.WithHelp("x", "delete"))
 	saveKey    = key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "save"))
 )
 
@@ -67,7 +67,6 @@ type savedMsg struct{ err error }
 func newEditor(client transcripts.DeleteClient, snapshot transcripts.IndexSnapshot) editor {
 	marks := make(map[string]transcripts.ItemState)
 	l := newList(snapshot.Index.Transcripts, marks)
-	l.KeyMap.NextPage.SetKeys("right", "l", "pgdown", "f")
 	l.AdditionalShortHelpKeys = func() []key.Binding { return []key.Binding{archiveKey, deleteKey, saveKey} }
 	return editor{list: l, client: client, snapshot: snapshot, marks: marks}
 }
@@ -196,7 +195,7 @@ func (e editor) summary(done bool) string {
 func (e editor) statusLine() string {
 	text := e.message
 	if text == "" && len(e.marks) == 0 {
-		text = "No changes. a marks to archive, d marks to delete."
+		text = "No changes. a marks to archive, x marks to delete."
 	} else if text == "" {
 		text = e.summary(false) + " · enter saves · q quits without saving"
 	}
