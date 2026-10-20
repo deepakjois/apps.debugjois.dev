@@ -29,7 +29,6 @@ var (
 	durationPartPattern = regexp.MustCompile(`(?i)(\d+(?:\.\d+)?)\s*(hours?|hrs?|minutes?|mins?|seconds?|secs?)`)
 )
 
-// podcastEpisodeJSONLD contains the Podcast Addict fields mapped into common metadata.
 type podcastEpisodeJSONLD struct {
 	Type            string `json:"@type"`
 	URL             string `json:"url"`
@@ -45,7 +44,6 @@ type podcastEpisodeJSONLD struct {
 	} `json:"partOfSeries"`
 }
 
-// parsedInput retains the original share payload and its extracted episode details.
 type parsedInput struct {
 	input      string
 	shareTitle string
@@ -213,7 +211,6 @@ func parseEpisodeDocument(doc *goquery.Document, source parsedInput) (podscriber
 	if durationDisplay != "" {
 		extra["duration_display"] = durationDisplay
 	}
-	// Retain the original spelling for compatibility transports and stable hashes.
 	if publishedRaw != "" {
 		extra["published_at_raw"] = publishedRaw
 	}

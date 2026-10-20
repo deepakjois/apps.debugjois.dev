@@ -1,12 +1,10 @@
 import { invokeBackendLambda } from "./backendLambda";
 
-// LoggerNote is decoded Markdown exchanged by the Nitro API and browser editor.
 export type LoggerNote = {
   title: string;
   contents: string;
 };
 
-// LoggerLambdaResponse is the backend wire format, where Markdown is base64 encoded.
 type LoggerLambdaResponse = {
   title: string;
   contents: string;

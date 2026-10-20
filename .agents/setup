@@ -1,17 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Toolchains come from flake.nix; this script only makes sure Nix exists, builds
-# the flake's tool profile, persists it for later login shells, and installs
-# the locked npm and Go dependencies with those tools.
-
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 step() {
   printf '\n==> %s\n' "$1"
 }
 
-# Runs a named step and prints how long it took, so setup.log shows slow steps.
 timed() {
   local name="$1" start
   shift
@@ -31,7 +26,6 @@ install_nix() {
 }
 
 install_npm_dependencies() {
-  # Each lockfile owns an independent dependency tree.
   local project
   for project in app infra; do
     npm --prefix "$repo_root/$project" ci --no-audit --no-fund

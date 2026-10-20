@@ -3,7 +3,6 @@ import { useId, useState, type FormEvent } from "react";
 
 type SubmitState = "idle" | "submitting" | "success" | "error";
 
-// PodcastTranscribeResponse is the accepted job returned by the Podscriber API.
 export type PodcastTranscribeResponse = {
   podcast: {
     source?: {

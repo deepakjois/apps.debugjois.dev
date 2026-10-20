@@ -3,7 +3,6 @@ import { requireAdminSession } from "../../../../utils/adminSession";
 
 const LINK_PREVIEW_API_URL = "https://api.linkpreview.net/";
 
-// Only the page title is exposed to the browser.
 type LoggerLinkPreview = {
   title: string;
 };

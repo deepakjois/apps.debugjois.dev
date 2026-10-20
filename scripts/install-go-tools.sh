@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# One version list for local development, orbs, and CI. Build helpers with the
-# active Go toolchain so analyzers understand the same language as the backend.
 export GOTOOLCHAIN=local
 export GOBIN="${GOBIN:-$HOME/.cache/apps-debugjois-dev/go-tools/bin}"
 mkdir -p "$GOBIN"

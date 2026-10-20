@@ -9,7 +9,6 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
-// LoggerNote is the decoded editor document returned by the Nitro logger API.
 export type LoggerNote = {
   title: string;
   contents: string;
@@ -18,7 +17,6 @@ export type LoggerNote = {
 type LoggerLinkPreview = { title: string };
 type FetchLoggerLinkPreview = (url: string) => Promise<LoggerLinkPreview>;
 
-// PasteEditorView is the CodeMirror surface needed by the URL paste handler.
 type PasteEditorView = {
   state: {
     doc: { toString: () => string };
@@ -31,7 +29,6 @@ type PasteEditorView = {
   }) => void;
 };
 
-// Heading styles make Markdown structure visually scannable in the editor.
 const markdownHighlightStyle = HighlightStyle.define([
   { tag: t.heading1, fontSize: "2em", fontWeight: "bold" },
   { tag: t.heading2, fontSize: "1.75em", fontWeight: "bold" },

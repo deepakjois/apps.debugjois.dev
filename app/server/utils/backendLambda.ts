@@ -2,7 +2,6 @@ import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
 
 const textDecoder = new TextDecoder();
 
-// Backend Lambda responses are direct JSON payloads rather than API Gateway responses.
 type LambdaErrorPayload = {
   error?: unknown;
   errorMessage?: unknown;

@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Rebuild the Nix tool profile only if flake.nix or flake.lock changed since
-# the last build (e.g. the orb was paused while the repo moved on); otherwise
-# this is a no-op. There are no services or authentication to restore.
 "$(dirname "${BASH_SOURCE[0]}")/nix-tools" --if-changed
 
 # Amp re-appends its ~/.bash_profile block on activation; move the tool-profile

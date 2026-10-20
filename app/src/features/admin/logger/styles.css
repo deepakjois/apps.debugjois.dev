@@ -1,4 +1,3 @@
-/* Full-screen route surface for the standalone admin logger editor. */
 .admin-logger-page {
   display: grid;
   grid-template-rows: 56px minmax(0, 1fr);

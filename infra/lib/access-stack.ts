@@ -2,10 +2,8 @@ import * as cdk from "aws-cdk-lib";
 import * as iam from "aws-cdk-lib/aws-iam";
 import { Construct } from "constructs";
 
-// Account-wide GitHub Actions OIDC provider ARN. The provider itself is
-// managed manually outside this stack because AWS only permits a single
-// OIDC provider per issuer per account. We only reference it here by ARN
-// to build the role trust policy.
+// The GitHub OIDC provider is managed outside this stack. AWS permits one OIDC provider per issuer
+// per account.
 const GITHUB_OIDC_PROVIDER_ARN =
   "arn:aws:iam::654654546088:oidc-provider/token.actions.githubusercontent.com";
 
@@ -13,8 +11,6 @@ export class AppsDebugJoisDevAccessStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
     super(scope, id, props);
 
-    // Dedicated CloudFormation service role for stacks that should not depend
-    // on CDK bootstrap execution roles.
     const cloudFormationServiceRole = new iam.Role(
       this,
       "CloudFormationServiceRole",
@@ -31,7 +27,6 @@ export class AppsDebugJoisDevAccessStack extends cdk.Stack {
 
     cloudFormationServiceRole.applyRemovalPolicy(cdk.RemovalPolicy.RETAIN);
 
-    // IAM role assumed by GitHub Actions via OIDC for this repo's main branch.
     const githubActionsRole = new iam.Role(this, "GitHubActionsRole", {
       roleName: "apps-debugjois-dev-github-actions-role",
       description: "GitHub Actions OIDC role for deepakjois/apps.debugjois.dev",

@@ -20,7 +20,6 @@ const TRANSCRIPT_B: TranscriptPayload = { podcast: { episode: { title: "Episode 
 function queryClientWith(index: TranscriptIndexItem[]) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
-  // Seed app-owned inputs so loader tests never exercise the remote transcript service.
   queryClient.setQueryData(["transcripts", "index"], index);
   queryClient.setQueryData(["transcripts", "item", LOCATION_B], TRANSCRIPT_B);
 

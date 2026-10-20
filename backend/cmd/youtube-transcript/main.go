@@ -26,8 +26,6 @@ const (
 	deepgramTimeout      = 10 * time.Minute
 )
 
-// cliOptions controls local source extraction and payload delivery.
-// OutputFile implies NoPublish because the payload is dumped instead of sent.
 type cliOptions struct {
 	sourceURL          string
 	cookiesFromBrowser string
@@ -35,13 +33,11 @@ type cliOptions struct {
 	outputFile         string
 }
 
-// publishRequest is the media-free direct Lambda invocation contract.
 type publishRequest struct {
 	Action        string                         `json:"action"`
 	Transcription podscriber.TranscriptionResult `json:"transcription"`
 }
 
-// lambdaInvoker isolates the synchronous AWS transport.
 type lambdaInvoker interface {
 	Invoke(context.Context, *awslambda.InvokeInput, ...func(*awslambda.Options)) (*awslambda.InvokeOutput, error)
 }
@@ -118,7 +114,6 @@ func parseArgs(args []string) (cliOptions, error) {
 	}, nil
 }
 
-// validateEnvironment requires the backend Lambda target only when publishing.
 func validateEnvironment(publish bool) error {
 	if strings.TrimSpace(os.Getenv(deepgramAPIKeyEnv)) == "" {
 		return fmt.Errorf("%s must be set", deepgramAPIKeyEnv)
@@ -129,8 +124,6 @@ func validateEnvironment(publish bool) error {
 	return nil
 }
 
-// encodePublishRequest builds the exact bytes the publish mode sends to the
-// backend Lambda. Dump modes reuse it so a saved payload is replayable as-is.
 func encodePublishRequest(result podscriber.TranscriptionResult) ([]byte, error) {
 	payload, err := json.Marshal(publishRequest{Action: publishAction, Transcription: result})
 	if err != nil {
@@ -139,8 +132,6 @@ func encodePublishRequest(result podscriber.TranscriptionResult) ([]byte, error)
 	return payload, nil
 }
 
-// writePayload delivers the publish payload without invoking the Lambda. An
-// empty filePath writes to stdout; otherwise the payload goes to the file.
 func writePayload(filePath string, result podscriber.TranscriptionResult, stdout io.Writer) error {
 	payload, err := encodePublishRequest(result)
 	if err != nil {

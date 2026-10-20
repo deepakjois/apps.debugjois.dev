@@ -23,7 +23,6 @@ beforeEach(() => {
   delete process.env.DEV_ADMIN_BYPASS;
 });
 
-// Cookie strings are covered by adminSession.test.ts; these tests cover the HTTP contract only.
 describe("session routes", () => {
   it("GET reports the verified session", async () => {
     const event = sessionEvent({ headers: { cookie: `${AUTH_COOKIE_NAME}=signed-google-token` } });

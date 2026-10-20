@@ -1,7 +1,6 @@
 import { createContext, useContext } from "react";
 import type { AdminSession } from "../../../lib/auth/server";
 
-// Verified session plus the sign-out action, available to the authenticated admin layout.
 export type AdminSessionContextValue = {
   session: AdminSession;
   signOut: () => void;

@@ -8,7 +8,6 @@ export class AppsDebugJoisDevArtifactStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
     super(scope, id, props);
 
-    // Stores uploaded Lambda zip artifacts for the site stack.
     const artifactBucket = new s3.Bucket(this, "ArtifactBucket", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
@@ -27,7 +26,6 @@ export class AppsDebugJoisDevArtifactStack extends cdk.Stack {
       description: "ARN for the apps.debugjois.dev Lambda artifact bucket",
     });
 
-    // Stores pushed container images for the Go backend Lambda.
     const backendRepository = new ecr.Repository(this, "BackendRepository", {
       repositoryName: "apps-debugjois-dev-backend",
       removalPolicy: cdk.RemovalPolicy.RETAIN,

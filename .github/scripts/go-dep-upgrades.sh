@@ -3,8 +3,6 @@ set -euo pipefail
 
 MODULES=("backend")
 
-# Major version bumps change import paths and APIs, so they are left to the
-# separate go-major-upgrades workflow, which files an issue instead.
 upgrade_module() {
   (cd "$1" && git checkout -- go.mod go.sum && GOWORK=off go-mod-upgrade --force --no-major && go mod tidy)
 }

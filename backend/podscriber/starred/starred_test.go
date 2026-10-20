@@ -15,7 +15,6 @@ import (
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber/resolvers/miniflux"
 )
 
-// invokeFunc serves Lambda invocations without AWS.
 type invokeFunc func(*awslambda.InvokeInput) (*awslambda.InvokeOutput, error)
 
 func (f invokeFunc) Invoke(_ context.Context, in *awslambda.InvokeInput, _ ...func(*awslambda.Options)) (*awslambda.InvokeOutput, error) {
@@ -26,8 +25,6 @@ func audioEntry(id int64) miniflux.Entry {
 	return miniflux.Entry{ID: id, FeedID: 1, Title: "Episode", Enclosures: []miniflux.Enclosure{{URL: "https://cdn.example.com/a.mp3", MimeType: "audio/mpeg"}}}
 }
 
-// TestQueueContinuesAfterFailures checks that a failing entry, including a
-// Lambda function error, is reported without stopping later entries.
 func TestQueueContinuesAfterFailures(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{"total": 3, "entries": []miniflux.Entry{audioEntry(1), audioEntry(2), audioEntry(3)}})

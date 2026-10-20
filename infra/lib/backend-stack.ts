@@ -70,8 +70,6 @@ export class AppDebugJoisDevBackendStack extends cdk.Stack {
     });
     backendLambda.node.addDependency(deepgramAPIKeySecret);
 
-    // queue-podcast-transcription self-invokes this Lambda asynchronously, and
-    // queue-miniflux-starred synchronously invokes queue-podcast-transcription.
     new iam.Policy(this, "BackendLambdaSelfInvokePolicy", {
       roles: [backendRole],
       statements: [
@@ -82,10 +80,7 @@ export class AppDebugJoisDevBackendStack extends cdk.Stack {
       ],
     });
 
-    // Daily run of queue-miniflux-starred. The constant target input replaces
-    // the EventBridge event, so the Lambda sees a plain direct-invocation
-    // payload. EventBridge rule cron is UTC-only: 04:00 UTC is 05:00 Berlin in
-    // winter (CET) and 06:00 in summer (CEST).
+    // EventBridge cron expressions are UTC-only.
     const queueMinifluxStarredRule = new events.CfnRule(
       this,
       "QueueMinifluxStarredRule",
@@ -104,8 +99,6 @@ export class AppDebugJoisDevBackendStack extends cdk.Stack {
       },
     );
 
-    // Resource-based permission letting only that rule invoke the Lambda, so
-    // EventBridge needs no IAM role.
     new lambda.CfnPermission(this, "QueueMinifluxStarredRuleInvokePermission", {
       action: "lambda:InvokeFunction",
       functionName: backendLambda.attrArn,

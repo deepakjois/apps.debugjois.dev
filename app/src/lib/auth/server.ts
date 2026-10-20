@@ -3,14 +3,12 @@ import { ALLOWED_ADMIN_EMAILS, GOOGLE_CLIENT_ID, GOOGLE_ISSUERS } from "./config
 
 const googleJwks = createRemoteJWKSet(new URL("https://www.googleapis.com/oauth2/v3/certs"));
 
-// Identity fields exposed to authenticated admin UI and server operations.
 export type AdminSession = {
   email: string;
   name: string | null;
   picture: string | null;
 };
 
-// Shape of the token check, injectable so session and route tests never contact Google.
 export type VerifyGoogleIdToken = (idToken: string) => Promise<AdminSession>;
 
 function parseAllowedEmail(email: unknown, emailVerified: unknown): string {

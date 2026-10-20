@@ -167,7 +167,6 @@ export default function TranscriptSearchModal({
   }, []);
 
   useEffect(() => {
-    // Global shortcuts mirror the transcript search trigger.
     function handleKeyDown(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
@@ -227,7 +226,6 @@ export default function TranscriptSearchModal({
   }
 
   function handleSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
-    // Arrow keys change the active result without moving focus out of the search field.
     if (event.key === "ArrowDown") {
       event.preventDefault();
 
@@ -282,7 +280,6 @@ export default function TranscriptSearchModal({
     }
   }
 
-  // Native option values use transcript locations, which are unique within the index.
   const clampedActiveResultIndex = Math.min(
     activeResultIndex,
     Math.max(visibleResults.length - 1, 0),

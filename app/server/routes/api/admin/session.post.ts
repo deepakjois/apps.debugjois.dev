@@ -2,12 +2,10 @@ import { createError, defineEventHandler, readBody, type H3Event } from "nitro/h
 import type { VerifyGoogleIdToken } from "../../../../src/lib/auth/server";
 import { createAdminSession, type SessionResponse } from "../../../utils/adminSession";
 
-// Browser payload containing the ID token returned by Google Identity Services.
 type LoginBody = {
   credential?: unknown;
 };
 
-// Signs in: verifies the Google credential and issues the session cookie.
 export async function handleLogin(
   event: H3Event,
   verify?: VerifyGoogleIdToken,

@@ -11,7 +11,6 @@ import (
 	"github.com/deepakjois/apps.debugjois.dev/backend/dailylog"
 )
 
-// logStore records the storage boundary without Google credentials.
 type logStore struct {
 	title    string
 	contents []byte
@@ -36,7 +35,6 @@ func TestDailyLogWireContract(t *testing.T) {
 	t.Cleanup(func() { newDailyLogStore, dailyLogNow = oldStore, oldNow })
 	store := &logStore{contents: []byte("hello"), found: true}
 	newDailyLogStore = func(context.Context) (dailylog.Store, error) { return store, nil }
-	// UTC is still April 28, but Berlin is already April 29.
 	dailyLogNow = func() time.Time { return time.Date(2026, 4, 28, 22, 30, 0, 0, time.UTC) }
 	body, err := dispatchBackendEvent(context.Background(), json.RawMessage(`{"action":"post-daily-log","title":" 2026-04-29.md ","contents":"aGVs\nbG8="}`))
 	if err != nil || string(body) != `{"title":"2026-04-29.md","contents":"aGVs\nbG8="}` || store.title != "2026-04-29.md" || string(store.contents) != "hello" {

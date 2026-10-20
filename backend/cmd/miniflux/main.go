@@ -36,8 +36,6 @@ func main() {
 	}
 }
 
-// entryReport is one starred entry and, for podcast episodes, its parsed
-// transcription input or parse error.
 type entryReport struct {
 	EntryID     int64                          `json:"entry_id"`
 	Feed        string                         `json:"feed"`
@@ -101,7 +99,6 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	}
 }
 
-// unstar removes the star from one entry URL or bare entry ID.
 func unstar(ctx context.Context, client *miniflux.Client, input string, stdout io.Writer) error {
 	input = strings.TrimSpace(input)
 	var (
@@ -124,7 +121,6 @@ func unstar(ctx context.Context, client *miniflux.Client, input string, stdout i
 	return err
 }
 
-// printEntry prints the transcription input for one entry URL or bare entry ID.
 func printEntry(ctx context.Context, client *miniflux.Client, input string, stdout io.Writer) error {
 	input = strings.TrimSpace(input)
 	var (
@@ -148,8 +144,6 @@ func printEntry(ctx context.Context, client *miniflux.Client, input string, stdo
 	return writeJSON(stdout, parsed)
 }
 
-// printStarred prints every starred entry, parsing those with audio. It fails
-// only when a podcast entry cannot be parsed; articles are reported as such.
 func printStarred(ctx context.Context, client *miniflux.Client, stdout, stderr io.Writer) error {
 	entries, err := client.StarredEntries(ctx)
 	if err != nil {
@@ -187,9 +181,6 @@ func printStarred(ctx context.Context, client *miniflux.Client, stdout, stderr i
 	return nil
 }
 
-// queueStarred sends each starred podcast entry to the backend Lambda's
-// single-URL queue action, the same iteration the queue-miniflux-starred
-// Lambda action runs.
 func queueStarred(ctx context.Context, client *miniflux.Client, dryRun bool, stdout, stderr io.Writer) error {
 	var dispatch starred.Dispatcher
 	if !dryRun {

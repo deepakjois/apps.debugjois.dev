@@ -5,7 +5,6 @@ import {
   type PodcastTranscribeResponse,
 } from "../../../utils/podscriber";
 
-// Route dependencies keep authorization and request validation independent from AWS in tests.
 type PodscriberDependencies = {
   requireAdmin: (event: H3Event) => Promise<unknown>;
   submit: (text: string) => Promise<PodcastTranscribeResponse>;

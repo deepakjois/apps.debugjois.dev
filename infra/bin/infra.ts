@@ -15,7 +15,6 @@ const appSynthesizer = new NoAssumeRoleSynthesizer({
     "arn:aws:iam::654654546088:role/apps-debugjois-dev-cloudformation-role",
 });
 
-// Shared deployment settings for the apps.debugjois.dev stack family.
 const appConfig = {
   domainName: "apps.debugjois.dev",
   hostedZoneId: "Z00045403RW6YB0MUHDBN",

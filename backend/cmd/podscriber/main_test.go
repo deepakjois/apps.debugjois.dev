@@ -118,7 +118,6 @@ func TestWriteTranscriptSelectsStdoutOrFile(t *testing.T) {
 	}
 }
 
-// errorReader provides a deterministic stdin failure for argument parsing.
 type errorReader struct {
 	err error
 }

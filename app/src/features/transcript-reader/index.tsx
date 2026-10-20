@@ -23,7 +23,6 @@ export function TranscriptReader({
 }: TranscriptReaderProps) {
   const navigate = useNavigate({ from: "/transcript-reader" });
   const queryClient = useQueryClient();
-  // This pending selection keeps the current article visible during a fast prefetch.
   const [pendingLocation, setPendingLocation] = useState<string | null>(null);
   const [showTransitionSkeleton, setShowTransitionSkeleton] = useState(false);
   const transitionSequenceRef = useRef(0);
@@ -69,7 +68,6 @@ export function TranscriptReader({
     setPendingLocation(nextLocation);
     setShowTransitionSkeleton(false);
 
-    // Slow prefetches replace the old article with a skeleton after a short grace period.
     skeletonTimerRef.current = window.setTimeout(() => {
       if (transitionSequenceRef.current === transitionSequence) {
         setShowTransitionSkeleton(true);

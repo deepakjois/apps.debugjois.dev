@@ -28,11 +28,8 @@ const maxSlugLength = 120
 
 var slugPattern = regexp.MustCompile(`[^a-z0-9]+`)
 
-// urlPattern finds bare HTTP(S) links in plain-text descriptions, excluding
-// trailing punctuation that usually ends the surrounding sentence.
 var urlPattern = regexp.MustCompile(`https?://[^\s<>"']+[^\s<>"'.,;:!?)\]]`)
 
-// paragraphBreakPattern splits plain-text descriptions on blank lines.
 var paragraphBreakPattern = regexp.MustCompile(`\n[ \t]*\n+`)
 
 // Publisher writes compatibility-shaped transcript documents and refreshes the index.
@@ -95,33 +92,28 @@ func (p *Publisher) Publish(ctx context.Context, result podscriber.Transcription
 	return nil
 }
 
-// document preserves the payload shape consumed by the existing transcript reader.
 type document struct {
 	Podcast  podcastDocument `json:"podcast"`
 	Deepgram json.RawMessage `json:"deepgram"`
 }
 
-// podcastDocument maps provider-neutral metadata to the existing public schema.
 type podcastDocument struct {
 	Source  sourceDocument  `json:"source"`
 	Podcast seriesDocument  `json:"podcast"`
 	Episode episodeDocument `json:"episode"`
 }
 
-// sourceDocument identifies the original public episode page.
 type sourceDocument struct {
 	Type       podscriber.SourceType `json:"type"`
 	ShareTitle string                `json:"share_title,omitempty"`
 	EpisodeURL string                `json:"episode_url"`
 }
 
-// seriesDocument identifies the podcast or channel.
 type seriesDocument struct {
 	Title string `json:"title,omitempty"`
 	URL   string `json:"url,omitempty"`
 }
 
-// episodeDocument contains display metadata for the transcript reader.
 type episodeDocument struct {
 	Title           string     `json:"title,omitempty"`
 	PublishedAt     *time.Time `json:"published_at,omitempty"`
@@ -180,7 +172,6 @@ func DurationDisplay(metadata podscriber.Metadata) string {
 	}
 }
 
-// plural formats a count with its unit, adding "s" unless the count is one.
 func plural(count int, unit string) string {
 	if count == 1 {
 		return fmt.Sprintf("%d %s", count, unit)
@@ -188,11 +179,6 @@ func plural(count int, unit string) string {
 	return fmt.Sprintf("%d %ss", count, unit)
 }
 
-// descriptionHTML prefers provider HTML and otherwise converts a plain-text
-// description (YouTube) into safe HTML for the reader's show notes. Blank
-// lines become paragraphs, single newlines become <br>, and bare URLs become
-// links. Every text and URL fragment is escaped because the reader renders the
-// result as raw HTML.
 func descriptionHTML(metadata podscriber.Metadata) string {
 	if strings.TrimSpace(metadata.DescriptionHTML) != "" {
 		return metadata.DescriptionHTML
@@ -208,7 +194,6 @@ func descriptionHTML(metadata podscriber.Metadata) string {
 			continue
 		}
 		builder.WriteString("<p>")
-		// Links are located in the raw text so escaping cannot split or extend them.
 		last := 0
 		for _, match := range urlPattern.FindAllStringIndex(paragraph, -1) {
 			builder.WriteString(escapeLines(paragraph[last:match[0]]))
@@ -222,7 +207,6 @@ func descriptionHTML(metadata podscriber.Metadata) string {
 	return builder.String()
 }
 
-// escapeLines escapes plain text and preserves its single line breaks.
 func escapeLines(text string) string {
 	return strings.ReplaceAll(html.EscapeString(text), "\n", "<br>")
 }

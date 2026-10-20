@@ -22,12 +22,10 @@ const (
 	actionQueueMinifluxStarred        = "queue-miniflux-starred"
 )
 
-// directRequest reads the discriminator shared by every direct invocation.
 type directRequest struct {
 	Action string `json:"action"`
 }
 
-// eventType separates transport envelopes before dispatching application actions.
 type eventType int
 
 const (
@@ -36,7 +34,6 @@ const (
 	eventTypeDirect
 )
 
-// eventProbe reads only envelope discriminators, leaving action decoding separate.
 type eventProbe struct {
 	RequestContext *struct {
 		HTTP *struct{} `json:"http"`

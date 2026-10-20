@@ -31,17 +31,12 @@ const (
 	BaseURLEnv = "MINIFLUX_URL"
 )
 
-// pageSize is the number of entries requested per API page.
 const pageSize = 100
 
 var (
-	// uiEntryPathPattern matches every web UI entry route, such as
-	// /starred/entry/1, /feed/2/entry/1, and /unread/category/3/entry/1.
-	uiEntryPathPattern = regexp.MustCompile(`^(?:/[^/]+)*/entry/(\d+)/?$`)
-	// apiEntryPathPattern matches the REST API entry route.
+	uiEntryPathPattern  = regexp.MustCompile(`^(?:/[^/]+)*/entry/(\d+)/?$`)
 	apiEntryPathPattern = regexp.MustCompile(`^/v1/entries/(\d+)/?$`)
-	// audioExtensions identify audio enclosures whose MIME type is missing or generic.
-	audioExtensions = map[string]bool{
+	audioExtensions     = map[string]bool{
 		".mp3": true, ".m4a": true, ".aac": true, ".ogg": true, ".oga": true,
 		".opus": true, ".wav": true, ".flac": true,
 	}
@@ -80,7 +75,6 @@ type Feed struct {
 	FeedURL string `json:"feed_url"`
 }
 
-// entriesPage is one page of the GET /v1/entries response.
 type entriesPage struct {
 	Total   int     `json:"total"`
 	Entries []Entry `json:"entries"`
@@ -167,7 +161,6 @@ func (c *Client) StarredEntries(ctx context.Context) ([]Entry, error) {
 			return nil, fmt.Errorf("fetch starred Miniflux entries: %w", err)
 		}
 		entries = append(entries, page.Entries...)
-		// Stop on a short page too, in case entries are unstarred mid-pagination.
 		if len(page.Entries) < pageSize || len(entries) >= page.Total {
 			return entries, nil
 		}
@@ -206,8 +199,6 @@ func (c *Client) get(ctx context.Context, apiPath string, query url.Values, targ
 	return c.do(ctx, http.MethodGet, apiPath, query, target)
 }
 
-// do sends an authenticated API request and decodes a JSON response into
-// target. A nil target expects an empty success response, such as 204.
 func (c *Client) do(ctx context.Context, method, apiPath string, query url.Values, target any) error {
 	endpoint := c.baseURL.JoinPath(apiPath)
 	endpoint.RawQuery = query.Encode()
@@ -224,7 +215,6 @@ func (c *Client) do(ctx context.Context, method, apiPath string, query url.Value
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		// Miniflux reports API failures as {"error_message": "..."}.
 		var apiErr struct {
 			Message string `json:"error_message"`
 		}
@@ -250,7 +240,6 @@ func (c *Client) EntryID(input string) (int64, bool) {
 	if err != nil || !strings.EqualFold(u.Host, c.baseURL.Host) || (u.Scheme != "http" && u.Scheme != "https") {
 		return 0, false
 	}
-	// Match routes relative to the instance root so subpath installs work.
 	relative, ok := strings.CutPrefix(u.Path, c.baseURL.Path)
 	if !ok {
 		return 0, false
@@ -387,9 +376,6 @@ func HasAudio(entry Entry) bool {
 	return ok
 }
 
-// audioEnclosure picks the first enclosure with an audio MIME type, falling
-// back to the first one with an audio file extension. Feeds often attach
-// cover images (image/*) alongside the episode audio.
 func audioEnclosure(enclosures []Enclosure) (Enclosure, bool) {
 	var fallback *Enclosure
 	for i := range enclosures {

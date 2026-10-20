@@ -1,16 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Builds the flake's tool profile (packages.default) into the out-link that
-# .agents/nix-env.sh puts on PATH. With --if-changed, skips the build when
-# flake.nix and flake.lock match the last successful build, which keeps
-# .agents/resume within its time budget.
-
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=.agents/nix-env.sh
 source "$repo_root/.agents/nix-env.sh"
 
-# Fingerprint of the inputs that determine the profile, recorded after each build.
 stamp="$APPS_DEBUGJOIS_DEV_TOOLS.stamp"
 fingerprint="$(cat "$repo_root/flake.nix" "$repo_root/flake.lock" | sha256sum | cut -d' ' -f1)"
 

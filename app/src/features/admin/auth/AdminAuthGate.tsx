@@ -10,37 +10,28 @@ import { LAST_ADMIN_EMAIL_STORAGE_KEY } from "../../../lib/auth/config";
 import type { AdminSession } from "../../../lib/auth/server";
 import { AdminSessionContext } from "./adminSession";
 
-// Body of every /api/admin/session response; null means this browser holds no valid session.
 type SessionResponse = {
   session: AdminSession | null;
 };
 
-// One Nitro resource owns the session: GET reads it, POST signs in, DELETE signs out.
 const SESSION_URL = "/api/admin/session";
-// Query cache entry mirroring the server's view of the session; sign-in and sign-out update it.
 const SESSION_QUERY_KEY = ["admin", "session"];
 
-// Page-wide Google Identity Services state: the client it was initialized for and the handler
-// that currently receives credentials (whichever sign-in button is mounted, if any).
 type GoogleIdentityInit = {
   clientId: string;
   onCredential: (response: CredentialResponse) => void;
-  // Whether One Tap has been requested on this page; Chrome allows one FedCM request at a time.
   oneTapPrompted: boolean;
 };
 
 declare global {
   interface Window {
     __appsDebugjoisGoogleInit?: GoogleIdentityInit;
-    // API installed by the Google Identity Services script after it loads.
     google?: {
       accounts?: {
         id?: {
           initialize: (configuration: IdConfiguration) => void;
           renderButton: (parent: HTMLElement, configuration: GsiButtonConfiguration) => void;
-          // Shows One Tap (a FedCM account chooser in Chrome) for the initialized client.
           prompt: () => void;
-          // Records an opt-out so auto_select cannot sign the user straight back in after sign-out.
           disableAutoSelect: () => void;
         };
       };
@@ -55,11 +46,8 @@ type AdminAuthGateProps = {
 export function AdminAuthGate({ children }: AdminAuthGateProps) {
   const { clientId } = useGoogleOAuth();
   const queryClient = useQueryClient();
-  // After an explicit sign-out, One Tap stays quiet so the chooser does not pop straight back up.
   const [signedOutHere, setSignedOutHere] = useState(false);
 
-  // Only the browser fetches this. On the server the query stays pending, so SSR emits the checking
-  // state and admin pages never depend on server-rendered session data.
   const sessionQuery = useQuery({
     queryKey: SESSION_QUERY_KEY,
     queryFn: fetchAdminSession,
@@ -80,8 +68,6 @@ export function AdminAuthGate({ children }: AdminAuthGateProps) {
     mutationFn: logoutAdmin,
     onSuccess: () => {
       forgetLastAdminEmail();
-      // Google records the opt-out through its client, so ours must exist first. Otherwise it
-      // creates an unconfigured one and the sign-in card's initialize() warns about a second call.
       ensureGoogleIdentityInitialized(clientId);
       window.google?.accounts?.id?.disableAutoSelect();
       setSignedOutHere(true);
@@ -89,7 +75,6 @@ export function AdminAuthGate({ children }: AdminAuthGateProps) {
     },
   });
 
-  // A failed sign-in attempt is more actionable than a failed session check, so it wins.
   const authError = loginMutation.error ?? sessionQuery.error;
   const authErrorMessage = authError instanceof Error ? authError.message : null;
 
@@ -183,7 +168,6 @@ async function logoutAdmin(): Promise<void> {
   await requestSession({ method: "DELETE" }, "Sign-out could not be completed");
 }
 
-// Every session request hits the same resource; any non-2xx response surfaces as `failureMessage`.
 async function requestSession(
   init: RequestInit | undefined,
   failureMessage: string,
@@ -197,9 +181,8 @@ async function requestSession(
   return response.json() as Promise<SessionResponse>;
 }
 
-// Google allows one initialize() per page, and some of its other entry points (prompt,
-// disableAutoSelect) silently create an unconfigured client when none exists yet. Every call into
-// Google Identity Services therefore goes through here first. Returns null until its script loads.
+// Google allows one initialize() per page, and prompt() and disableAutoSelect() silently create an
+// unconfigured client when none exists yet, so every Google Identity Services call goes through here.
 function ensureGoogleIdentityInitialized(clientId: string): GoogleIdentityInit | null {
   const googleId = window.google?.accounts?.id;
 
@@ -218,18 +201,12 @@ function ensureGoogleIdentityInitialized(clientId: string): GoogleIdentityInit |
 
   googleId.initialize({
     client_id: clientId,
-    // Delegates to whichever sign-in button is mounted when Google returns a credential.
     callback: (response) => init.onCredential(response),
-    // A returning user with one Google session that already approved this app is signed in
-    // without a click; otherwise One Tap lists the signed-in accounts to choose from.
     auto_select: true,
     cancel_on_tap_outside: false,
     use_fedcm_for_prompt: true,
-    // In Chrome the button also goes through FedCM, so it stays personalized (avatar, name,
-    // email) even when third-party cookies are blocked, and clicking opens the FedCM chooser.
     use_fedcm_for_button: true,
     itp_support: true,
-    // Preselects whoever signed in last on this browser when the button popup opens.
     ...(lastEmail ? { login_hint: lastEmail } : {}),
   });
 
@@ -238,7 +215,6 @@ function ensureGoogleIdentityInitialized(clientId: string): GoogleIdentityInit |
   return init;
 }
 
-// localStorage can be unavailable or full; the login hint is a convenience, so failures are ignored.
 function readLastAdminEmail(): string | null {
   try {
     return window.localStorage.getItem(LAST_ADMIN_EMAIL_STORAGE_KEY);
@@ -250,22 +226,17 @@ function readLastAdminEmail(): string | null {
 function rememberLastAdminEmail(email: string): void {
   try {
     window.localStorage.setItem(LAST_ADMIN_EMAIL_STORAGE_KEY, email);
-  } catch {
-    // See readLastAdminEmail.
-  }
+  } catch {}
 }
 
 function forgetLastAdminEmail(): void {
   try {
     window.localStorage.removeItem(LAST_ADMIN_EMAIL_STORAGE_KEY);
-  } catch {
-    // See readLastAdminEmail.
-  }
+  } catch {}
 }
 
 type GoogleSignInButtonProps = {
   disabled: boolean;
-  // Whether to show One Tap alongside the button once Google Identity Services is ready.
   promptOneTap: boolean;
   onCredential: (response: CredentialResponse) => void;
   onError: () => void;
@@ -308,7 +279,6 @@ function GoogleSignInButton({
     };
 
     return () => {
-      // A credential arriving after this button unmounts has nowhere to go.
       init.onCredential = () => {};
     };
   }, [clientId, scriptLoadedSuccessfully]);

@@ -115,8 +115,6 @@ func transcriptionOptions() *deepgraminterfaces.PreRecordedTranscriptionOptions 
 		Punctuate:   true,
 		Numerals:    true,
 		SmartFormat: true,
-		// Utterances stay off: nothing reads them, and they duplicate the
-		// word-level data, roughly doubling the stored and published payload.
 	}
 }
 

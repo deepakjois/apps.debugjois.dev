@@ -41,7 +41,6 @@ type ListItem struct {
 }
 
 type document struct {
-	// Input and Transcript describe provider-neutral backend payloads.
 	Input struct {
 		Metadata struct {
 			Title         string `json:"title"`
@@ -59,7 +58,6 @@ type document struct {
 		Raw json.RawMessage `json:"raw"`
 	} `json:"transcript"`
 
-	// Podcast and Deepgram keep existing backend payloads indexable during migration.
 	Podcast struct {
 		Source struct {
 			ShareTitle string `json:"share_title"`

@@ -2,7 +2,6 @@ import { createError, defineEventHandler, readBody, type H3Event } from "nitro/h
 import { requireAdminSession } from "../../../utils/adminSession";
 import { saveLoggerNote, type LoggerNote } from "../../../utils/logger";
 
-// Route dependencies keep request validation independent from AWS in tests.
 type SaveLoggerDependencies = {
   requireAdmin: (event: H3Event) => Promise<unknown>;
   saveLogger: (note: LoggerNote) => Promise<LoggerNote>;

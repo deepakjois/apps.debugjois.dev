@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Keeps a single GitHub issue in sync with major version upgrade results:
-# creates or updates it when upgrades exist, and closes it when none remain.
 # Expects HAS_UPGRADES ("true"/"false") and UPGRADE_BODY (issue body markdown).
 
 title="go: major version upgrades available"

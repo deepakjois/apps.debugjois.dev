@@ -2,10 +2,8 @@
 
 @import "@webtui/css/base.css";
 
-/* WebTUI utilities used by the admin shell. */
 @import "@webtui/css/utils/box.css";
 
-/* WebTUI components used by admin pages. */
 @import "@webtui/css/components/badge.css";
 @import "@webtui/css/components/button.css";
 @import "@webtui/css/components/typography.css";
@@ -20,7 +18,6 @@
 }
 
 @layer components {
-  /* Admin-only layout around the imported WebTUI primitives. */
   .admin-webtui {
     --box-border-color: var(--background1);
     min-height: 100vh;
@@ -133,7 +130,6 @@
     word-break: normal;
   }
 
-  /* Podscriber form controls use WebTUI shell colors with native form elements. */
   .admin-podscriber-page,
   .admin-podscriber-form,
   .admin-podscriber-error,

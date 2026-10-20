@@ -26,7 +26,6 @@ export const Route = createFileRoute("/transcript-reader")({
   loader: ({ context, deps }) => loadTranscriptReaderData(context.queryClient, deps.requestedHash),
   head: ({ loaderData }) => ({
     links: [
-      // SSR emits feature CSS before the route paints, avoiding an unstyled reader shell.
       { rel: "stylesheet", href: transcriptReaderStylesHref },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },

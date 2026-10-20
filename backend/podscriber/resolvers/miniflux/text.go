@@ -7,7 +7,6 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-// blockElements end the current paragraph when they open or close.
 var blockElements = map[atom.Atom]bool{
 	atom.P: true, atom.Div: true, atom.Ul: true, atom.Ol: true,
 	atom.H1: true, atom.H2: true, atom.H3: true, atom.H4: true, atom.H5: true,
@@ -15,7 +14,6 @@ var blockElements = map[atom.Atom]bool{
 	atom.Tr: true, atom.Hr: true, atom.Figure: true, atom.Section: true,
 }
 
-// textBuilder accumulates plain text as paragraphs of whitespace-collapsed lines.
 type textBuilder struct {
 	paragraphs []string
 	lines      []string
@@ -24,8 +22,6 @@ type textBuilder struct {
 
 func (b *textBuilder) write(text string) { b.current.WriteString(text) }
 
-// lineBreak ends the current line. A break on an already-empty line (as in
-// <br><br>, which many feeds use instead of <p>) ends the paragraph.
 func (b *textBuilder) lineBreak() {
 	line := cleanText(b.current.String())
 	b.current.Reset()
@@ -36,7 +32,6 @@ func (b *textBuilder) lineBreak() {
 	b.lines = append(b.lines, line)
 }
 
-// endLine ends the current line, if it has text, within the paragraph.
 func (b *textBuilder) endLine() {
 	if line := cleanText(b.current.String()); line != "" {
 		b.lines = append(b.lines, line)
@@ -52,9 +47,6 @@ func (b *textBuilder) endParagraph() {
 	}
 }
 
-// htmlToText renders sanitized entry HTML as plain text: block elements
-// become blank-line-separated paragraphs, <br> becomes a newline, and list
-// items are prefixed with "- ".
 func htmlToText(content string) string {
 	nodes, err := html.ParseFragment(strings.NewReader(content), &html.Node{Type: html.ElementNode, Data: "body", DataAtom: atom.Body})
 	if err != nil {
@@ -78,7 +70,6 @@ func htmlToText(content string) string {
 		case node.DataAtom == atom.Script || node.DataAtom == atom.Style:
 			return
 		case node.DataAtom == atom.Li:
-			// List items stay on consecutive lines of the list's paragraph.
 			builder.endLine()
 			builder.write("- ")
 		case blockElements[node.DataAtom]:

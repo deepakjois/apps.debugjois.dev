@@ -31,14 +31,12 @@ import (
 	"github.com/deepakjois/apps.debugjois.dev/backend/transcripts"
 )
 
-// podcastPayload retains the original public and asynchronous worker JSON schema.
 type podcastPayload struct {
 	Source  podcastSource  `json:"source"`
 	Podcast podcastSeries  `json:"podcast"`
 	Episode podcastEpisode `json:"episode"`
 }
 
-// podcastSource retains the share input and canonical episode page.
 type podcastSource struct {
 	Type       podscriber.SourceType `json:"type,omitempty"`
 	Input      string                `json:"input"`
@@ -46,13 +44,11 @@ type podcastSource struct {
 	EpisodeURL string                `json:"episode_url"`
 }
 
-// podcastSeries is the deployed podcast metadata shape.
 type podcastSeries struct {
 	Title string `json:"title"`
 	URL   string `json:"url,omitempty"`
 }
 
-// podcastEpisode includes the audio URL required by already-queued worker events.
 type podcastEpisode struct {
 	Title           string `json:"title"`
 	PublishedAt     string `json:"published_at,omitempty"`
@@ -62,47 +58,36 @@ type podcastEpisode struct {
 	DescriptionHTML string `json:"description_html"`
 }
 
-// queuePodcastTranscriptionRequest is the input carried by the queue action.
 type queuePodcastTranscriptionRequest struct {
-	Text string `json:"text"`
-	// SkipExisting returns an already-published transcript instead of
-	// transcribing the episode again; queue-miniflux-starred sets it.
-	SkipExisting bool `json:"skip_existing"`
+	Text         string `json:"text"`
+	SkipExisting bool   `json:"skip_existing"`
 }
 
-// queueMinifluxStarredRequest is the input of the starred-entries queue action.
 type queueMinifluxStarredRequest struct {
-	// DryRun lists the entries that would be queued without queueing them.
 	DryRun bool `json:"dry_run"`
 }
 
-// processPodcastTranscriptionRequest preserves the asynchronous worker envelope.
 type processPodcastTranscriptionRequest struct {
 	Action  string         `json:"action"`
 	Podcast podcastPayload `json:"podcast"`
 }
 
-// queuedResponse is the accepted response consumed by the admin UI. Exactly
-// one of TranscriptionLambdaID and ExistingTranscript is set.
 type queuedResponse struct {
 	Podcast               podcastPayload `json:"podcast"`
 	TranscriptionLambdaID string         `json:"transcription_lambda_id,omitempty"`
 	ExistingTranscript    string         `json:"existing_transcript,omitempty"`
 }
 
-// transcriptResponse is both the worker response and the persisted document.
 type transcriptResponse struct {
 	Podcast  podcastPayload  `json:"podcast"`
 	Deepgram json.RawMessage `json:"deepgram"`
 }
 
-// publishCompletedTranscriptionRequest carries a media-free local result.
 type publishCompletedTranscriptionRequest struct {
 	Action        string                         `json:"action"`
 	Transcription podscriber.TranscriptionResult `json:"transcription"`
 }
 
-// completedTranscriptPublisher is the Lambda-owned publishing boundary.
 type completedTranscriptPublisher interface {
 	Publish(context.Context, podscriber.TranscriptionResult) error
 }
@@ -111,8 +96,6 @@ var (
 	extractPodcast      = extractQueueSource
 	newMinifluxClient   = func() (*miniflux.Client, error) { return miniflux.NewFromEnv(nil) }
 	invokePodcastWorker = invokeSelfForPodcastTranscription
-	// unstarMinifluxEntry removes the star from a transcribed Miniflux entry,
-	// identified by its source input URL.
 	unstarMinifluxEntry = func(ctx context.Context, entryURL string) error {
 		client, err := newMinifluxClient()
 		if err != nil {
@@ -128,8 +111,6 @@ var (
 		}
 		return transcripts.ObjectExists(ctx, client, transcripts.BucketName, key)
 	}
-	// newSelfQueueDispatcher sends each starred entry back to this function's
-	// single-URL queue action.
 	newSelfQueueDispatcher = func(ctx context.Context) (starred.Dispatcher, error) {
 		functionName := strings.TrimSpace(os.Getenv("AWS_LAMBDA_FUNCTION_NAME"))
 		if functionName == "" {
@@ -180,12 +161,8 @@ func handlePublishCompletedTranscription(ctx context.Context, result podscriber.
 	return json.Marshal(map[string]bool{"ok": true})
 }
 
-// errUnsupportedQueueSource rejects inputs the Lambda queue cannot resolve.
 var errUnsupportedQueueSource = errors.New("unsupported Lambda transcription source: only Podcast Addict and Miniflux entry URLs are supported")
 
-// extractQueueSource resolves the remote-audio sources Lambda queues. The CLI
-// owns resolution for additional source types such as YouTube and audio URLs.
-// Miniflux is available only when MINIFLUX_API_TOKEN is configured.
 func extractQueueSource(ctx context.Context, text string) (podscriber.TranscriptionInput, error) {
 	extractors := []resolvers.Extractor{podcastaddict.New(nil)}
 	client, minifluxErr := newMinifluxClient()
@@ -213,7 +190,6 @@ func handleQueuePodcastTranscription(ctx context.Context, request queuePodcastTr
 	}
 	podcast := podcastFromInput(input)
 	if request.SkipExisting {
-		// The worker persists under this key, derived from the same payload.
 		key, err := transcriptObjectKey(actionProcessPodcastTranscription, podcast)
 		if err != nil {
 			return nil, err
@@ -233,9 +209,6 @@ func handleQueuePodcastTranscription(ctx context.Context, request queuePodcastTr
 	return json.Marshal(queuedResponse{Podcast: podcast, TranscriptionLambdaID: id})
 }
 
-// handleQueueMinifluxStarred sends every starred Miniflux podcast entry back
-// to this function's queue-podcast-transcription action, one URL per call,
-// skipping episodes that already have a transcript.
 func handleQueueMinifluxStarred(ctx context.Context, request queueMinifluxStarredRequest) (json.RawMessage, error) {
 	client, err := newMinifluxClient()
 	if err != nil {
@@ -280,8 +253,7 @@ func handleProcessPodcastTranscription(ctx context.Context, request processPodca
 	}
 	if publishedPodcast.Source.Type == podscriber.SourceTypeMiniflux {
 		// The transcript is already published, so an unstar failure is only
-		// logged: failing would make AWS retry and transcribe the episode
-		// again. A still-starred entry is skipped later by skip_existing.
+		// logged. Failing would make AWS retry and transcribe the episode again.
 		if err := unstarMinifluxEntry(ctx, request.Podcast.Source.Input); err != nil {
 			log.Printf("unstar transcribed Miniflux entry %s: %v", request.Podcast.Source.Input, err)
 		}
@@ -292,7 +264,6 @@ func handleProcessPodcastTranscription(ctx context.Context, request processPodca
 func podcastFromInput(input podscriber.TranscriptionInput) podcastPayload {
 	metadata := input.Metadata
 	shareTitle, _ := metadata.Extra["share_title"].(string)
-	// Podcast Addict supplies its own label; Miniflux only has DurationSeconds.
 	duration := s3publisher.DurationDisplay(metadata)
 	publishedAt, _ := metadata.Extra["published_at_raw"].(string)
 	if publishedAt == "" && metadata.PublishedAt != nil {
@@ -310,8 +281,6 @@ func podcastFromInput(input podscriber.TranscriptionInput) podcastPayload {
 }
 
 func (p podcastPayload) transcriptionInput() podscriber.TranscriptionInput {
-	// Old worker events only required audio_url. Fill missing source identity for
-	// the stricter internal contract without changing the echoed public payload.
 	sourceURL := p.Source.EpisodeURL
 	if strings.TrimSpace(sourceURL) == "" {
 		sourceURL = p.Episode.AudioURL
@@ -333,7 +302,6 @@ func (p podcastPayload) transcriptionInput() podscriber.TranscriptionInput {
 	}
 }
 
-// lambdaInvoker allows the asynchronous AWS request to be verified without AWS writes.
 type lambdaInvoker interface {
 	Invoke(context.Context, *awslambda.InvokeInput, ...func(*awslambda.Options)) (*awslambda.InvokeOutput, error)
 }
@@ -371,7 +339,6 @@ func invokeWorker(ctx context.Context, client lambdaInvoker, functionName string
 var transcriptSlugPattern = regexp.MustCompile(`[^a-z0-9]+`)
 
 func transcriptObjectKey(action string, podcast podcastPayload) (string, error) {
-	// Keep the legacy hash input and field order: changing these changes public URLs.
 	payload, err := json.Marshal(struct {
 		Action  string         `json:"action"`
 		Podcast podcastPayload `json:"podcast"`
@@ -415,8 +382,6 @@ func persistTranscript(ctx context.Context, action string, podcast podcastPayloa
 	if err != nil {
 		return err
 	}
-	// The general v2 publisher intentionally has a different identity/document;
-	// this transport retains the deployed document and retry-stable object key.
 	_, err = client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(transcripts.BucketName), Key: aws.String(key),
 		Body: bytes.NewReader(body), ContentType: aws.String("application/json"),

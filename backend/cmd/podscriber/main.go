@@ -31,7 +31,6 @@ func main() {
 	}
 }
 
-// cliOptions describes which half of the eventual queue/worker flow to run.
 type cliOptions struct {
 	parseOnly bool
 	publish   bool
@@ -68,7 +67,6 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer) 
 		return err
 	}
 	extractors := []resolvers.Extractor{podcastaddict.New(nil)}
-	// Miniflux entry URLs are recognized only when an API token is configured.
 	var minifluxClient *miniflux.Client
 	if strings.TrimSpace(os.Getenv(miniflux.TokenEnv)) != "" {
 		if minifluxClient, err = miniflux.NewFromEnv(nil); err != nil {
@@ -76,7 +74,6 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer) 
 		}
 		extractors = append(extractors, miniflux.NewExtractor(minifluxClient))
 	}
-	// The generic audio URL extractor must stay last.
 	extractors = append(extractors, youtubeExtractor, audiourl.New())
 	resolver := resolvers.New(extractors...)
 
@@ -109,8 +106,6 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer) 
 		if err := publisher.Publish(ctx, result); err != nil {
 			return err
 		}
-		// Like the Lambda worker, unstar a published Miniflux entry. The
-		// transcript is already published, so a failure is only a warning.
 		if prepared.Source.Type == podscriber.SourceTypeMiniflux && minifluxClient != nil {
 			if _, err := minifluxClient.UnstarEntryURL(ctx, prepared.Source.Input); err != nil {
 				_, _ = fmt.Fprintf(os.Stderr, "warning: %v\n", err)

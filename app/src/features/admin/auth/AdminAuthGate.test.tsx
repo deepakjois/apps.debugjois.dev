@@ -8,7 +8,6 @@ import type { AdminSession } from "../../../lib/auth/server";
 import { AdminAuthGate } from "./AdminAuthGate";
 import { useAdminSession } from "./adminSession";
 
-// Mutable so individual tests can simulate the Google script finishing to load.
 const oauthState = vi.hoisted(() => ({ scriptLoadedSuccessfully: false }));
 
 vi.mock("@react-oauth/google", () => ({
@@ -18,7 +17,6 @@ vi.mock("@react-oauth/google", () => ({
   }),
 }));
 
-// Stand-in for the google.accounts.id API installed by Google's script.
 const googleId = {
   initialize: vi.fn(),
   renderButton: vi.fn(),
@@ -57,7 +55,6 @@ function SignOutButton() {
 }
 
 function renderGate() {
-  // Each render gets isolated query and mutation state, matching the app's request-local client.
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -72,8 +69,6 @@ function renderGate() {
   );
 }
 
-// Fakes the /api/admin/session resource: GET reports `current`, POST signs in as `login`, DELETE
-// signs out. Every call gets a fresh Response because a body can only be read once.
 function mockSessionApi({
   current,
   login = session,
@@ -151,7 +146,6 @@ describe("AdminAuthGate", () => {
     oauthState.scriptLoadedSuccessfully = true;
     mockSessionApi({ current: null });
 
-    // StrictMode and Fast Refresh both re-run mount effects; a second FedCM request would fail.
     renderGate();
     await screen.findByRole("heading", { name: SIGN_IN_HEADING });
     cleanup();
@@ -203,14 +197,11 @@ describe("AdminAuthGate", () => {
     renderGate();
     const signOut = await screen.findByRole("button", { name: "Sign out deepak.jois@gmail.com" });
 
-    // The sign-in card never rendered, so nothing has initialized Google yet.
     expect(googleId.initialize).not.toHaveBeenCalled();
 
     fireEvent.click(signOut);
     await screen.findByRole("heading", { name: SIGN_IN_HEADING });
 
-    // Google's disableAutoSelect creates an unconfigured client if none exists, and the card's own
-    // initialize() would then be a second call. Ours must run first and the card must reuse it.
     expect(googleId.initialize).toHaveBeenCalledTimes(1);
     expect(googleId.initialize.mock.invocationCallOrder[0]).toBeLessThan(
       googleId.disableAutoSelect.mock.invocationCallOrder[0] ?? 0,

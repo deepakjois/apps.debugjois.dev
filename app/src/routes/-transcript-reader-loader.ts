@@ -9,7 +9,6 @@ import {
 } from "../features/transcript-reader/data";
 import type { TranscriptIndexItem, TranscriptPayload } from "../features/transcript-reader/data";
 
-// Loader data is the complete SSR snapshot needed to render one reader page.
 export type TranscriptReaderLoaderData = {
   transcriptList: TranscriptIndexItem[];
   selectedLocation: string | null;

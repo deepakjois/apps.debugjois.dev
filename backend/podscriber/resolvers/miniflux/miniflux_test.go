@@ -43,7 +43,6 @@ func TestParseEntryPodcastEpisode(t *testing.T) {
 		t.Fatalf("ParseEntry() error = %v", err)
 	}
 
-	// The fixture's first enclosure is a proxied cover image; the audio is second.
 	if !strings.HasPrefix(got.Media.URL, "https://tracking.swap.fm/") || !strings.HasSuffix(got.Media.URL, "&size=30878911") {
 		t.Fatalf("media URL = %q, want the audio/mpeg enclosure", got.Media.URL)
 	}
@@ -56,14 +55,12 @@ func TestParseEntryPodcastEpisode(t *testing.T) {
 	if got.Metadata.PublishedDate != "2026-10-16" || got.Metadata.PublishedAt == nil {
 		t.Fatalf("published = %v / %q", got.Metadata.PublishedAt, got.Metadata.PublishedDate)
 	}
-	// reading_time 32 minutes comes from itunes:duration (1929 seconds).
 	if got.Metadata.DurationSeconds != 1920 {
 		t.Fatalf("duration = %v, want 1920", got.Metadata.DurationSeconds)
 	}
 	if got.Metadata.Series == nil || got.Metadata.Series.Title != "Planet Money" || got.Metadata.Series.URL != "https://www.npr.org/podcasts/510289/planet-money" {
 		t.Fatalf("series = %#v", got.Metadata.Series)
 	}
-	// <br/><br/> separates paragraphs in this feed's show notes.
 	if !strings.HasSuffix(got.Metadata.Description, "around the world.\n\nFor more episodes about the entertainment industry:") {
 		t.Fatalf("description = %q", got.Metadata.Description)
 	}
@@ -109,7 +106,6 @@ func TestParseEntryEnclosures(t *testing.T) {
 			if got.Media.URL != tt.wantURL {
 				t.Fatalf("media URL = %q, want %q", got.Media.URL, tt.wantURL)
 			}
-			// Entries without a web URL fall back to their Miniflux page.
 			if got.Source.URL != "https://reader.example.com/miniflux/feed/3/entry/7" {
 				t.Fatalf("source URL = %q", got.Source.URL)
 			}
@@ -181,8 +177,6 @@ func TestStarredEntriesPaginates(t *testing.T) {
 	}
 }
 
-// TestUnstar checks that Unstar reads the star state before using Miniflux's
-// toggle, so a repeated call never re-stars the entry.
 func TestUnstar(t *testing.T) {
 	starred, toggles := true, 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -73,7 +73,6 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
     });
     linkPreviewAPIKeySecret.applyRemovalPolicy(cdk.RemovalPolicy.RETAIN);
 
-    // Holds static frontend files uploaded separately from CloudFormation.
     const siteBucket = new s3.Bucket(this, "StaticAssetsBucket", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
@@ -148,12 +147,8 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
 
     const staticOrigin = origins.S3BucketOrigin.withOriginAccessControl(siteBucket);
 
-    // Custom cache policy for the API Gateway → Lambda origin. Honors the
-    // origin's Cache-Control header (set per-route by Nitro) and keys the
-    // cache by path + query string so ?t=<hash> routes don't collide.
-    // Crucially, it forwards no headers — the managed
-    // UseOriginCacheControlHeaders-QueryStrings policy whitelists `host`,
-    // which causes API Gateway to 403 the CloudFront-forwarded request.
+    // Forwards no headers. The managed UseOriginCacheControlHeaders-QueryStrings policy whitelists
+    // `host`, which makes API Gateway 403 the CloudFront-forwarded request.
     const apiCachePolicy = new cloudfront.CachePolicy(this, "ApiCachePolicy", {
       cachePolicyName: "apps-debugjois-dev-api",
       comment: "Honor origin Cache-Control; cache key includes query strings",
@@ -167,7 +162,6 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
       enableAcceptEncodingBrotli: true,
     });
 
-    // Static files that should be served directly from S3.
     const staticBehaviors: Record<string, cloudfront.BehaviorOptions> = {
       "/assets/*": createStaticBehavior(staticOrigin),
       "/favicon.ico": createStaticBehavior(staticOrigin),

@@ -7,7 +7,6 @@ import { GOOGLE_CLIENT_ID } from "../lib/auth/config";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
-    // The parent layout loads one stylesheet for every admin child route.
     links: [{ rel: "stylesheet", href: adminStylesHref }],
   }),
   component: AdminRoute,
@@ -28,7 +27,6 @@ function AdminLayout() {
     select: (state) => state.location.pathname === "/admin/logger",
   });
 
-  // Logger retains its standalone full-screen editing surface from the previous app.
   if (isLogger) {
     return <Outlet />;
   }

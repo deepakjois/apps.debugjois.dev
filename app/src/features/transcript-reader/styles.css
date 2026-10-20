@@ -1,5 +1,4 @@
 .transcript-reader-page {
-  /* Route-local palette and typography for the transcript reader UI. */
   --tr-bg: #101113;
   --tr-bg-raised: #18191d;
   --tr-bg-overlay: rgb(16 17 19 / 74%);

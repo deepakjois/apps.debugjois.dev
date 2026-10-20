@@ -14,7 +14,6 @@ import (
 	"github.com/deepakjois/apps.debugjois.dev/backend/podscriber"
 )
 
-// invokeFunc records one synthetic Lambda invocation.
 type invokeFunc func(*awslambda.InvokeInput) (*awslambda.InvokeOutput, error)
 
 func (f invokeFunc) Invoke(_ context.Context, input *awslambda.InvokeInput, _ ...func(*awslambda.Options)) (*awslambda.InvokeOutput, error) {
@@ -86,7 +85,6 @@ func TestRunRequiresLambdaNameOnlyWhenPublishing(t *testing.T) {
 		return podscriber.TranscriptionResult{}, nil
 	}
 
-	// Publishing still requires the backend Lambda target.
 	err := run(context.Background(), []string{"https://youtu.be/example"}, &bytes.Buffer{})
 	if err == nil || !strings.Contains(err.Error(), backendLambdaNameEnv) {
 		t.Fatalf("run() error = %v", err)

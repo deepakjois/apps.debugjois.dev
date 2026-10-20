@@ -99,7 +99,6 @@ func (e *Extractor) CanHandle(input string) bool {
 	}
 }
 
-// ytMetadata contains the curated subset of yt-dlp's JSON output used downstream.
 type ytMetadata struct {
 	ID                 string  `json:"id"`
 	Title              string  `json:"title"`

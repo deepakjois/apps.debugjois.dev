@@ -1,6 +1,5 @@
 import { invokeBackendLambda } from "./backendLambda";
 
-// PodcastTranscribeResponse is the accepted job returned by the backend Lambda.
 export type PodcastTranscribeResponse = {
   podcast: Record<string, unknown>;
   transcription_lambda_id: string;

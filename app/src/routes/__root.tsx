@@ -8,7 +8,6 @@ import {
 } from "@tanstack/react-router";
 import "../styles/global.css";
 
-// Shared request-local services available to every feature's loaders.
 export type RouterContext = { queryClient: QueryClient };
 
 export const Route = createRootRouteWithContext<RouterContext>()({

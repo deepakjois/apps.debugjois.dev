@@ -15,14 +15,10 @@
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
     in
     {
-      # Profiles share toolchains; CI omits local media and Google Drive tools.
-      # Application dependencies stay in npm/Go lockfiles. Go helpers are built
-      # with go install by scripts/install-go-tools.sh, not by Nix.
       packages = forAllSystems (
         pkgs:
         let
           node = pkgs.nodejs-slim_latest;
-          # npm releases independently of Node's bundled version.
           npm = pkgs.stdenvNoCC.mkDerivation rec {
             pname = "npm";
             version = "12.2.0";
@@ -54,7 +50,7 @@
               gh
               git
               jq
-              perl # shasum in infra/deploy.sh
+              perl
               zip
               unzip
             ];
@@ -80,8 +76,6 @@
         default = pkgs.mkShellNoCC {
           packages = [ self.packages.${pkgs.stdenv.hostPlatform.system}.default ];
 
-          # Fail instead of letting `go` download a toolchain behind Nix's back.
-          # Keep in sync with .agents/nix-env.sh, which exports the same for orbs.
           GOTOOLCHAIN = "local";
           shellHook = ''
             export GOBIN="$HOME/.cache/apps-debugjois-dev/go-tools/bin"

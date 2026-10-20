@@ -60,8 +60,6 @@ type Report struct {
 // Failed is the number of entries whose dispatch failed.
 func (r Report) Failed() int { return r.Counts[StatusFailed] }
 
-// queueResponse is the subset of the queue action's response used to tell a
-// newly queued transcription from an existing one.
 type queueResponse struct {
 	TranscriptionLambdaID string `json:"transcription_lambda_id"`
 	ExistingTranscript    string `json:"existing_transcript"`

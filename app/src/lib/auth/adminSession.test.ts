@@ -10,7 +10,6 @@ import { AUTH_COOKIE_NAME } from "./config";
 
 const session = { email: "deepak.jois@gmail.com", name: "Deepak", picture: null };
 
-// A request to a private route, optionally carrying a session cookie.
 function apiEvent(cookie?: string, protocol: "http" | "https" = "https") {
   return new H3Event(
     new Request(`${protocol}://apps.debugjois.dev/api/admin/logger`, {
@@ -19,7 +18,6 @@ function apiEvent(cookie?: string, protocol: "http" | "https" = "https") {
   );
 }
 
-// Set-Cookie headers queued on the event's response.
 function issuedCookies(event: H3Event): string[] {
   return event.res.headers.getSetCookie();
 }
@@ -137,7 +135,6 @@ describe("requireAdminSession", () => {
     const event = apiEvent("expired-token");
     const verify = vi.fn().mockRejectedValue(new Error("JWT expired"));
 
-    // h3 drops the event's regular headers from error responses, so check the HTTP response itself.
     const response = await toResponse(requireAdminSession(event, verify), event);
 
     expect(response.status).toBe(401);

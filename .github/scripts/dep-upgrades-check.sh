@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Check for and apply npm dependency upgrades in a single project directory.
-#
 # Usage: dep-upgrades-check.sh <project-dir> <report-file>
 #
 # Semver ranges are bumped with npm-check-updates. Dependencies that track an
@@ -18,12 +16,10 @@ set -euo pipefail
 PROJECT_DIR="$1"
 REPORT_FILE="$2"
 
-# Ensure the report file starts empty so "no upgrades" can be detected by size.
 : >"$REPORT_FILE"
 
 cd "$PROJECT_DIR"
 
-# Names of direct dependencies whose spec is a dist-tag ending in "latest".
 mapfile -t TAGGED < <(node -e '
   const pkg = require("./package.json");
   const deps = { ...pkg.dependencies, ...pkg.devDependencies };
@@ -32,7 +28,6 @@ mapfile -t TAGGED < <(node -e '
   }
 ')
 
-# Print "<name> <locked version>" for each dist-tag dependency.
 locked_tagged_versions() {
   [ "${#TAGGED[@]}" -eq 0 ] && return 0
   node -e '
@@ -45,14 +40,11 @@ locked_tagged_versions() {
 
 TAGGED_BEFORE=$(locked_tagged_versions)
 
-# Capture human-readable upgrade report (shows package old → new).
 NCU_REPORT=$(npm-check-updates 2>/dev/null || true)
 
-# Detect whether any semver upgrades are available (empty object means none).
 UPGRADES=$(npm-check-updates --jsonUpgraded 2>/dev/null || echo '{}')
 NCU_UPDATED=false
 if [ "$UPGRADES" != '{}' ] && [ -n "$UPGRADES" ]; then
-  # Apply upgrades to package.json and refresh the lockfile.
   npm-check-updates -u
   npm install
   NCU_UPDATED=true
@@ -69,7 +61,6 @@ if [ "${#TAGGED[@]}" -gt 0 ]; then
   done
 fi
 
-# Report dist-tag dependencies whose locked version changed, as "name  old → new".
 TAGGED_REPORT=$(join <(sort <<<"$TAGGED_BEFORE") <(locked_tagged_versions | sort) |
   awk '$2 != $3 { printf " %s  %s  →  %s\n", $1, $2, $3 }')
 
@@ -78,7 +69,6 @@ if [ "$NCU_UPDATED" = "false" ] && [ -z "$TAGGED_REPORT" ]; then
   exit 0
 fi
 
-# Persist the human-readable report for the caller to aggregate into a PR body.
 {
   [ "$NCU_UPDATED" = "true" ] && printf '%s\n' "$NCU_REPORT"
   if [ -n "$TAGGED_REPORT" ]; then

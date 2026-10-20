@@ -19,13 +19,11 @@ import (
 	"github.com/deepakjois/apps.debugjois.dev/backend/transcripts"
 )
 
-// fakeObject is an in-memory S3 object used by publisher tests.
 type fakeObject struct {
 	body string
 	etag string
 }
 
-// fakeClient records writes and supports index refresh reads.
 type fakeClient struct {
 	objects map[string]fakeObject
 	puts    []*s3.PutObjectInput
@@ -68,7 +66,6 @@ func (f *fakeClient) GetObject(_ context.Context, input *s3.GetObjectInput, _ ..
 	}, nil
 }
 
-// fakeAPIError supplies the AWS error code used for missing index objects.
 type fakeAPIError struct {
 	code string
 }
@@ -130,7 +127,6 @@ func TestNewDocumentPreservesYouTubeSourceType(t *testing.T) {
 	result := testResult()
 	result.Source.Type = podscriber.SourceTypeYouTube
 	result.Source.URL = "https://www.youtube.com/watch?v=example"
-	// YouTube supplies plain text and seconds rather than HTML and a display label.
 	result.Metadata.Extra = map[string]any{"video_id": "example"}
 	result.Metadata.DurationSeconds = 3725
 	result.Metadata.Description = "Intro <b>&</b> more\r\nSee \"https://example.com/a?x=1&y=2\".\n\n\nSponsor: https://sponsor.example/deal."

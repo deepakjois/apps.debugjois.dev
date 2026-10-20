@@ -10,7 +10,6 @@ const TEST_LOCATION = `https://example.com/transcript--${TEST_HASH}.json`;
 function getSeededRouter() {
   const router = getRouter();
 
-  // Route-shape tests use local query data rather than the public transcript service.
   router.options.context.queryClient.setQueryData(
     ["transcripts", "index"],
     [{ location: TEST_LOCATION, title: "Test transcript" }],

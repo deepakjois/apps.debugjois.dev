@@ -2,7 +2,6 @@ import { queryOptions } from "@tanstack/react-query";
 
 export const TRANSCRIPT_INDEX_URL = "https://www.debugjois.dev/transcripts/transcripts.json";
 
-// Index records identify immutable transcript payloads published by the backend.
 export type TranscriptIndexItem = {
   title?: string;
   location: string;
@@ -17,7 +16,6 @@ type TranscriptSentence = {
   text?: string;
 };
 
-// Paragraph records are the display-ready speaker groups returned by Deepgram.
 export type TranscriptParagraph = {
   sentences?: TranscriptSentence[];
   speaker?: number | string | null;
@@ -42,7 +40,6 @@ type TranscriptModelInfo = Record<
   }
 >;
 
-// Transcript payloads combine Podcast Addict metadata with Deepgram output.
 export type TranscriptPayload = {
   podcast?: {
     source?: {
@@ -240,7 +237,6 @@ export function getTranscriptParagraphs(
   );
 }
 
-// Display paragraphs contain joined text and speaker-boundary metadata for rendering.
 export type TranscriptDisplayParagraph = {
   key: string;
   speaker: string | number;

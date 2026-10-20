@@ -132,8 +132,6 @@ func TestNewRequiresAPIKey(t *testing.T) {
 }
 
 func TestNewDoesNotTouchGlobalFlags(t *testing.T) {
-	// The SDK's InitWithDefault() registers klog flags on flag.CommandLine and
-	// parses os.Args, which crashes CLI binaries that accept their own flags.
 	if _, err := New("api-key"); err != nil {
 		t.Fatalf("New() error = %v", err)
 	}

@@ -1,4 +1,3 @@
-# The build script supplies the active flake Go version; there is no second pin.
 ARG GO_VERSION
 FROM golang:${GO_VERSION}-alpine AS builder
 

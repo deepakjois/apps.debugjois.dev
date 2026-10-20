@@ -37,7 +37,6 @@ func newTestService(t *testing.T, store Store) *Service {
 	}
 	service := New(store, location)
 	service.now = func() time.Time {
-		// This instant is still the previous day in UTC, but April 29 in Berlin.
 		return time.Date(2026, 4, 28, 22, 30, 0, 0, time.UTC)
 	}
 	return service

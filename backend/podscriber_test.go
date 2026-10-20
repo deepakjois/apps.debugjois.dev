@@ -27,25 +27,21 @@ import (
 	"github.com/deepakjois/apps.debugjois.dev/backend/transcripts"
 )
 
-// Literal legacy JSON pins field order, omission rules, and nested envelopes.
 const legacyPodcast = `{"source":{"input":"https://podcastaddict.com/show/episode/123","episode_url":"https://podcastaddict.com/show/episode/123"},"podcast":{"title":"A Show","url":"https://example.com/show"},"episode":{"title":"Episode Two","published_at":"2026-04-29T12:34:56.123+00:00","published_date":"2026-04-29","audio_url":"https://example.com/audio.mp3","description_html":"Notes"}}`
 const legacyWorker = `{"action":"process-podcast-transcription","podcast":` + legacyPodcast + `}`
 const typedPodcast = `{"source":{"type":"podcast_addict","input":"https://podcastaddict.com/show/episode/123","episode_url":"https://podcastaddict.com/show/episode/123"},"podcast":{"title":"A Show","url":"https://example.com/show"},"episode":{"title":"Episode Two","published_at":"2026-04-29T12:34:56.123+00:00","published_date":"2026-04-29","audio_url":"https://example.com/audio.mp3","description_html":"Notes"}}`
 const typedWorker = `{"action":"process-podcast-transcription","podcast":` + typedPodcast + `}`
 
-// roundTripFunc serves a synthetic Podcast Addict page without network access.
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 
-// invokeFunc records AWS invocation options and returns request metadata.
 type invokeFunc func(*awslambda.InvokeInput) (*awslambda.InvokeOutput, error)
 
 func (f invokeFunc) Invoke(_ context.Context, in *awslambda.InvokeInput, _ ...func(*awslambda.Options)) (*awslambda.InvokeOutput, error) {
 	return f(in)
 }
 
-// completedPublisherFunc captures portable results without AWS writes.
 type completedPublisherFunc func(context.Context, podscriber.TranscriptionResult) error
 
 func (f completedPublisherFunc) Publish(ctx context.Context, result podscriber.TranscriptionResult) error {
@@ -90,7 +86,6 @@ func TestQueueLegacyContract(t *testing.T) {
 func TestQueueRejectsUnsupportedSourcesBeforeFetching(t *testing.T) {
 	oldClient := newMinifluxClient
 	t.Cleanup(func() { newMinifluxClient = oldClient })
-	// Any request means an unsupported input reached a network fetch.
 	noNetwork := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		t.Fatalf("fetched %s for an unsupported source", r.URL)
 		return nil, nil
@@ -111,7 +106,6 @@ func TestQueueRejectsUnsupportedSourcesBeforeFetching(t *testing.T) {
 		}
 	}
 
-	// Without a token, Miniflux URLs are unsupported and the error says why.
 	t.Setenv(miniflux.TokenEnv, "")
 	newMinifluxClient = oldClient
 	_, err := handleQueuePodcastTranscription(context.Background(), queuePodcastTranscriptionRequest{Text: "https://reader.miniflux.app/starred/entry/7"})
@@ -120,9 +114,6 @@ func TestQueueRejectsUnsupportedSourcesBeforeFetching(t *testing.T) {
 	}
 }
 
-// TestQueueMinifluxStarredLoop runs queue-miniflux-starred, whose dispatcher
-// sends each entry URL back through this Lambda's queue action, then checks
-// that a published transcript is skipped on the next run.
 func TestQueueMinifluxStarredLoop(t *testing.T) {
 	fixture, err := os.ReadFile("podscriber/resolvers/miniflux/testdata/planet-money-entry.json")
 	if err != nil {
@@ -132,7 +123,6 @@ func TestQueueMinifluxStarredLoop(t *testing.T) {
 	if err := json.Unmarshal(fixture, &podcastEntry); err != nil {
 		t.Fatal(err)
 	}
-	// An article without enclosures must never be sent to the queue action.
 	article := miniflux.Entry{ID: 5, FeedID: 9, Title: "An article", URL: "https://example.com/article"}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -158,7 +148,6 @@ func TestQueueMinifluxStarredLoop(t *testing.T) {
 	newMinifluxClient = func() (*miniflux.Client, error) {
 		return miniflux.New(miniflux.Config{BaseURL: server.URL, Token: "secret"})
 	}
-	// Simulate synchronous self-invocation by dispatching the payload in-process.
 	var selfPayloads []string
 	newSelfQueueDispatcher = func(context.Context) (starred.Dispatcher, error) {
 		return starred.LambdaDispatcher(invokeFunc(func(in *awslambda.InvokeInput) (*awslambda.InvokeOutput, error) {
@@ -209,8 +198,6 @@ func TestQueueMinifluxStarredLoop(t *testing.T) {
 		t.Fatalf("queued podcast = %+v", podcast)
 	}
 
-	// Run the worker on the exact event invokeWorker sends, recording the key
-	// persistTranscript would write, so the skip check is tied to real storage.
 	workerEvent, err := json.Marshal(processPodcastTranscriptionRequest{Action: actionProcessPodcastTranscription, Podcast: podcast})
 	if err != nil {
 		t.Fatal(err)
@@ -231,8 +218,6 @@ func TestQueueMinifluxStarredLoop(t *testing.T) {
 		unstarred = append(unstarred, entryURL)
 		return errors.New("Miniflux unavailable")
 	}
-	// An unstar failure must not fail the worker, which would make AWS retry
-	// and transcribe the episode again.
 	if _, err := dispatchBackendEvent(context.Background(), workerEvent); err != nil || len(published) != 1 {
 		t.Fatalf("worker err=%v published=%v", err, published)
 	}
@@ -246,7 +231,6 @@ func TestQueueMinifluxStarredLoop(t *testing.T) {
 		t.Fatalf("second run queued=%d report=%+v", len(queued), report)
 	}
 
-	// A dry run lists the podcast entry without invoking anything.
 	newSelfQueueDispatcher = func(context.Context) (starred.Dispatcher, error) {
 		t.Fatal("dry run created a dispatcher")
 		return nil, nil
@@ -361,7 +345,6 @@ func TestInvokeWorkerErrors(t *testing.T) {
 	}
 }
 
-// transcriptStore captures document writes and simulates index refresh failure.
 type transcriptStore struct {
 	key, body string
 	listErr   error
@@ -384,7 +367,6 @@ func TestLegacyPersistenceIdentity(t *testing.T) {
 	if err := json.Unmarshal([]byte(legacyPodcast), &podcast); err != nil {
 		t.Fatal(err)
 	}
-	// Hash literal legacy bytes, not the implementation's marshaled request.
 	want := fmt.Sprintf("transcripts/a-show--episode-two--%x.json", sha256.Sum256([]byte(legacyWorker)))
 	key, err := transcriptObjectKey(actionProcessPodcastTranscription, podcast)
 	if err != nil || key != want {

@@ -11,7 +11,6 @@ token="$(amp orb id-token \
   --subject-scope project \
   --ttl-seconds "$TTL_SECONDS")"
 
-# Report the expiry slightly early so Google refreshes before Amp's token lapses.
 expires_at=$(($(date +%s) + TTL_SECONDS - 60))
 
 jq -n --arg token "$token" --argjson exp "$expires_at" '{

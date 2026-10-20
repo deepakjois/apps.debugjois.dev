@@ -13,13 +13,11 @@ import (
 	"github.com/deepakjois/apps.debugjois.dev/backend/dailylog/gdrive"
 )
 
-// postDailyLogRequest is the input carried by the post-daily-log action.
 type postDailyLogRequest struct {
 	Title    string `json:"title"`
 	Contents string `json:"contents"`
 }
 
-// dailyLogResponse is the existing base64-encoded daily-log wire format.
 type dailyLogResponse struct {
 	Title    string `json:"title"`
 	Contents string `json:"contents"`
@@ -62,7 +60,6 @@ func handlePostDailyLog(ctx context.Context, title, encodedContents string) (jso
 	if err != nil {
 		return nil, err
 	}
-	// Save the validated filename, even if Drive initialization crosses midnight.
 	if err := store.Save(ctx, title, contents); err != nil {
 		return nil, err
 	}

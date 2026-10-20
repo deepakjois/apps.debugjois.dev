@@ -6,12 +6,10 @@ import {
   type VerifyGoogleIdToken,
 } from "../../src/lib/auth/server";
 
-// Body of every /api/admin/session response; null means the browser holds no valid session.
 export type SessionResponse = {
   session: AdminSession | null;
 };
 
-// Local identity used to inspect protected pages without contacting Google.
 const developmentAdminSession: AdminSession = {
   email: "local-admin@localhost",
   name: "Local Admin",
@@ -19,15 +17,11 @@ const developmentAdminSession: AdminSession = {
 };
 
 function getDevelopmentAdminSession(): AdminSession | null {
-  // Vite replaces DEV at build time, so a production artifact cannot enable this bypass.
   return import.meta.env.DEV && process.env.DEV_ADMIN_BYPASS === "true"
     ? developmentAdminSession
     : null;
 }
 
-// The one implementation of the session rule. The cookie carries Google's signed ID token, which
-// is re-verified on every request; a cookie whose token no longer verifies (expired, allowlist
-// change, tampering) is expired on this response so the browser stops sending it.
 export async function readAdminSession(
   event: H3Event,
   verify: VerifyGoogleIdToken = verifyGoogleIdToken,
@@ -50,7 +44,6 @@ export async function readAdminSession(
   }
 }
 
-// Verifies a Google credential and issues it as the session cookie on this response.
 export async function createAdminSession(
   event: H3Event,
   credential: string,
@@ -58,8 +51,6 @@ export async function createAdminSession(
 ): Promise<AdminSession> {
   const session = await verify(credential);
 
-  // srvx already resolves the scheme (https behind API Gateway, the socket locally), and browsers
-  // drop a Secure cookie issued over local http.
   setCookie(event, AUTH_COOKIE_NAME, credential, {
     ...ADMIN_SESSION_COOKIE,
     secure: event.url.protocol === "https:",
@@ -68,12 +59,10 @@ export async function createAdminSession(
   return session;
 }
 
-// Expires the session cookie; h3 forces Max-Age=0 and keeps the shared path.
 export function clearAdminSession(event: H3Event): void {
   deleteCookie(event, AUTH_COOKIE_NAME, ADMIN_SESSION_COOKIE);
 }
 
-// Every private Nitro route calls this first; a missing or stale cookie fails the request with 401.
 export async function requireAdminSession(
   event: H3Event,
   verify?: VerifyGoogleIdToken,
