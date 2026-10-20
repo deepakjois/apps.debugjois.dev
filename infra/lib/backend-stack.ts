@@ -1,4 +1,5 @@
 import * as cdk from "aws-cdk-lib";
+import * as events from "aws-cdk-lib/aws-events";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as s3 from "aws-cdk-lib/aws-s3";
@@ -79,6 +80,37 @@ export class AppDebugJoisDevBackendStack extends cdk.Stack {
           resources: [backendLambda.attrArn],
         }),
       ],
+    });
+
+    // Daily run of queue-miniflux-starred. The constant target input replaces
+    // the EventBridge event, so the Lambda sees a plain direct-invocation
+    // payload. EventBridge rule cron is UTC-only: 04:00 UTC is 05:00 Berlin in
+    // winter (CET) and 06:00 in summer (CEST).
+    const queueMinifluxStarredRule = new events.CfnRule(
+      this,
+      "QueueMinifluxStarredRule",
+      {
+        description:
+          "Queue starred Miniflux podcast entries for transcription once a day",
+        scheduleExpression: "cron(0 4 * * ? *)",
+        state: "ENABLED",
+        targets: [
+          {
+            arn: backendLambda.attrArn,
+            id: "BackendLambda",
+            input: JSON.stringify({ action: "queue-miniflux-starred" }),
+          },
+        ],
+      },
+    );
+
+    // Resource-based permission letting only that rule invoke the Lambda, so
+    // EventBridge needs no IAM role.
+    new lambda.CfnPermission(this, "QueueMinifluxStarredRuleInvokePermission", {
+      action: "lambda:InvokeFunction",
+      functionName: backendLambda.attrArn,
+      principal: "events.amazonaws.com",
+      sourceArn: queueMinifluxStarredRule.attrArn,
     });
 
     new cdk.CfnOutput(this, "LambdaFunctionArn", {

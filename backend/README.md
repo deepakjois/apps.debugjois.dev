@@ -244,7 +244,9 @@ function. Successful worker and completed-result actions always publish;
 publishing failures fail the invocation so AWS can retry. The Lambda preserves
 the deployed reader-compatible document format and object identity.
 
-Queue starred Miniflux episodes from the deployed function (this writes to
+The backend stack runs this action daily at 04:00 UTC through an EventBridge
+rule (see the infra README). Queue starred Miniflux episodes
+manually from the deployed function (this writes to
 AWS; use `{"action":"queue-miniflux-starred","dry_run":true}` to preview):
 
 ```bash

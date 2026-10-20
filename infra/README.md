@@ -9,7 +9,7 @@ This CDK app is used only to synthesize CloudFormation templates. It uses `Legac
 - `AppsDebugJoisDevAccessStack` in `us-west-2` manages the dedicated CloudFormation service role and the GitHub Actions OIDC role used by this repo.
 - `AppsDebugJoisDevArtifactStack` in `us-west-2` creates the versioned S3 bucket for Lambda artifacts and the ECR repository for backend images.
 - `AppsDebugJoisDevCertificateStack` in `us-east-1` creates the ACM certificate for `apps.debugjois.dev`.
-- `AppDebugJoisDevBackendStack` in `us-west-2` creates the Go backend Lambda and Deepgram API key secret.
+- `AppDebugJoisDevBackendStack` in `us-west-2` creates the Go backend Lambda, Deepgram API key secret, and the daily EventBridge rule that queues starred Miniflux entries.
 - `AppsDebugJoisDevSiteStack` in `us-west-2` creates the static asset bucket, Lambda, API Gateway, CloudFront distribution, and Route53 records.
 
 # Getting Started
@@ -107,6 +107,8 @@ aws secretsmanager create-secret \
 ```
 
 Rotate it with `aws secretsmanager put-secret-value --secret-id apps-debugjois-dev/miniflux-api-token --secret-string '...'`, then redeploy the backend stack to refresh the Lambda environment variable.
+
+An EventBridge rule (`QueueMinifluxStarredRule`) invokes the backend Lambda asynchronously every day at 04:00 UTC (05:00 Berlin in winter, 06:00 in summer; rule cron expressions are UTC-only) with `{"action":"queue-miniflux-starred"}`. A Lambda resource-based permission scoped to that rule's ARN authorizes the call, so no IAM role is needed. Already-published episodes are skipped, so repeated runs are harmless. Pause it with `aws events disable-rule --name <rule-name>` or change `scheduleExpression` in `lib/backend-stack.ts`.
 
 The backend Lambda execution role has the stable name `apps-debugjois-dev-backend-lambda-role` so GCP Workload Identity Federation can trust it by role subject.
 
