@@ -1,18 +1,33 @@
-# infra
+# Infrastructure
 
-Bootstrap-free AWS infrastructure for `apps.debugjois.dev` with no dependency on the `CdkToolkit` stack.
+AWS CDK stacks for `apps.debugjois.dev`, deployed without CDK bootstrap and
+with no dependency on the `CdkToolkit` stack.
 
-This CDK app is used only to synthesize CloudFormation templates. It uses `LegacyStackSynthesizer` so the generated cloud assembly does not assume the existence of CDK bootstrap roles, bootstrap buckets, or the `CdkToolkit` stack. Deployments are handled by `infra/deploy.sh`, which uses `aws cloudformation deploy`, `aws s3 sync`, and `aws cloudfront create-invalidation` directly.
+The CDK app synthesizes CloudFormation templates with `NoAssumeRoleSynthesizer`
+in `lib/no-assume-role-synthesizer.ts`, a `BootstraplessSynthesizer` subclass.
+The cloud assembly names no bootstrap roles or buckets, so `cdk deploy` runs
+with the caller's credentials. For every stack except the access stack, the
+synthesizer also tells CloudFormation to execute with the dedicated service
+role that the access stack creates. `deploy.sh` runs the `cdk deploy` calls in
+order, passes stack outputs to later stacks as parameters, uploads the Lambda
+artifact with `aws s3api put-object`, syncs static assets with `aws s3 sync`,
+and clears the cache with `aws cloudfront create-invalidation`. CDK-managed
+assets are not used.
 
-# Stacks
+## Stacks
 
-- `AppsDebugJoisDevAccessStack` in `us-west-2` manages the dedicated CloudFormation service role and the GitHub Actions OIDC role used by this repo.
-- `AppsDebugJoisDevArtifactStack` in `us-west-2` creates the versioned S3 bucket for Lambda artifacts and the ECR repository for backend images.
-- `AppsDebugJoisDevCertificateStack` in `us-east-1` creates the ACM certificate for `apps.debugjois.dev`.
-- `AppDebugJoisDevBackendStack` in `us-west-2` creates the Go backend Lambda, Deepgram API key secret, and the daily EventBridge rule that queues starred Miniflux entries.
-- `AppsDebugJoisDevSiteStack` in `us-west-2` creates the static asset bucket, Lambda, API Gateway, CloudFront distribution, and Route53 records.
+| Stack                              | Region      | Creates                                                                                                            |
+| ---------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------ |
+| `AppsDebugJoisDevAccessStack`      | `us-west-2` | The CloudFormation service role and the GitHub Actions OIDC role for this repo's `main` branch                     |
+| `AppsDebugJoisDevArtifactStack`    | `us-west-2` | The versioned S3 bucket for Lambda zip artifacts and the ECR repository for backend images                         |
+| `AppsDebugJoisDevCertificateStack` | `us-east-1` | The ACM certificate for `apps.debugjois.dev`                                                                       |
+| `AppDebugJoisDevBackendStack`      | `us-west-2` | The Go backend Lambda, its role, the Deepgram API key secret, and the daily EventBridge rule for Miniflux          |
+| `AppsDebugJoisDevSiteStack`        | `us-west-2` | The static asset bucket, the Nitro Lambda, API Gateway, CloudFront, Route53 records, and the LinkPreview secret    |
 
-# Getting Started
+The GitHub OIDC identity provider is managed outside the access stack, because
+an AWS account allows one provider per issuer. The stack references it by ARN.
+
+## Getting started
 
 Enter the [repository Nix environment](../README.md#development-environment),
 then install locked dependencies from `infra/`:
@@ -21,9 +36,9 @@ then install locked dependencies from `infra/`:
 npm ci
 ```
 
-The CDK CLI is a local dev dependency used by npm scripts and `deploy.sh`;
-do not install a separate global copy. AWS CLI comes from the flake. Docker
-with buildx is required separately only for backend container builds.
+The CDK CLI is a local dev dependency used by the npm scripts and `deploy.sh`.
+Do not install a global copy. The AWS CLI comes from the flake. Docker with
+buildx is needed separately, and only for backend container builds.
 
 Synthesize all CloudFormation templates:
 
@@ -31,17 +46,23 @@ Synthesize all CloudFormation templates:
 npm run synth
 ```
 
-The CDK app command (`cdk.json`) runs `tsc` to type-check, then executes `bin/infra.ts` with [tsx](https://tsx.is/), matching the TypeScript template from `cdk init`. `ts-node` is not used because it is incompatible with TypeScript 7. `npm run build` only type-checks; it emits no files.
+The CDK app command in `cdk.json` runs `tsc` to type-check, then runs
+`bin/infra.ts` with [tsx](https://tsx.is/), matching the TypeScript template
+from `cdk init`. `ts-node` is not used because it is incompatible with
+TypeScript 7. `npm run build` only type-checks and emits no files.
 
-# Deploy
+## Deploy
 
-Default deploy reuses the currently deployed Lambda artifact and only updates infrastructure:
+Every form of `deploy.sh` writes to AWS. Run from `infra/`.
+
+The default deploy reuses the deployed Lambda artifact and backend image and
+updates only infrastructure:
 
 ```bash
 ./deploy.sh
 ```
 
-To build, package, upload, and deploy a new frontend Lambda artifact as part of the deploy:
+To build, package, upload, and deploy a new frontend Lambda artifact:
 
 ```bash
 ./deploy.sh --with-artifact
@@ -53,7 +74,7 @@ To build, push, and deploy a new backend Lambda container image:
 ./deploy.sh --with-backend-image
 ```
 
-The flags can be combined when both app and backend code changed:
+Combine the flags when both app and backend code changed:
 
 ```bash
 ./deploy.sh --with-artifact --with-backend-image
@@ -62,41 +83,71 @@ The flags can be combined when both app and backend code changed:
 The script always:
 
 1. synthesizes the CDK templates during each stack deploy
-2. deploys the access, artifact bucket/ECR, and certificate stacks
-3. deploys the backend stack when a new backend image is requested or an existing backend stack can reuse its current image
-4. deploys the site stack
+2. deploys the access, artifact, and certificate stacks
+3. deploys the backend stack, with a new image when requested or with the image
+   the existing backend stack already runs
+4. deploys the site stack, passing it the backend Lambda function name
 
-When `--with-artifact` is passed, the script also:
+With `--with-artifact`, the script also:
 
 1. builds the app in `../app`
 2. packages `../app/.output/` into `../app/artifacts/lambda-package.zip`
 3. hashes the zip bytes
-4. uploads the artifact to the versioned artifact bucket using a key like `lambda/app-debugjois-dev-<hash>.zip`
-5. passes the uploaded object's S3 version ID into the site stack deploy
+4. uploads the artifact to the versioned artifact bucket under a key like
+   `lambda/app-debugjois-dev-<hash>.zip`, or reuses the object if that key
+   already exists
+5. passes the object's S3 version ID into the site stack deploy
 6. syncs `../app/.output/public` into the static asset bucket
 7. invalidates the CloudFront distribution
 
-Without `--with-artifact`, the script reuses the existing `ArtifactObjectKey` and `ArtifactObjectVersion` from `AppsDebugJoisDevSiteStack`. Without `--with-backend-image`, the script reuses the backend Lambda image currently deployed in `AppDebugJoisDevBackendStack`; if that stack does not exist yet, deployment stops and you must rerun with `--with-backend-image`.
+Without `--with-artifact`, the script reuses the `ArtifactObjectKey` and
+`ArtifactObjectVersion` parameters of `AppsDebugJoisDevSiteStack`. Without
+`--with-backend-image`, it reuses the image the backend Lambda currently runs.
+If the backend stack does not exist yet, the deploy stops. Rerun with
+`--with-backend-image`.
 
-# Routing
+## Routing
 
-CloudFront is configured as follows:
+CloudFront routes requests as follows:
 
-- `/assets/*` goes to the static asset S3 bucket
-- `/favicon.ico` goes to the static asset S3 bucket
-- `/logo192.png` goes to the static asset S3 bucket
-- `/logo512.png` goes to the static asset S3 bucket
-- `/manifest.json` goes to the static asset S3 bucket
-- `/robots.txt` goes to the static asset S3 bucket
-- all other paths go to API Gateway and then Lambda
+- `/assets/*`, `/favicon.ico`, `/logo192.png`, `/logo512.png`,
+  `/manifest.json`, and `/robots.txt` go to the static asset S3 bucket.
+- All other paths go to API Gateway and then the Nitro Lambda.
 
-All behaviors use CloudFront's native `redirect-to-https` policy.
+All behaviors redirect HTTP to HTTPS. The API Gateway behavior uses a custom
+cache policy that honors the origin's `Cache-Control` header, keys the cache by
+path and query string, and forwards no headers. The managed policy forwards
+`host`, which makes API Gateway reject the request.
 
-# Backend Lambda
+## Backend Lambda
 
-`AppDebugJoisDevBackendStack` deploys the Go backend as a Lambda container image with no API Gateway. It supports direct Lambda invocation actions such as `get-daily-log`, `post-daily-log`, `queue-podcast-transcription`, `queue-miniflux-starred`, and `process-podcast-transcription`. The backend Lambda receives `DEEPGRAM_API_KEY` through a CloudFormation Secrets Manager dynamic reference to the `apps-debugjois-dev/deepgram-api-key` secret and `MINIFLUX_API_TOKEN` from the `apps-debugjois-dev/miniflux-api-token` secret, writes transcripts to the existing `debugjois-dev-site` transcript bucket, and uses Google Drive for daily-log load/save actions.
+`AppDebugJoisDevBackendStack` deploys the Go backend as a Lambda container
+image with no API Gateway. The app and the CLIs invoke it directly. The
+[backend README](../backend/README.md#direct-invocation-actions) lists the
+actions.
 
-The Miniflux secret is not created by the stack: a stack-created secret would still be empty when the Lambda's dynamic reference resolves on first deploy. Create it once before deploying the backend stack (deploys fail while it is missing):
+The Lambda receives `DEEPGRAM_API_KEY` and `MINIFLUX_API_TOKEN` through
+CloudFormation Secrets Manager dynamic references, writes transcripts to the
+existing `debugjois-dev-site` bucket, and uses Google Drive for the daily-log
+actions.
+
+### Secrets
+
+The stack creates the retained `apps-debugjois-dev/deepgram-api-key` secret
+with no value. Set it, then redeploy the backend stack so the Lambda
+environment picks it up:
+
+```bash
+aws secretsmanager put-secret-value \
+  --region us-west-2 \
+  --secret-id apps-debugjois-dev/deepgram-api-key \
+  --secret-string 'your-deepgram-api-key'
+```
+
+The stack does not create the Miniflux secret. A stack-created secret would
+still be empty when the Lambda's dynamic reference resolves on first deploy.
+Create it once before the first backend deploy. Deploys fail while it is
+missing:
 
 ```bash
 aws secretsmanager create-secret \
@@ -106,15 +157,32 @@ aws secretsmanager create-secret \
   --secret-string 'your-miniflux-api-token'
 ```
 
-Rotate it with `aws secretsmanager put-secret-value --secret-id apps-debugjois-dev/miniflux-api-token --secret-string '...'`, then redeploy the backend stack to refresh the Lambda environment variable.
+Rotate it with
+`aws secretsmanager put-secret-value --secret-id apps-debugjois-dev/miniflux-api-token --secret-string '...'`,
+then redeploy the backend stack.
 
-An EventBridge rule (`QueueMinifluxStarredRule`) invokes the backend Lambda asynchronously every day at 04:00 UTC (05:00 Berlin in winter, 06:00 in summer; rule cron expressions are UTC-only) with `{"action":"queue-miniflux-starred"}`. A Lambda resource-based permission scoped to that rule's ARN authorizes the call, so no IAM role is needed. Already-published episodes are skipped, so repeated runs are harmless. Pause it with `aws events disable-rule --name <rule-name>` or change `scheduleExpression` in `lib/backend-stack.ts`.
+### Daily Miniflux run
 
-The backend Lambda execution role has the stable name `apps-debugjois-dev-backend-lambda-role` so GCP Workload Identity Federation can trust it by role subject.
+The EventBridge rule `QueueMinifluxStarredRule` invokes the backend Lambda
+asynchronously every day at 04:00 UTC with `{"action":"queue-miniflux-starred"}`.
+That is 05:00 in Berlin in winter and 06:00 in summer, because rule cron
+expressions are UTC-only. A Lambda resource-based permission scoped to the
+rule's ARN authorizes the call, so EventBridge needs no IAM role. Episodes that
+already have a transcript are skipped, so repeated runs are harmless.
 
-The backend image bundles a non-secret Google external-account credential config at `/gcp-credentials.json`. The backend stack sets `GOOGLE_APPLICATION_CREDENTIALS=/gcp-credentials.json`; no Google service-account key is stored in AWS.
+Pause the rule with `aws events disable-rule --name <rule-name>`, or change
+`scheduleExpression` in `lib/backend-stack.ts`.
 
-Enable the GCP-side trust for the stable backend Lambda role with:
+### Google Drive federation
+
+The backend Lambda execution role has the stable name
+`apps-debugjois-dev-backend-lambda-role` so that GCP Workload Identity
+Federation can trust it by subject. The backend image bundles the non-secret
+external-account config at `/gcp-credentials.json`, and the stack sets
+`GOOGLE_APPLICATION_CREDENTIALS=/gcp-credentials.json`. No Google
+service-account key is stored in AWS.
+
+Grant the GCP-side trust for that role with:
 
 ```bash
 gcloud iam service-accounts add-iam-policy-binding \
@@ -124,13 +192,18 @@ gcloud iam service-accounts add-iam-policy-binding \
   --member='principal://iam.googleapis.com/projects/1016117555218/locations/global/workloadIdentityPools/github-actions-pool/subject/apps-debugjois-dev-backend-lambda-role'
 ```
 
-The deploy script passes the backend Lambda function name into the site stack. The site stack sets `BACKEND_LAMBDA_FUNCTION_NAME` on the Nitro Lambda and grants that role `lambda:InvokeFunction` on the backend Lambda ARN derived from that function name.
+### Site to backend
 
-# Notes
+The deploy script passes the backend Lambda function name into the site stack.
+The site stack sets `BACKEND_LAMBDA_FUNCTION_NAME` on the Nitro Lambda and
+grants its role `lambda:InvokeFunction` on the backend Lambda ARN derived from
+that name.
 
-- The hosted zone is `debugjois.dev`.
-- The app domain is `apps.debugjois.dev`.
-- The site stack creates the retained `apps-debugjois-dev/linkpreview-api-key` Secrets Manager secret for logger URL title fetching. Set or rotate the value with:
+## Notes
+
+- The hosted zone is `debugjois.dev`. The app domain is `apps.debugjois.dev`.
+- The site stack creates the retained `apps-debugjois-dev/linkpreview-api-key`
+  secret for the logger's URL title lookup. Set or rotate it with:
 
   ```bash
   aws secretsmanager put-secret-value \
@@ -139,10 +212,13 @@ The deploy script passes the backend Lambda function name into the site stack. T
     --secret-string 'your-linkpreview-api-key'
   ```
 
-  Redeploy the site stack after changing the secret value so the Lambda environment variable is refreshed from the versionless CloudFormation dynamic reference.
+  Redeploy the site stack afterward. The Lambda environment variable comes
+  from a versionless dynamic reference, so it refreshes only on deploy.
 
-- Frontend Lambda artifacts are stored in a versioned S3 bucket and the site stack is deployed with both the object key and object version.
-- Backend Lambda images are stored in the `apps-debugjois-dev-backend` ECR repository and the backend stack is deployed with a digest-pinned image URI.
-- Static frontend assets are uploaded outside CloudFormation by `infra/deploy.sh --with-artifact`.
-- CDK-managed assets are intentionally not used in this app. Lambda artifacts and static assets are published explicitly by `infra/deploy.sh`.
-- ArtifactStack updates explicitly use the CloudFormation service role exported by `AppsDebugJoisDevAccessStack` so they do not depend on bootstrap execution roles.
+- Frontend Lambda artifacts live in a versioned S3 bucket. The site stack is
+  deployed with both the object key and the object version.
+- Backend Lambda images live in the `apps-debugjois-dev-backend` ECR
+  repository, which keeps the five most recent images. The backend stack is
+  deployed with a digest-pinned image URI.
+- `infra/deploy.sh --with-artifact` uploads static frontend assets outside
+  CloudFormation.
