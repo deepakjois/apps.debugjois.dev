@@ -8,7 +8,9 @@ Components. Run the commands below from `app/` unless noted.
 
 - `/transcript-reader` lists the 50 latest public transcripts from
   `www.debugjois.dev`. Each links to a `?t=<hash>` permalink that loads that
-  transcript. It needs no credentials and no backend. `/` redirects here.
+  transcript. Transcripts marked `archived` in the index are hidden behind a
+  Show archived toggle, which sets `?archived=true`. Their permalinks still
+  work. It needs no credentials and no backend. `/` redirects here.
 - `/admin/logger` edits today's Berlin-date Markdown note in Google Drive.
 - `/admin/podscriber` queues podcast transcriptions from Podcast Addict share
   text or Miniflux entry URLs. `/admin` redirects to the logger.

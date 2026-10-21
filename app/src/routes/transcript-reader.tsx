@@ -10,11 +10,13 @@ import {
 
 type TranscriptReaderSearch = {
   t?: string;
+  archived?: true;
 };
 
 export const Route = createFileRoute("/transcript-reader")({
   validateSearch: (search: Record<string, unknown>): TranscriptReaderSearch => ({
     t: normalizeTranscriptHash(search.t),
+    archived: search.archived === true || search.archived === "true" ? true : undefined,
   }),
   pendingComponent: TranscriptReaderPending,
   pendingMinMs: 200,
@@ -41,11 +43,16 @@ export const Route = createFileRoute("/transcript-reader")({
 
 function TranscriptReaderRoute() {
   const loaderData = Route.useLoaderData();
+  const { archived } = Route.useSearch();
 
   return "transcript" in loaderData ? (
     <TranscriptReader transcript={loaderData.transcript} />
   ) : (
-    <TranscriptList transcriptList={loaderData.transcriptList} />
+    <TranscriptList
+      archivedTranscriptList={loaderData.archivedTranscriptList}
+      showArchived={archived === true}
+      transcriptList={loaderData.transcriptList}
+    />
   );
 }
 

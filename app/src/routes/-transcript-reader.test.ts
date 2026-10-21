@@ -17,12 +17,20 @@ function locationFor(index: number) {
   return `https://example.com/episode-${index}--${index.toString(16).padStart(4, "0").padEnd(64, "f")}.json`;
 }
 
+const EPISODES: TranscriptIndexItem[] = Array.from({ length: 60 }, (_, index) => ({
+  location: locationFor(index + 1),
+  title: `Episode ${index + 1}`,
+}));
+const ARCHIVED: TranscriptIndexItem = {
+  location: locationFor(0xabc),
+  title: "Archived",
+  archived: true,
+};
 const INDEX: TranscriptIndexItem[] = [
   { location: "https://example.com/not-addressed.json", title: "Unlinkable" },
-  ...Array.from({ length: 60 }, (_, index) => ({
-    location: locationFor(index + 1),
-    title: `Episode ${index + 1}`,
-  })),
+  ARCHIVED,
+  { location: "https://example.com/archived-unlinkable.json", archived: true },
+  ...EPISODES,
 ];
 const TRANSCRIPT_2: TranscriptPayload = { podcast: { episode: { title: "Episode 2" } } };
 
@@ -40,14 +48,18 @@ afterEach(() => {
 });
 
 describe("transcript reader loader", () => {
-  it("lists the 50 latest linkable transcripts without fetching any transcript", async () => {
+  it("lists the 50 latest linkable transcripts apart from archived ones without fetching any transcript", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
     const loaderData = await loadTranscriptReaderData(queryClientWith(INDEX), undefined);
 
     expect(fetchMock).not.toHaveBeenCalled();
-    expect("transcriptList" in loaderData && loaderData.transcriptList).toEqual(INDEX.slice(1, 51));
+    expect(loaderData).toEqual({
+      transcriptList: EPISODES.slice(0, 50),
+      archivedTranscriptList: [ARCHIVED],
+      pageTitle: "Transcript Reader",
+    });
     expect(getTranscriptReaderCacheHeaders(loaderData)).toEqual({ "Cache-Control": SHORT_CACHE });
   });
 
@@ -111,6 +123,10 @@ describe("transcript reader loader", () => {
   it("renders the empty index state", async () => {
     const loaderData = await loadTranscriptReaderData(queryClientWith([]), undefined);
 
-    expect(loaderData).toEqual({ transcriptList: [], pageTitle: "Transcript Reader" });
+    expect(loaderData).toEqual({
+      transcriptList: [],
+      archivedTranscriptList: [],
+      pageTitle: "Transcript Reader",
+    });
   });
 });

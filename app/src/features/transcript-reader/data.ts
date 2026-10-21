@@ -6,6 +6,7 @@ export type TranscriptIndexItem = {
   title?: string;
   location: string;
   date?: string;
+  archived?: boolean;
 };
 
 type TranscriptIndexResponse = {

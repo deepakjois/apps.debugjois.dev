@@ -135,6 +135,56 @@
   color: var(--tr-text-dim);
 }
 
+.archived-transcripts {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--tr-border);
+}
+
+.archived-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--tr-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tr-text-dim);
+  text-decoration: none;
+}
+
+.archived-toggle::before {
+  content: "+";
+  font-size: 15px;
+  line-height: 1;
+  color: var(--tr-accent);
+}
+
+.archived-toggle[aria-expanded="true"]::before {
+  content: "−";
+}
+
+.archived-toggle:hover,
+.archived-toggle:focus-visible {
+  color: var(--tr-text-bright);
+  outline: none;
+}
+
+.archived-count {
+  font-weight: 500;
+  letter-spacing: 0;
+  opacity: 0.7;
+}
+
+.transcript-list-archived {
+  margin-top: 8px;
+}
+
+.transcript-list-archived .transcript-list-title {
+  color: var(--tr-text);
+}
+
 .podcast-name {
   margin-bottom: 16px;
   font-family: var(--tr-sans);

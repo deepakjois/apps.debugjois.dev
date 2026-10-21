@@ -10,7 +10,11 @@ import {
 import type { TranscriptIndexItem, TranscriptPayload } from "../features/transcript-reader/data";
 
 export type TranscriptReaderLoaderData =
-  | { transcriptList: TranscriptIndexItem[]; pageTitle: string }
+  | {
+      transcriptList: TranscriptIndexItem[];
+      archivedTranscriptList: TranscriptIndexItem[];
+      pageTitle: string;
+    }
   | { transcript: TranscriptPayload; pageTitle: string };
 
 type TranscriptReaderCacheHeaders = {
@@ -40,9 +44,12 @@ export async function loadTranscriptReaderData(
   const transcriptList = await queryClient.ensureQueryData(transcriptIndexQueryOptions());
 
   if (!requestedHash) {
+    const linkable = transcriptList.filter((item) => canonicalHashForTranscript(item));
+
     return {
-      transcriptList: transcriptList
-        .filter((item) => canonicalHashForTranscript(item))
+      transcriptList: linkable.filter((item) => !item.archived).slice(0, TRANSCRIPT_LIST_LIMIT),
+      archivedTranscriptList: linkable
+        .filter((item) => item.archived)
         .slice(0, TRANSCRIPT_LIST_LIMIT),
       pageTitle: "Transcript Reader",
     };
