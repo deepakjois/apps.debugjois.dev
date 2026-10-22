@@ -1,6 +1,15 @@
 name: Toolchain Validation
 
 on:
+  pull_request:
+    paths:
+      - "flake.nix"
+      - "flake.lock"
+      - ".agents/**"
+      - "scripts/install-go-tools.sh"
+      - ".github/actions/**"
+      - ".github/scripts/setup-ci.sh"
+      - ".github/workflows/**"
   push:
     branches: [main]
     paths:
