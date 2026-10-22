@@ -116,14 +116,16 @@ stay GitHub Actions responsibilities.
 | Workflow                   | Trigger                                                     | Effect                                                  |
 | -------------------------- | ----------------------------------------------------------- | ------------------------------------------------------- |
 | App Test and Deploy        | Push to `main` touching `app/`                              | `infra/deploy.sh --with-artifact`                       |
-| Backend Test and Deploy    | Push to `main` touching `backend/`                          | `infra/deploy.sh --with-backend-image`                  |
+| Backend Test and Deploy    | Push to `main` touching `backend/` or the flake             | `infra/deploy.sh --with-backend-image`                  |
 | Infra Build                | Push to `main` touching `infra/`                            | Type-check and synth only                               |
 | Infra Deploy               | Manual                                                      | `infra/deploy.sh` reusing the deployed artifacts        |
-| Toolchain Validation       | Changes to the flake, `.agents/`, actions, or workflows     | `nix flake check` plus all three component check suites |
-| Backend Go Vulnerability   | PRs touching `backend/` and daily                           | `govulncheck ./...`                                     |
+| Toolchain Validation       | Push to `main` touching the flake, `.agents/`, or workflows | `nix flake check` plus all three component check suites |
+| Backend Go Vulnerability   | Daily                                                       | `govulncheck ./...`                                     |
 | Dependency Upgrades        | Weekly                                                      | PR bumping npm dependencies in `app/` and `infra/`      |
 | Go Dependency Upgrades     | Weekly                                                      | PR bumping Go minor and patch versions                  |
 | Go Major Version Upgrades  | Weekly                                                      | Tracking issue listing available Go major versions      |
 
 The deploy workflows share one concurrency group, so deploys run one at a time.
-Pull requests never deploy or write to production.
+A flake change redeploys the backend because the image is built with the
+flake's Go. The app Lambda runs on the AWS-managed Node runtime, so it does not
+redeploy.

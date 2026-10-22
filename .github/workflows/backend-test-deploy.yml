@@ -6,6 +6,8 @@ on:
     branches: [main]
     paths:
       - "backend/**"
+      - "flake.nix"
+      - "flake.lock"
       - ".github/workflows/backend-test-deploy.yml"
       - ".github/actions/backend-go-lint-test-build/**"
 
