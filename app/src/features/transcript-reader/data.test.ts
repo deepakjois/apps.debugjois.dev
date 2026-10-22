@@ -4,6 +4,7 @@ import {
   extractFullHash,
   findTranscriptByHashPrefix,
   formatTranscriptDate,
+  getTranscriptDescription,
   getTranscriptDisplayParagraphs,
   getTranscriptPageTitle,
   normalizeTranscriptHash,
@@ -92,5 +93,36 @@ describe("transcript display data", () => {
         showSpeaker: true,
       },
     ]);
+  });
+
+  it("describes an episode by its byline and a plain-text show-notes excerpt", () => {
+    const sentence = "Matt &amp; Lucas discuss Netflix&#8217;s &lt;new&gt; era. ";
+    const payload: TranscriptPayload = {
+      podcast: {
+        podcast: { title: "The Town" },
+        episode: {
+          published_date: "2026-10-20",
+          duration: "37 mins",
+          description_html: `<p>${sentence.repeat(6)}</p><p>Host: Matt</p>`,
+        },
+      },
+    };
+
+    const description = getTranscriptDescription(payload);
+    const [byline, excerpt] = description.split(" — ");
+
+    expect(byline).toBe("The Town · October 20, 2026 · 37 mins");
+    expect(excerpt.startsWith("Matt & Lucas discuss Netflix\u2019s <new> era. Matt & Lucas")).toBe(
+      true,
+    );
+    expect(excerpt.endsWith("…")).toBe(true);
+    expect(excerpt.length).toBeLessThanOrEqual(200);
+    expect(excerpt).not.toMatch(/\s…$|Host/);
+    expect(
+      getTranscriptDescription({
+        podcast: { episode: { description_html: "<p>Short&nbsp;notes.</p>" } },
+      }),
+    ).toBe("Short notes.");
+    expect(getTranscriptDescription({})).toBe("Podcast episode transcript.");
   });
 });

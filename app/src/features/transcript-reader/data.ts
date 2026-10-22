@@ -185,6 +185,56 @@ export function getTranscriptPageTitle(transcript: TranscriptPayload | null | un
   return title === "Transcript Reader" ? title : `${title} | Transcript Reader`;
 }
 
+const HTML_ENTITIES: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+};
+const DESCRIPTION_MAX_LENGTH = 200;
+
+function htmlToText(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&#(x?)([0-9a-f]+);/gi, (entity, hex: string, digits: string) => {
+      const codePoint = Number.parseInt(digits, hex ? 16 : 10);
+      return codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : entity;
+    })
+    .replace(/&([a-z]+);/gi, (entity, name: string) => HTML_ENTITIES[name.toLowerCase()] ?? entity)
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function truncateAtWord(text: string, maxLength: number): string {
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  const cut = text.slice(0, maxLength - 1);
+  const lastSpace = cut.lastIndexOf(" ");
+
+  return `${(lastSpace > maxLength / 2 ? cut.slice(0, lastSpace) : cut).replace(/[\s,;:.]+$/, "")}…`;
+}
+
+export function getTranscriptDescription(transcript: TranscriptPayload | null | undefined): string {
+  const episode = transcript?.podcast?.episode;
+  const byline = [
+    transcript?.podcast?.podcast?.title,
+    formatTranscriptDate(episode?.published_date),
+    episode?.duration,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const showNotes = truncateAtWord(
+    htmlToText(episode?.description_html ?? ""),
+    DESCRIPTION_MAX_LENGTH,
+  );
+
+  return [byline, showNotes].filter(Boolean).join(" — ") || "Podcast episode transcript.";
+}
+
 export function getTranscriptParagraphs(
   transcript: TranscriptPayload | null | undefined,
 ): TranscriptParagraph[] {

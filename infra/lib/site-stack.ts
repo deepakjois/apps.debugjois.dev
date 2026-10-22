@@ -164,10 +164,11 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
 
     const staticBehaviors: Record<string, cloudfront.BehaviorOptions> = {
       "/assets/*": createStaticBehavior(staticOrigin),
+      "/icons/*": createStaticBehavior(staticOrigin),
       "/favicon.ico": createStaticBehavior(staticOrigin),
-      "/logo192.png": createStaticBehavior(staticOrigin),
-      "/logo512.png": createStaticBehavior(staticOrigin),
-      "/manifest.json": createStaticBehavior(staticOrigin),
+      "/favicon.svg": createStaticBehavior(staticOrigin),
+      "/apple-touch-icon.png": createStaticBehavior(staticOrigin),
+      "/manifest.webmanifest": createStaticBehavior(staticOrigin),
       "/robots.txt": createStaticBehavior(staticOrigin),
     };
 

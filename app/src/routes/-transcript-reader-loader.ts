@@ -3,19 +3,27 @@ import { redirect } from "@tanstack/react-router";
 import {
   canonicalHashForTranscript,
   findTranscriptByHashPrefix,
+  getTranscriptDescription,
   getTranscriptPageTitle,
   transcriptIndexQueryOptions,
   transcriptQueryOptions,
 } from "../features/transcript-reader/data";
 import type { TranscriptIndexItem, TranscriptPayload } from "../features/transcript-reader/data";
 
-export type TranscriptReaderLoaderData =
-  | {
-      transcriptList: TranscriptIndexItem[];
-      archivedTranscriptList: TranscriptIndexItem[];
-      pageTitle: string;
-    }
-  | { transcript: TranscriptPayload; pageTitle: string };
+type PageMeta = {
+  pageTitle: string;
+  pageDescription: string;
+  pagePath: string;
+};
+
+export type TranscriptReaderLoaderData = PageMeta &
+  (
+    | {
+        transcriptList: TranscriptIndexItem[];
+        archivedTranscriptList: TranscriptIndexItem[];
+      }
+    | { transcript: TranscriptPayload }
+  );
 
 type TranscriptReaderCacheHeaders = {
   "Cache-Control": string;
@@ -52,6 +60,8 @@ export async function loadTranscriptReaderData(
         .filter((item) => item.archived)
         .slice(0, TRANSCRIPT_LIST_LIMIT),
       pageTitle: "Transcript Reader",
+      pageDescription: "Readable, linkable podcast episode transcripts.",
+      pagePath: "/transcript-reader",
     };
   }
 
@@ -67,5 +77,10 @@ export async function loadTranscriptReaderData(
 
   const transcript = await queryClient.ensureQueryData(transcriptQueryOptions(item.location));
 
-  return { transcript, pageTitle: getTranscriptPageTitle(transcript) };
+  return {
+    transcript,
+    pageTitle: getTranscriptPageTitle(transcript),
+    pageDescription: getTranscriptDescription(transcript),
+    pagePath: `/transcript-reader?t=${canonicalHashForTranscript(item)}`,
+  };
 }

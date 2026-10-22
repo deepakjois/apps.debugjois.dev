@@ -1,12 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { TranscriptList, TranscriptReader } from "../features/transcript-reader";
 import TranscriptArticleSkeleton from "../features/transcript-reader/TranscriptArticleSkeleton";
-import { normalizeTranscriptHash } from "../features/transcript-reader/data";
+import { getTranscriptTitle, normalizeTranscriptHash } from "../features/transcript-reader/data";
 import transcriptReaderStylesHref from "../features/transcript-reader/styles.css?url";
 import {
   getTranscriptReaderCacheHeaders,
   loadTranscriptReaderData,
 } from "./-transcript-reader-loader";
+
+const SITE_ORIGIN = "https://apps.debugjois.dev";
 
 type TranscriptReaderSearch = {
   t?: string;
@@ -27,6 +29,7 @@ export const Route = createFileRoute("/transcript-reader")({
   loader: ({ context, deps }) => loadTranscriptReaderData(context.queryClient, deps.requestedHash),
   head: ({ loaderData }) => ({
     links: [
+      ...(loaderData ? [{ rel: "canonical", href: `${SITE_ORIGIN}${loaderData.pagePath}` }] : []),
       { rel: "stylesheet", href: transcriptReaderStylesHref },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
@@ -35,7 +38,33 @@ export const Route = createFileRoute("/transcript-reader")({
         href: "https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=DM+Sans:wght@400;500;600&display=swap",
       },
     ],
-    meta: [{ title: loaderData?.pageTitle ?? "Transcript Reader" }],
+    meta: [
+      { title: loaderData?.pageTitle ?? "Transcript Reader" },
+      ...(loaderData
+        ? [
+            { name: "description", content: loaderData.pageDescription },
+            { property: "og:site_name", content: "Transcript Reader" },
+            {
+              property: "og:type",
+              content: "transcript" in loaderData ? "article" : "website",
+            },
+            {
+              property: "og:title",
+              content:
+                "transcript" in loaderData
+                  ? getTranscriptTitle(loaderData.transcript)
+                  : loaderData.pageTitle,
+            },
+            { property: "og:description", content: loaderData.pageDescription },
+            { property: "og:url", content: `${SITE_ORIGIN}${loaderData.pagePath}` },
+            { property: "og:image", content: `${SITE_ORIGIN}/icons/og-card.png` },
+            { property: "og:image:width", content: "1200" },
+            { property: "og:image:height", content: "630" },
+            { property: "og:image:alt", content: "Transcript Reader pixel-art logo" },
+            { name: "twitter:card", content: "summary_large_image" },
+          ]
+        : []),
+    ],
   }),
   headers: ({ loaderData }) => getTranscriptReaderCacheHeaders(loaderData),
   component: TranscriptReaderRoute,

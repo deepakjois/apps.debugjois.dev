@@ -59,6 +59,8 @@ describe("transcript reader loader", () => {
       transcriptList: EPISODES.slice(0, 50),
       archivedTranscriptList: [ARCHIVED],
       pageTitle: "Transcript Reader",
+      pageDescription: "Readable, linkable podcast episode transcripts.",
+      pagePath: "/transcript-reader",
     });
     expect(getTranscriptReaderCacheHeaders(loaderData)).toEqual({ "Cache-Control": SHORT_CACHE });
   });
@@ -87,7 +89,7 @@ describe("transcript reader loader", () => {
       );
       vi.stubGlobal("fetch", fetchMock);
       const queryClient = createQueryClient();
-      const prefix = "0002ffffffffffff";
+      const prefix = "0002ff";
 
       const loaderData = await loadTranscriptReaderData(queryClient, prefix);
       await loadTranscriptReaderData(queryClient, undefined);
@@ -97,6 +99,8 @@ describe("transcript reader loader", () => {
       expect(loaderData).toEqual({
         transcript: TRANSCRIPT_2,
         pageTitle: "Episode 2 | Transcript Reader",
+        pageDescription: "Podcast episode transcript.",
+        pagePath: "/transcript-reader?t=0002ffffffffffff",
       });
       expect(fetchMock.mock.calls.filter(([url]) => url === locationFor(2))).toHaveLength(
         expectedFetches,
@@ -127,6 +131,8 @@ describe("transcript reader loader", () => {
       transcriptList: [],
       archivedTranscriptList: [],
       pageTitle: "Transcript Reader",
+      pageDescription: "Readable, linkable podcast episode transcripts.",
+      pagePath: "/transcript-reader",
     });
   });
 });

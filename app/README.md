@@ -15,6 +15,16 @@ Components. Run the commands below from `app/` unless noted.
 - `/admin/podscriber` queues podcast transcriptions from Podcast Addict share
   text or Miniflux entry URLs. `/admin` redirects to the logger.
 
+Transcript reader pages emit Open Graph and Twitter card tags, so pasted links
+unfurl in Slack, X, and similar apps. Each permalink uses the episode title, a
+byline, and a show-notes excerpt, with the shared card image
+`public/icons/og-card.png`. Tag URLs use the production origin
+`https://apps.debugjois.dev`.
+
+Favicons, touch icons, and the web manifest live in `public/`, from the Signal
+Archive icon kit. CloudFront serves `public/` from S3 only on the paths listed
+in the [infra README](../infra/README.md#routing).
+
 The admin pages call Nitro routes under `server/routes/api/admin/`. Those
 routes invoke the deployed backend Lambda. The
 [backend README](../backend/README.md#direct-invocation-actions) lists the

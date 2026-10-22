@@ -110,8 +110,10 @@ If the backend stack does not exist yet, the deploy stops. Rerun with
 
 CloudFront routes requests as follows:
 
-- `/assets/*`, `/favicon.ico`, `/logo192.png`, `/logo512.png`,
-  `/manifest.json`, and `/robots.txt` go to the static asset S3 bucket.
+- `/assets/*`, `/icons/*`, `/favicon.ico`, `/favicon.svg`,
+  `/apple-touch-icon.png`, `/manifest.webmanifest`, and `/robots.txt` go to
+  the static asset S3 bucket. Any new top-level file in `app/public/` needs a
+  behavior here; put other static files under `app/public/icons/`.
 - All other paths go to API Gateway and then the Nitro Lambda.
 
 All behaviors redirect HTTP to HTTPS. The API Gateway behavior uses a custom
