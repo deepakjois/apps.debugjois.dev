@@ -13,7 +13,7 @@ timed() {
   step "$name"
   start=$SECONDS
   "$@"
-  printf '    (%ss)\n' "$((SECONDS - start))"
+  printf '==> %s finished (%ss)\n' "$name" "$((SECONDS - start))"
 }
 
 install_nix() {
@@ -25,27 +25,36 @@ install_nix() {
   curl -fsSL https://nixos.org/nix/install | sh -s -- --no-daemon --yes
 }
 
-install_npm_dependencies() {
-  local project
-  for project in app infra; do
-    npm --prefix "$repo_root/$project" ci --no-audit --no-fund
-  done
-}
-
 download_go_modules() {
   (cd "$repo_root/backend" && go mod download)
 }
 
+install_dependencies() {
+  local project pid status=0
+  local -a pids=()
+  for project in app infra; do
+    timed "Installing $project npm dependencies" npm --prefix "$repo_root/$project" ci --no-audit --no-fund &
+    pids+=("$!")
+  done
+  timed "Downloading Go modules" download_go_modules &
+  pids+=("$!")
+  timed "Installing Go helper tools" "$repo_root/scripts/install-go-tools.sh" &
+  pids+=("$!")
+
+  for pid in "${pids[@]}"; do
+    wait "$pid" || status=$?
+  done
+  return "$status"
+}
+
 timed "Installing Nix" install_nix
-timed "Building Nix tool profile" "$repo_root/.agents/nix-tools"
+timed "Building Nix tool profile" "$repo_root/.agents/nix-tools" --if-changed
 timed "Persisting login-shell hook" "$repo_root/.agents/profile-hook"
 
 # shellcheck source=.agents/nix-env.sh
 source "$repo_root/.agents/nix-env.sh"
 printf '\nUsing %s, node %s, npm %s\n' "$(go version)" "$(node --version)" "$(npm --version)"
 
-timed "Installing Go helper tools" "$repo_root/scripts/install-go-tools.sh"
-timed "Installing npm dependencies" install_npm_dependencies
-timed "Downloading Go modules" download_go_modules
+timed "Installing project dependencies" install_dependencies
 
 printf '\nOrb setup complete.\n'

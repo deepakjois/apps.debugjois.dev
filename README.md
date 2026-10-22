@@ -90,6 +90,14 @@ flake's tool profile (`packages.default`) into
 `.agents/profile-hook` that puts the profile on `PATH` for login shells inside
 the repo, and installs the npm and Go dependencies and the Go helpers.
 
+Setup reuses the tool profile when the flake fingerprint matches. Once the
+tools are available, the two npm installs, Go module download, and Go helper
+installs run concurrently; setup waits for all of them and fails if any fails.
+Each task logs its elapsed time. A cold start still downloads the full Nix
+profile (including Google Cloud and media tools) and compiles all five Go
+helpers. Warm runs reuse Nix and Go caches, but `npm ci` reinstalls dependencies
+from each lockfile.
+
 `.agents/resume` rebuilds the tool profile when `flake.nix` or `flake.lock`
 changed since the last build. It also moves the hook back to the end of
 `~/.bash_profile`, because Amp appends a block there on activation that
