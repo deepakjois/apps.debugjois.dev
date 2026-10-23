@@ -7,6 +7,7 @@ import type {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { AdminSessionContext } from "./adminSession";
+import { requestJSON } from "../http";
 import { LAST_ADMIN_EMAIL_STORAGE_KEY } from "./config";
 import type { AdminSession, SessionResponse } from "./contract";
 
@@ -160,13 +161,7 @@ async function requestSession(
   init: RequestInit | undefined,
   failureMessage: string,
 ): Promise<SessionResponse> {
-  const response = await fetch(SESSION_URL, init);
-
-  if (!response.ok) {
-    throw new Error(failureMessage);
-  }
-
-  return response.json() as Promise<SessionResponse>;
+  return requestJSON<SessionResponse>(SESSION_URL, init, failureMessage);
 }
 
 // Google allows one initialize() per page, and prompt() and disableAutoSelect() silently create an

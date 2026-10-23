@@ -103,9 +103,11 @@ stack outputs with `aws cloudformation describe-stacks`, not from memory.
   or non-trivial shell in `run:` blocks. Put it in a script under
   `.github/scripts/` and call the script from the step.
 - **Admin endpoints.** Admin API endpoints are Nitro routes under
-  `app/server/routes/api/admin/`. Every private route calls
-  `requireAdminSession` first. TanStack server functions are for SSR data only.
-  Do not propose moving admin endpoints to server functions.
+  `app/server/routes/api/admin/`. Every private route is defined with
+  `defineAdminHandler`, which checks the session before the handler runs. A
+  test sends each route there a request without a session and expects 401.
+  TanStack server functions are for SSR data only. Do not propose moving admin
+  endpoints to server functions.
 - **Frontend apps.** Each app lives in `app/src/apps/<app>/` and imports only
   from `app/src/core/`, never from another app. The root route stays neutral.
   An app sets its own theme, `theme-color`, and manifest in its route `head`.

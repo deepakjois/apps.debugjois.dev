@@ -7,15 +7,11 @@ import CodeMirror, { basicSetup, EditorView } from "@uiw/react-codemirror";
 import { githubDark } from "@uiw/codemirror-theme-github";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useAdminSession } from "#/core/auth/adminSession";
+import { requestJSON } from "#/core/http";
+import type { LoggerLinkPreview, LoggerNote } from "./contract";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
-export type LoggerNote = {
-  title: string;
-  contents: string;
-};
-
-type LoggerLinkPreview = { title: string };
 type FetchLoggerLinkPreview = (url: string) => Promise<LoggerLinkPreview>;
 
 type PasteEditorView = {
@@ -166,39 +162,31 @@ function LoggerEditor({ initialNote }: { initialNote: LoggerNote }) {
 }
 
 async function getLogger(): Promise<LoggerNote> {
-  return requestJSON<LoggerNote>("/api/admin/logger");
+  return requestJSON<LoggerNote>("/api/admin/logger", undefined, "Could not load the logger");
 }
 
 async function saveLogger(note: LoggerNote): Promise<LoggerNote> {
-  return requestJSON<LoggerNote>("/api/admin/logger", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(note),
-  });
+  return requestJSON<LoggerNote>(
+    "/api/admin/logger",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(note),
+    },
+    "Could not save the logger",
+  );
 }
 
 async function getLoggerLinkPreview(url: string): Promise<LoggerLinkPreview> {
-  return requestJSON<LoggerLinkPreview>("/api/admin/logger/link-preview", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ url }),
-  });
-}
-
-async function requestJSON<ResponseBody>(url: string, init?: RequestInit): Promise<ResponseBody> {
-  const response = await fetch(url, init);
-  if (response.ok) {
-    return (await response.json()) as ResponseBody;
-  }
-
-  const body = (await response.json().catch(() => null)) as {
-    message?: unknown;
-    statusMessage?: unknown;
-  } | null;
-  const message = [body?.statusMessage, body?.message].find(
-    (value): value is string => typeof value === "string" && Boolean(value.trim()),
+  return requestJSON<LoggerLinkPreview>(
+    "/api/admin/logger/link-preview",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url }),
+    },
+    "Could not fetch the link title",
   );
-  throw new Error(message ?? `Logger request failed with HTTP ${response.status}.`);
 }
 
 export function buildLoggerPasteExtension(fetchLinkPreview: FetchLoggerLinkPreview) {

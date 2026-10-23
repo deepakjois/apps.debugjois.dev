@@ -95,9 +95,9 @@ All `/admin` pages require Google sign-in. The OAuth web client ID lives in
 `server/core/googleIdToken.ts`. No client secret and no
 local Google environment variable is needed. The server verifies the signed
 Google ID token and the verified-email allowlist on every request, and keeps
-the token in an `HttpOnly` cookie. Every private Nitro endpoint calls
-`requireAdminSession` first. The browser's page guard is not server
-authorization.
+the token in an `HttpOnly` cookie. Every private Nitro endpoint is defined
+with `defineAdminHandler`, which checks the session first. The browser's page
+guard is not server authorization.
 
 For real sign-in, add the development origin under **Authorized JavaScript
 origins** for that OAuth client in Google Cloud:

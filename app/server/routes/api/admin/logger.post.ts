@@ -1,20 +1,9 @@
-import { createError, defineEventHandler, readBody, type H3Event } from "nitro/h3";
-import { requireAdminSession } from "../../../core/adminSession";
-import { saveLoggerNote, type LoggerNote } from "../../../apps/logger/dailyLog";
+import { createError, readBody } from "nitro/h3";
+import type { LoggerNote } from "#/apps/logger/contract";
+import { saveLoggerNote } from "../../../apps/logger/dailyLog";
+import { defineAdminHandler } from "../../../core/adminHandler";
 
-type SaveLoggerDependencies = {
-  requireAdmin: (event: H3Event) => Promise<unknown>;
-  saveLogger: (note: LoggerNote) => Promise<LoggerNote>;
-};
-
-export async function handleSaveLogger(
-  event: H3Event,
-  dependencies: SaveLoggerDependencies = {
-    requireAdmin: requireAdminSession,
-    saveLogger: saveLoggerNote,
-  },
-): Promise<LoggerNote> {
-  await dependencies.requireAdmin(event);
+export default defineAdminHandler(async (event) => {
   const body = await readBody<Partial<LoggerNote>>(event);
 
   if (typeof body?.title !== "string" || typeof body.contents !== "string") {
@@ -24,7 +13,5 @@ export async function handleSaveLogger(
     });
   }
 
-  return dependencies.saveLogger({ title: body.title, contents: body.contents });
-}
-
-export default defineEventHandler(handleSaveLogger);
+  return saveLoggerNote({ title: body.title, contents: body.contents });
+});

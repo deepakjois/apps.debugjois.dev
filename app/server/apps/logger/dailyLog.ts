@@ -1,9 +1,5 @@
+import type { LoggerNote } from "#/apps/logger/contract";
 import { invokeBackendLambda } from "../../core/backendLambda";
-
-export type LoggerNote = {
-  title: string;
-  contents: string;
-};
 
 type LoggerLambdaResponse = {
   title: string;

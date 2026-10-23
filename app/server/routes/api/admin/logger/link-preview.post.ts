@@ -1,25 +1,10 @@
-import { createError, defineEventHandler, readBody, type H3Event } from "nitro/h3";
-import { requireAdminSession } from "../../../../core/adminSession";
+import { createError, readBody } from "nitro/h3";
+import type { LoggerLinkPreview } from "#/apps/logger/contract";
+import { defineAdminHandler } from "../../../../core/adminHandler";
 
 const LINK_PREVIEW_API_URL = "https://api.linkpreview.net/";
 
-type LoggerLinkPreview = {
-  title: string;
-};
-
-type LinkPreviewDependencies = {
-  requireAdmin: (event: H3Event) => Promise<unknown>;
-  fetcher: typeof fetch;
-};
-
-export async function handleLoggerLinkPreview(
-  event: H3Event,
-  dependencies: LinkPreviewDependencies = {
-    requireAdmin: requireAdminSession,
-    fetcher: fetch,
-  },
-): Promise<LoggerLinkPreview> {
-  await dependencies.requireAdmin(event);
+export default defineAdminHandler(async (event): Promise<LoggerLinkPreview> => {
   const body = await readBody<{ url?: unknown }>(event);
   const url = normalizeHttpUrl(body?.url);
   if (!url) {
@@ -31,19 +16,16 @@ export async function handleLoggerLinkPreview(
     throw new Error("LINKPREVIEW_API_KEY must be set to a 32-character key.");
   }
 
-  const response = await dependencies.fetcher(
-    `${LINK_PREVIEW_API_URL}?q=${encodeURIComponent(url)}`,
-    {
-      headers: { "X-Linkpreview-Api-Key": apiKey },
-    },
-  );
+  const response = await fetch(`${LINK_PREVIEW_API_URL}?q=${encodeURIComponent(url)}`, {
+    headers: { "X-Linkpreview-Api-Key": apiKey },
+  });
   if (!response.ok) {
     throw new Error(`LinkPreview API returned HTTP ${response.status}.`);
   }
 
   const result = (await response.json()) as { title?: unknown };
   return { title: typeof result.title === "string" ? result.title : "" };
-}
+});
 
 function normalizeHttpUrl(value: unknown): string | null {
   if (typeof value !== "string" || !value.trim()) {
@@ -57,5 +39,3 @@ function normalizeHttpUrl(value: unknown): string | null {
     return null;
   }
 }
-
-export default defineEventHandler(handleLoggerLinkPreview);
