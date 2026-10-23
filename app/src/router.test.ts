@@ -24,7 +24,6 @@ function getSeededRouter() {
 describe("feature routing", () => {
   it.each([
     ["/transcript-reader?t=1111111111111111", ["__root__", "/transcript-reader"]],
-    ["/admin/podscriber", ["__root__", "/admin", "/admin/podscriber"]],
     ["/admin/logger", ["__root__", "/admin", "/admin/logger"]],
   ])("matches %s with its expected layout", async (path, routeIds) => {
     const router = getSeededRouter();
@@ -53,7 +52,6 @@ describe("feature routing", () => {
 
   it.each([
     ["/transcript-reader?t=1111111111111111", "/transcript-reader"],
-    ["/admin/podscriber", "/admin"],
     ["/admin/logger", "/admin"],
   ])("loads only the stylesheet owned by %s", async (path, ownerRouteId) => {
     const router = getSeededRouter();

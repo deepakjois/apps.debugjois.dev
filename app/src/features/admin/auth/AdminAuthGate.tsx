@@ -80,14 +80,10 @@ export function AdminAuthGate({ children }: AdminAuthGateProps) {
 
   if (sessionQuery.isPending) {
     return (
-      <main className="admin-webtui admin-screen">
-        <section box-="double" className="admin-auth-card">
-          <div className="admin-copy" is-="typography-block">
-            <span cap-="square round" is-="badge" variant-="foreground0">
-              Admin
-            </span>
-            <p className="admin-status-copy">Checking session...</p>
-          </div>
+      <main className="admin-auth-screen">
+        <section className="admin-auth-card">
+          <p className="admin-auth-label">Admin</p>
+          <p className="admin-auth-status">Checking session...</p>
         </section>
       </main>
     );
@@ -110,16 +106,12 @@ export function AdminAuthGate({ children }: AdminAuthGateProps) {
   }
 
   return (
-    <main className="admin-webtui admin-screen">
-      <section box-="double" className="admin-auth-card">
-        <div className="admin-copy" is-="typography-block">
-          <span cap-="square round" is-="badge" variant-="foreground0">
-            Admin
-          </span>
-          <h1>Sign in to access admin routes.</h1>
-          <p>Only allowed Google accounts can view this section.</p>
-        </div>
-        <div className="admin-auth-actions">
+    <main className="admin-auth-screen">
+      <section className="admin-auth-card">
+        <p className="admin-auth-label">Admin</p>
+        <h1>Sign in to access admin routes.</h1>
+        <p>Only allowed Google accounts can view this section.</p>
+        <div>
           <GoogleSignInButton
             disabled={loginMutation.isPending}
             promptOneTap={!signedOutHere}
@@ -136,7 +128,7 @@ export function AdminAuthGate({ children }: AdminAuthGateProps) {
             }}
           />
         </div>
-        {loginMutation.isPending ? <p className="admin-status-copy">Signing in...</p> : null}
+        {loginMutation.isPending ? <p className="admin-auth-status">Signing in...</p> : null}
         {authErrorMessage ? <p className="admin-auth-error">{authErrorMessage}</p> : null}
       </section>
     </main>
@@ -324,15 +316,17 @@ function GoogleSignInButton({
   }, [clientId, promptOneTap, scriptLoadedSuccessfully]);
 
   return (
-    <div className="admin-google-button-wrap">
+    <>
       <div
         aria-disabled={disabled || !scriptLoadedSuccessfully}
-        className={disabled ? "admin-google-button-disabled" : undefined}
+        className={
+          disabled ? "admin-google-button admin-google-button-disabled" : "admin-google-button"
+        }
         ref={buttonContainerRef}
       />
       {!scriptLoadedSuccessfully ? (
-        <p className="admin-status-copy">Loading Google sign-in...</p>
+        <p className="admin-auth-status">Loading Google sign-in...</p>
       ) : null}
-    </div>
+    </>
   );
 }

@@ -33,8 +33,6 @@
     "@uiw/codemirror-theme-github": "^4.25.12",
     "@uiw/react-codemirror": "^4.25.12",
     "@vitejs/plugin-rsc": "^0.5.38",
-    "@webtui/css": "^0.1.10",
-    "@webtui/theme-catppuccin": "^0.0.5",
     "jose": "^6.2.12",
     "nitro": "npm:nitro-nightly@latest",
     "react": "^19.3.1",

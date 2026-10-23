@@ -12,8 +12,7 @@ Components. Run the commands below from `app/` unless noted.
   Show archived toggle, which sets `?archived=true`. Their permalinks still
   work. It needs no credentials and no backend. `/` redirects here.
 - `/admin/logger` edits today's Berlin-date Markdown note in Google Drive.
-- `/admin/podscriber` queues podcast transcriptions from Podcast Addict share
-  text or Miniflux entry URLs. `/admin` redirects to the logger.
+  `/admin` redirects here. The toolbar has the admin Sign out button.
 
 Transcript reader pages emit Open Graph and Twitter card tags, so pasted links
 unfurl in Slack, X, and similar apps. Each permalink uses the episode title, a
@@ -25,7 +24,7 @@ Favicons, touch icons, and the web manifest live in `public/`, from the Signal
 Archive icon kit. CloudFront serves `public/` from S3 only on the paths listed
 in the [infra README](../infra/README.md#routing).
 
-The admin pages call Nitro routes under `server/routes/api/admin/`. Those
+The admin page calls Nitro routes under `server/routes/api/admin/`. Those
 routes invoke the deployed backend Lambda. The
 [backend README](../backend/README.md#direct-invocation-actions) lists the
 actions.
@@ -44,7 +43,7 @@ npm run dev
 
 Vite serves on port 3000. The transcript reader works with no further setup.
 
-### Backend settings for the admin pages
+### Backend settings for the Logger
 
 Local and orb development both use the deployed backend Lambda. There is no
 local backend server. Copy the example configuration and fill it in:
@@ -55,7 +54,7 @@ cp .env.example .env.local
 
 | Setting                        | Purpose                                                                          |
 | ------------------------------ | -------------------------------------------------------------------------------- |
-| `BACKEND_LAMBDA_FUNCTION_NAME` | Deployed backend for Logger and Podscriber                                       |
+| `BACKEND_LAMBDA_FUNCTION_NAME` | Deployed backend for Logger                                                      |
 | `AWS_REGION`                   | Region of that Lambda                                                            |
 | `LINKPREVIEW_API_KEY`          | 32-character key for Logger's automatic page-title lookup when pasting bare URLs |
 
@@ -63,7 +62,7 @@ Provide AWS credentials through the SDK's normal credential chain, for example
 `AWS_PROFILE`, or `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` with
 `AWS_SESSION_TOKEN` for temporary credentials. The identity needs
 `lambda:InvokeFunction` on the configured backend. Nitro invokes Lambda on the
-server. AWS credentials never reach the browser. Google Drive and transcription
+server. AWS credentials never reach the browser. Google Drive access
 must already be configured on the deployed backend. See the
 [backend README](../backend/README.md).
 
@@ -94,7 +93,7 @@ DEV_ADMIN_BYPASS=true npm run dev
 
 This bypasses only the app's admin session in development. It does not bypass
 AWS permissions or backend authorization, and real requests can read and write
-Drive notes or queue transcription jobs. Vite replaces the development flag at
+Drive notes. Vite replaces the development flag at
 build time, so a production build cannot enable the bypass.
 
 ### Amp orbs and tunnels

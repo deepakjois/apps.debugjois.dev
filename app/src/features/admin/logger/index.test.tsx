@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { AdminSessionContext } from "../auth/adminSession";
 import { handleLoggerUrlPaste, Logger } from ".";
 
 vi.mock("@uiw/react-codemirror", async () => {
@@ -28,7 +29,15 @@ function renderLogger() {
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <Logger />
+      <AdminSessionContext.Provider
+        value={{
+          session: { email: "admin@example.com", name: null, picture: null },
+          signOut: () => {},
+          isSigningOut: false,
+        }}
+      >
+        <Logger />
+      </AdminSessionContext.Provider>
     </QueryClientProvider>,
   );
 }

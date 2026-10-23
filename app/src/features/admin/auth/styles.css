@@ -1,0 +1,55 @@
+.admin-auth-screen {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: #0d1117;
+  color: #c9d1d9;
+  font-family: system-ui, sans-serif;
+}
+
+.admin-auth-card {
+  display: grid;
+  gap: 16px;
+  width: min(100%, 420px);
+  padding: 28px;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  background: #161b22;
+}
+
+.admin-auth-label {
+  margin: 0;
+  color: #8b949e;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-auth-card h1 {
+  margin: 0;
+  color: #f0f6fc;
+  font-size: 20px;
+}
+
+.admin-auth-card p {
+  margin: 0;
+}
+
+.admin-auth-status {
+  color: #8b949e;
+}
+
+.admin-auth-error {
+  color: #ff7b72;
+}
+
+.admin-google-button {
+  min-height: 44px;
+}
+
+.admin-google-button-disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}

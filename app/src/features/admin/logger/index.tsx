@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import CodeMirror, { basicSetup, EditorView } from "@uiw/react-codemirror";
 import { githubDark } from "@uiw/codemirror-theme-github";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useAdminSession } from "../auth/adminSession";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -74,6 +75,7 @@ export function Logger() {
 
 function LoggerEditor({ initialNote }: { initialNote: LoggerNote }) {
   const queryClient = useQueryClient();
+  const { session, signOut, isSigningOut } = useAdminSession();
   const [title, setTitle] = useState(initialNote.title);
   const [value, setValue] = useState(initialNote.contents);
   const [savedValue, setSavedValue] = useState(initialNote.contents);
@@ -136,6 +138,15 @@ function LoggerEditor({ initialNote }: { initialNote: LoggerNote }) {
             type="button"
           >
             {saveButtonLabel}
+          </button>
+          <button
+            className="admin-logger-sign-out-button"
+            disabled={isSigningOut}
+            onClick={signOut}
+            title={session.email}
+            type="button"
+          >
+            Sign out
           </button>
         </div>
       </header>
