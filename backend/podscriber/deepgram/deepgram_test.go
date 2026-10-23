@@ -74,6 +74,9 @@ func TestTranscribeRemoteURL(t *testing.T) {
 	if len(got.Transcript.Raw) == 0 || got.Metadata.Title != "Episode" {
 		t.Fatalf("result = %#v", got)
 	}
+	if got.Source != remoteInput().Source {
+		t.Fatalf("source metadata changed: %#v", got.Source)
+	}
 }
 
 func TestTranscribeLocalFile(t *testing.T) {

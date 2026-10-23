@@ -104,6 +104,51 @@ func (f *fakeClient) DeleteObject(_ context.Context, input *s3.DeleteObjectInput
 	return &s3.DeleteObjectOutput{}, nil
 }
 
+func TestBuildIndexPreservesSourceMetadata(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		body        string
+		sourceType  string
+		podcastName string
+	}{
+		{"legacy podcast", `{"podcast":{"podcast":{"title":" The Town "}}}`, "", "The Town"},
+		{"podcast addict", `{"podcast":{"source":{"type":"podcast_addict"},"podcast":{"title":"Signals and Threads"}}}`, "podcast_addict", "Signals and Threads"},
+		{"miniflux", `{"input":{"source":{"type":"miniflux"},"metadata":{"series":{"title":"Oxide and Friends"}}}}`, "miniflux", "Oxide and Friends"},
+		{"youtube channel", `{"podcast":{"source":{"type":"youtube"},"podcast":{"title":"Channel name"}}}`, "youtube", "Channel name"},
+		{"v2 youtube", `{"input":{"source":{"type":"youtube"},"metadata":{"series":{"title":"Channel name"}}}}`, "youtube", "Channel name"},
+		{"audio", `{"podcast":{"source":{"type":"audio_url"}}}`, "audio_url", ""},
+		{"v2 audio", `{"input":{"source":{"type":"audio_url"}}}`, "audio_url", ""},
+		{"missing metadata", `{}`, "", ""},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			client := &fakeClient{
+				listOutputs: []*s3.ListObjectsV2Output{{
+					Contents: []s3types.Object{{Key: aws.String("transcripts/example.json")}},
+				}},
+				objects: map[string]fakeObject{"transcripts/example.json": {body: tt.body}},
+			}
+			index, err := BuildIndex(context.Background(), client, BucketName, Index{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			body, err := MarshalIndex(index)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var published map[string][]map[string]any
+			if err := json.Unmarshal(body, &published); err != nil {
+				t.Fatal(err)
+			}
+			for key, want := range map[string]string{"source_type": tt.sourceType, "podcast_name": tt.podcastName} {
+				got, present := published["transcripts"][0][key]
+				if want == "" && present || want != "" && got != want {
+					t.Fatalf("%s = %v, want %q (omitted if empty)", key, got, want)
+				}
+			}
+		})
+	}
+}
+
 func TestBuildIndexPrefersEpisodeTitleAndPublishedDate(t *testing.T) {
 	client := &fakeClient{
 		listOutputs: []*s3.ListObjectsV2Output{{
@@ -351,10 +396,13 @@ func TestRefreshIndexFailsAfterSecondConditionalConflict(t *testing.T) {
 	}
 }
 
-func TestRefreshIndexKeepsArchivedFlags(t *testing.T) {
-	episode := func(title string) fakeObject {
+func TestRefreshIndexKeepsArchivedFlagsAndBackfillsLegacySourceTypes(t *testing.T) {
+	episode := func(title, sourceType string) fakeObject {
 		return fakeObject{body: mustMarshalDoc(t, map[string]any{
-			"podcast": map[string]any{"episode": map[string]any{"title": title, "published_date": "2026-04-06"}},
+			"podcast": map[string]any{
+				"source":  map[string]any{"type": sourceType},
+				"episode": map[string]any{"title": title, "published_date": "2026-04-06"},
+			},
 		})}
 	}
 	client := &fakeClient{
@@ -363,12 +411,12 @@ func TestRefreshIndexKeepsArchivedFlags(t *testing.T) {
 		}},
 		objects: map[string]fakeObject{
 			IndexObjectKey: {
-				body: `{"transcripts":[{"title":"A","location":"` + LocationPrefix + `a.json","date":"2026-04-06"},` +
-					`{"title":"B","location":"` + LocationPrefix + `b.json","date":"2026-04-06","archived":true}]}`,
+				body: `{"transcripts":[{"title":"A","location":"` + LocationPrefix + `a.json","date":"2026-04-06","source_type":"podcast"},` +
+					`{"title":"B","location":"` + LocationPrefix + `b.json","date":"2026-04-06","archived":true,"source_type":"podcast"}]}`,
 				etag: `"etag-1"`,
 			},
-			"transcripts/a.json": episode("A"),
-			"transcripts/b.json": episode("B"),
+			"transcripts/a.json": episode("A", ""),
+			"transcripts/b.json": episode("B", "youtube"),
 		},
 	}
 
@@ -387,6 +435,13 @@ func TestRefreshIndexKeepsArchivedFlags(t *testing.T) {
 	archived := map[string]bool{}
 	for _, item := range index.Transcripts {
 		archived[item.Title] = item.Archived
+		wantSourceType := "podcast"
+		if item.Title == "B" {
+			wantSourceType = "youtube"
+		}
+		if item.SourceType != wantSourceType {
+			t.Fatalf("source type = %q, want %q", item.SourceType, wantSourceType)
+		}
 	}
 	if len(archived) != 2 || archived["A"] || !archived["B"] {
 		t.Fatalf("unexpected archived flags %v", archived)

@@ -43,10 +43,12 @@ type Index struct {
 }
 
 type ListItem struct {
-	Title    string `json:"title"`
-	Location string `json:"location"`
-	Date     string `json:"date"`
-	Archived bool   `json:"archived,omitempty"`
+	Title       string `json:"title"`
+	Location    string `json:"location"`
+	Date        string `json:"date"`
+	SourceType  string `json:"source_type,omitempty"`
+	PodcastName string `json:"podcast_name,omitempty"`
+	Archived    bool   `json:"archived,omitempty"`
 }
 
 type ItemState int
@@ -78,6 +80,9 @@ type IndexSnapshot struct {
 
 type document struct {
 	Input struct {
+		Source struct {
+			Type string `json:"type"`
+		} `json:"source"`
 		Metadata struct {
 			Title         string `json:"title"`
 			PublishedAt   string `json:"published_at"`
@@ -96,6 +101,7 @@ type document struct {
 
 	Podcast struct {
 		Source struct {
+			Type       string `json:"type"`
 			ShareTitle string `json:"share_title"`
 		} `json:"source"`
 		Podcast struct {
@@ -116,14 +122,12 @@ type deepgramMetadataEnvelope struct {
 	} `json:"metadata"`
 }
 
-// BuildIndex lists the transcript objects. Archived flags come from previous,
-// because the transcript objects do not record them.
+// BuildIndex lists the transcript objects. Archived flags and source types
+// backfilled for legacy documents come from previous.
 func BuildIndex(ctx context.Context, client S3Client, bucketName string, previous Index) (Index, error) {
-	archived := make(map[string]bool)
+	previousItems := make(map[string]ListItem)
 	for _, item := range previous.Transcripts {
-		if item.Archived {
-			archived[item.Location] = true
-		}
+		previousItems[item.Location] = item
 	}
 
 	keys, err := listTranscriptKeys(ctx, client, bucketName)
@@ -139,11 +143,24 @@ func BuildIndex(ctx context.Context, client S3Client, bucketName string, previou
 		}
 
 		location := LocationPrefix + path.Base(key)
+		sourceType := strings.TrimSpace(doc.Input.Source.Type)
+		if sourceType == "" {
+			sourceType = strings.TrimSpace(doc.Podcast.Source.Type)
+		}
+		if sourceType == "" {
+			sourceType = previousItems[location].SourceType
+		}
+		podcastName := strings.TrimSpace(doc.Input.Metadata.Series.Title)
+		if podcastName == "" {
+			podcastName = strings.TrimSpace(doc.Podcast.Podcast.Title)
+		}
 		items = append(items, ListItem{
-			Title:    transcriptTitle(doc, key),
-			Location: location,
-			Date:     transcriptDate(doc),
-			Archived: archived[location],
+			Title:       transcriptTitle(doc, key),
+			Location:    location,
+			Date:        transcriptDate(doc),
+			SourceType:  sourceType,
+			PodcastName: podcastName,
+			Archived:    previousItems[location].Archived,
 		})
 	}
 

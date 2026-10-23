@@ -80,6 +80,9 @@ func TestExtractorFetchesAndParsesEpisode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Extract() error = %v", err)
 	}
+	if got.Source.Type != "podcast_addict" {
+		t.Fatalf("source type = %q", got.Source.Type)
+	}
 	if gotUserAgent != UserAgent {
 		t.Fatalf("User-Agent = %q", gotUserAgent)
 	}

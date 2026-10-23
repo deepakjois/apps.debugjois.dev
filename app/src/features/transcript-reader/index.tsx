@@ -3,7 +3,7 @@
 import { Link, useCanGoBack, useRouter } from "@tanstack/react-router";
 import type { MouseEvent } from "react";
 import TranscriptArticle from "./TranscriptArticle";
-import { canonicalHashForTranscript, formatTranscriptDate } from "./data";
+import { canonicalHashForTranscript, formatTranscriptDate, getTranscriptSourceLabel } from "./data";
 import type { TranscriptIndexItem, TranscriptPayload } from "./data";
 
 type TranscriptListProps = {
@@ -75,6 +75,9 @@ function TranscriptLinks({
               search={{ t: canonicalHashForTranscript(item) }}
               to="/transcript-reader"
             >
+              <div className="podcast-name">
+                {getTranscriptSourceLabel(item.source_type, item.podcast_name)}
+              </div>
               <span className="transcript-list-title">{item.title || "Untitled"}</span>
               {date ? <span className="transcript-list-date">{date}</span> : null}
             </Link>

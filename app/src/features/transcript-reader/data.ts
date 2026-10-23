@@ -6,6 +6,8 @@ export type TranscriptIndexItem = {
   title?: string;
   location: string;
   date?: string;
+  source_type?: string;
+  podcast_name?: string;
   archived?: boolean;
 };
 
@@ -44,6 +46,7 @@ type TranscriptModelInfo = Record<
 export type TranscriptPayload = {
   podcast?: {
     source?: {
+      type?: string;
       share_title?: string;
       episode_url?: string;
     };
@@ -169,6 +172,17 @@ export function formatTranscriptDate(value: string | undefined): string | undefi
     day: "numeric",
     timeZone: "UTC",
   }).format(parsedDate);
+}
+
+export function getTranscriptSourceLabel(sourceType?: string, podcastName?: string): string {
+  switch (sourceType ?? "podcast") {
+    case "youtube":
+      return "YouTube";
+    case "audio_url":
+      return "Audio";
+    default:
+      return podcastName || "Podcast";
+  }
 }
 
 export function getTranscriptTitle(transcript: TranscriptPayload | null | undefined): string {

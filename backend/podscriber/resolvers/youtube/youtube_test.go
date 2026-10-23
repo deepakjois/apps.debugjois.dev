@@ -78,6 +78,9 @@ func TestExtractorDownloadsAudioAndMapsMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Extract() error = %v", err)
 	}
+	if got.Source.Type != podscriber.SourceTypeYouTube {
+		t.Fatalf("source type = %q", got.Source.Type)
+	}
 	if runner.name != "/usr/bin/yt-dlp" {
 		t.Fatalf("runner name = %q", runner.name)
 	}

@@ -123,6 +123,36 @@ func TestPublishWritesCompatibleDocumentAndRefreshesIndex(t *testing.T) {
 	}
 }
 
+func TestPublishPreservesSourceTypesInDocumentAndIndex(t *testing.T) {
+	for _, sourceType := range []podscriber.SourceType{
+		podscriber.SourceTypePodcastAddict, podscriber.SourceTypeMiniflux,
+		podscriber.SourceTypeYouTube, podscriber.SourceTypeAudioURL,
+	} {
+		t.Run(string(sourceType), func(t *testing.T) {
+			client := &fakeClient{objects: make(map[string]fakeObject)}
+			result := testResult()
+			result.Source.Type = sourceType
+			if err := newPublisher(client, "test-bucket").Publish(context.Background(), result); err != nil {
+				t.Fatal(err)
+			}
+			var index transcripts.Index
+			if err := json.Unmarshal([]byte(client.objects[transcripts.IndexObjectKey].body), &index); err != nil {
+				t.Fatal(err)
+			}
+			if len(index.Transcripts) != 1 || index.Transcripts[0].SourceType != string(sourceType) || index.Transcripts[0].PodcastName != "Example Show" {
+				t.Fatalf("published index = %#v", index)
+			}
+			var published document
+			if err := json.Unmarshal([]byte(client.objects[aws.ToString(client.puts[0].Key)].body), &published); err != nil {
+				t.Fatal(err)
+			}
+			if published.Podcast.Source.Type != sourceType {
+				t.Fatalf("published source type = %q, want %q", published.Podcast.Source.Type, sourceType)
+			}
+		})
+	}
+}
+
 func TestNewDocumentPreservesYouTubeSourceType(t *testing.T) {
 	result := testResult()
 	result.Source.Type = podscriber.SourceTypeYouTube

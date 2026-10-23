@@ -18,6 +18,9 @@ func TestExtractor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Extract() error = %v", err)
 	}
+	if got.Source.Type != podscriber.SourceTypeAudioURL {
+		t.Fatalf("source type = %q", got.Source.Type)
+	}
 	if got.Media.Type != podscriber.MediaTypeRemoteURL {
 		t.Fatalf("media type = %q", got.Media.Type)
 	}

@@ -1,4 +1,9 @@
-import { formatTranscriptDate, getTranscriptDisplayParagraphs, getTranscriptTitle } from "./data";
+import {
+  formatTranscriptDate,
+  getTranscriptDisplayParagraphs,
+  getTranscriptSourceLabel,
+  getTranscriptTitle,
+} from "./data";
 import type { TranscriptPayload } from "./data";
 
 type TranscriptArticleProps = {
@@ -6,7 +11,10 @@ type TranscriptArticleProps = {
 };
 
 export default function TranscriptArticle({ transcript }: TranscriptArticleProps) {
-  const podcastName = transcript.podcast?.podcast?.title;
+  const sourceLabel = getTranscriptSourceLabel(
+    transcript.podcast?.source?.type,
+    transcript.podcast?.podcast?.title,
+  );
   const episode = transcript.podcast?.episode;
   const formattedDate = formatTranscriptDate(episode?.published_date);
   const descriptionHtml = episode?.description_html;
@@ -17,7 +25,7 @@ export default function TranscriptArticle({ transcript }: TranscriptArticleProps
   return (
     <>
       <div className="episode-header">
-        {podcastName ? <div className="podcast-name">{podcastName}</div> : null}
+        <div className="podcast-name">{sourceLabel}</div>
 
         <h1 className="episode-title">{title}</h1>
 

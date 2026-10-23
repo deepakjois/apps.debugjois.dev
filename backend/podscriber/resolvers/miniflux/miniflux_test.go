@@ -43,6 +43,9 @@ func TestParseEntryPodcastEpisode(t *testing.T) {
 		t.Fatalf("ParseEntry() error = %v", err)
 	}
 
+	if got.Source.Type != "miniflux" {
+		t.Fatalf("source type = %q", got.Source.Type)
+	}
 	if !strings.HasPrefix(got.Media.URL, "https://tracking.swap.fm/") || !strings.HasSuffix(got.Media.URL, "&size=30878911") {
 		t.Fatalf("media URL = %q, want the audio/mpeg enclosure", got.Media.URL)
 	}

@@ -202,10 +202,20 @@ func TestQueueMinifluxStarredLoop(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	transcribePodcast = func(context.Context, podscriber.TranscriptionInput) (podscriber.TranscriptionResult, error) {
+	transcribePodcast = func(_ context.Context, input podscriber.TranscriptionInput) (podscriber.TranscriptionResult, error) {
+		if input.Source.Type != podscriber.SourceTypeMiniflux || input.Source.Input != entryURL {
+			t.Fatalf("worker input source = %+v", input.Source)
+		}
 		return podscriber.TranscriptionResult{Transcript: podscriber.Transcript{Raw: json.RawMessage(`{}`)}}, nil
 	}
-	persistPodcastTranscript = func(_ context.Context, action string, p podcastPayload, _ []byte) error {
+	persistPodcastTranscript = func(_ context.Context, action string, p podcastPayload, body []byte) error {
+		var document transcriptResponse
+		if err := json.Unmarshal(body, &document); err != nil {
+			t.Fatal(err)
+		}
+		if document.Podcast.Source.Type != podscriber.SourceTypeMiniflux {
+			t.Fatalf("published source type = %q", document.Podcast.Source.Type)
+		}
 		key, err := transcriptObjectKey(action, p)
 		published[key] = true
 		return err

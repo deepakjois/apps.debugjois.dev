@@ -213,6 +213,17 @@ publishing returns `{"ok":true}` after the upload and the index refresh.
 
 ### Transcript index
 
+Each resolver sets `source.type` on its transcription input: `podcast_addict`,
+`miniflux`, `youtube`, or `audio_url`. Transcription preserves that field, and
+both publishing paths write it to `podcast.source.type`. Index generation
+copies it unchanged into `source_type`, with the series title in `podcast_name`.
+Display labels belong to the reader, not the index.
+
+The web reader treats a missing `source_type` (or an explicit `podcast`) as a
+podcast, using `podcast_name` when available. Rebuild the index to populate
+existing entries; new publications refresh it automatically. A rebuild keeps
+manually backfilled `source_type` values when the transcript has no source type.
+
 Both commands read S3 and print the generated index. Only `--write` updates
 `transcripts/transcripts.json` in the bucket. It writes conditionally on the
 index's ETag and retries once on a conflict. A rebuild keeps each item's
