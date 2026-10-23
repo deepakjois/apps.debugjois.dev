@@ -1,6 +1,7 @@
 import { createError, defineEventHandler, readBody, type H3Event } from "nitro/h3";
-import type { VerifyGoogleIdToken } from "../../../../src/lib/auth/server";
-import { createAdminSession, type SessionResponse } from "../../../utils/adminSession";
+import type { SessionResponse } from "#/core/auth/contract";
+import { createAdminSession } from "../../../core/adminSession";
+import type { VerifyGoogleIdToken } from "../../../core/googleIdToken";
 
 type LoginBody = {
   credential?: unknown;

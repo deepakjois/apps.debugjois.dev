@@ -1,6 +1,7 @@
 import { defineEventHandler, type H3Event } from "nitro/h3";
-import type { VerifyGoogleIdToken } from "../../../../src/lib/auth/server";
-import { readAdminSession, type SessionResponse } from "../../../utils/adminSession";
+import type { SessionResponse } from "#/core/auth/contract";
+import { readAdminSession } from "../../../core/adminSession";
+import type { VerifyGoogleIdToken } from "../../../core/googleIdToken";
 
 export async function handleGetSession(
   event: H3Event,

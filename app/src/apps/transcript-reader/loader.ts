@@ -7,8 +7,8 @@ import {
   getTranscriptPageTitle,
   transcriptIndexQueryOptions,
   transcriptQueryOptions,
-} from "../features/transcript-reader/data";
-import type { TranscriptIndexItem, TranscriptPayload } from "../features/transcript-reader/data";
+} from "./data";
+import type { TranscriptIndexItem, TranscriptPayload } from "./data";
 
 type PageMeta = {
   pageTitle: string;

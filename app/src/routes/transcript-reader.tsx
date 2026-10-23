@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { TranscriptList, TranscriptReader } from "../features/transcript-reader";
-import TranscriptArticleSkeleton from "../features/transcript-reader/TranscriptArticleSkeleton";
-import { getTranscriptTitle, normalizeTranscriptHash } from "../features/transcript-reader/data";
-import transcriptReaderStylesHref from "../features/transcript-reader/styles.css?url";
+import { TranscriptList, TranscriptReader } from "#/apps/transcript-reader";
+import TranscriptArticleSkeleton from "#/apps/transcript-reader/TranscriptArticleSkeleton";
+import { getTranscriptTitle, normalizeTranscriptHash } from "#/apps/transcript-reader/data";
 import {
   getTranscriptReaderCacheHeaders,
   loadTranscriptReaderData,
-} from "./-transcript-reader-loader";
+} from "#/apps/transcript-reader/loader";
+import transcriptReaderStylesHref from "#/apps/transcript-reader/styles.css?url";
 
 const SITE_ORIGIN = "https://apps.debugjois.dev";
 

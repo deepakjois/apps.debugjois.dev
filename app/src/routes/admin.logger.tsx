@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Logger } from "../features/admin/logger";
-import "../features/admin/logger/styles.css";
+import { Logger } from "#/apps/logger/Logger";
+import "#/apps/logger/styles.css";
 
 export const Route = createFileRoute("/admin/logger")({
   head: () => ({ meta: [{ title: "Logger" }] }),

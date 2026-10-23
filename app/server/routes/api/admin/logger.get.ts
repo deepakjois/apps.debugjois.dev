@@ -1,6 +1,6 @@
 import { defineEventHandler, type H3Event } from "nitro/h3";
-import { requireAdminSession } from "../../../utils/adminSession";
-import { getLoggerNote, type LoggerNote } from "../../../utils/logger";
+import { requireAdminSession } from "../../../core/adminSession";
+import { getLoggerNote, type LoggerNote } from "../../../apps/logger/dailyLog";
 
 type GetLoggerDependencies = {
   requireAdmin: (event: H3Event) => Promise<unknown>;

@@ -29,6 +29,25 @@ routes invoke the deployed backend Lambda. The
 [backend README](../backend/README.md#direct-invocation-actions) lists the
 actions.
 
+## Layout
+
+The site hosts independent apps that share a small core. Apps can look
+completely different and move at their own pace. The core changes together.
+
+| Path                 | Holds                                                                         |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `src/core/`          | Shared client code: admin sign-in, global CSS, helpers used by several apps   |
+| `src/apps/<app>/`    | One app's components, data, styles, and tests                                 |
+| `src/routes/`        | Thin TanStack route files that wire an app's pieces to a URL                  |
+| `server/core/`       | Shared server code: admin session, Google token checks, backend Lambda client |
+| `server/apps/<app>/` | One app's server logic and its tests                                          |
+| `server/routes/api/` | Nitro route files                                                             |
+
+An app imports from `src/core/` but never from another app. Use the `#/`
+alias (`#/core/...`, `#/apps/...`) for imports across these folders. Server
+code may import types and client-safe constants from `src/`, but `src/` never
+imports from `server/`.
+
 ## Installation
 
 Follow the [root README](../README.md#development-environment) for the Nix
@@ -68,8 +87,9 @@ must already be configured on the deployed backend. See the
 
 ### Admin sign-in
 
-All `/admin` pages require Google sign-in. The OAuth web client ID and the
-admin email allowlist live in `src/lib/auth/config.ts`. No client secret and no
+All `/admin` pages require Google sign-in. The OAuth web client ID lives in
+`src/core/auth/config.ts` and the admin email allowlist in
+`server/core/googleIdToken.ts`. No client secret and no
 local Google environment variable is needed. The server verifies the signed
 Google ID token and the verified-email allowlist on every request, and keeps
 the token in an `HttpOnly` cookie. Every private Nitro endpoint calls

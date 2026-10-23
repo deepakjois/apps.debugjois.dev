@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const invokeBackendLambda = vi.hoisted(() => vi.fn());
-vi.mock("../../../../server/utils/backendLambda", () => ({ invokeBackendLambda }));
+vi.mock("../../core/backendLambda", () => ({ invokeBackendLambda }));
 
-import { getLoggerNote, saveLoggerNote } from "../../../../server/utils/logger";
+import { getLoggerNote, saveLoggerNote } from "./dailyLog";
 
 beforeEach(() => invokeBackendLambda.mockReset());
 

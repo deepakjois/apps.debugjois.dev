@@ -1,14 +1,15 @@
 import { createError, deleteCookie, getCookie, setCookie, type H3Event } from "nitro/h3";
-import { ADMIN_SESSION_COOKIE, AUTH_COOKIE_NAME } from "../../src/lib/auth/config";
-import {
-  verifyGoogleIdToken,
-  type AdminSession,
-  type VerifyGoogleIdToken,
-} from "../../src/lib/auth/server";
+import type { AdminSession } from "#/core/auth/contract";
+import { verifyGoogleIdToken, type VerifyGoogleIdToken } from "./googleIdToken";
 
-export type SessionResponse = {
-  session: AdminSession | null;
-};
+export const AUTH_COOKIE_NAME = "apps_debugjois_dev_admin_session";
+
+const ADMIN_SESSION_COOKIE = {
+  path: "/",
+  httpOnly: true,
+  sameSite: "lax",
+  maxAge: 60 * 60 * 24 * 7,
+} as const;
 
 const developmentAdminSession: AdminSession = {
   email: "local-admin@localhost",

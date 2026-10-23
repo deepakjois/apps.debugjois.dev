@@ -1,13 +1,12 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
-import { ALLOWED_ADMIN_EMAILS, GOOGLE_CLIENT_ID, GOOGLE_ISSUERS } from "./config";
+import { GOOGLE_CLIENT_ID } from "#/core/auth/config";
+import type { AdminSession } from "#/core/auth/contract";
+
+export const ALLOWED_ADMIN_EMAILS = new Set(["deepak.jois@gmail.com"]);
+
+export const GOOGLE_ISSUERS = new Set(["accounts.google.com", "https://accounts.google.com"]);
 
 const googleJwks = createRemoteJWKSet(new URL("https://www.googleapis.com/oauth2/v3/certs"));
-
-export type AdminSession = {
-  email: string;
-  name: string | null;
-  picture: string | null;
-};
 
 export type VerifyGoogleIdToken = (idToken: string) => Promise<AdminSession>;
 

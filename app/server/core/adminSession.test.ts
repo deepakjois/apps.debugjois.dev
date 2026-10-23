@@ -1,12 +1,12 @@
 import { H3Event, toResponse } from "nitro/h3";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  AUTH_COOKIE_NAME,
   clearAdminSession,
   createAdminSession,
   readAdminSession,
   requireAdminSession,
-} from "../../../server/utils/adminSession";
-import { AUTH_COOKIE_NAME } from "./config";
+} from "./adminSession";
 
 const session = { email: "deepak.jois@gmail.com", name: "Deepak", picture: null };
 

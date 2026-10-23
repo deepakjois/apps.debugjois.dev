@@ -1,4 +1,4 @@
-import { invokeBackendLambda } from "./backendLambda";
+import { invokeBackendLambda } from "../../core/backendLambda";
 
 export type LoggerNote = {
   title: string;

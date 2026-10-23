@@ -1,14 +1,10 @@
 // @vitest-environment jsdom
 
-// The dash prefix keeps this test module out of TanStack's generated route tree.
 import { dehydrate, hydrate } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  getTranscriptReaderCacheHeaders,
-  loadTranscriptReaderData,
-} from "./-transcript-reader-loader";
-import type { TranscriptIndexItem, TranscriptPayload } from "../features/transcript-reader/data";
-import { getRouter } from "../router";
+import { getRouter } from "#/router";
+import type { TranscriptIndexItem, TranscriptPayload } from "./data";
+import { getTranscriptReaderCacheHeaders, loadTranscriptReaderData } from "./loader";
 
 const SHORT_CACHE = "public, max-age=0, s-maxage=60, stale-while-revalidate=300";
 const LONG_CACHE = "public, max-age=60, s-maxage=31536000, stale-while-revalidate=86400";

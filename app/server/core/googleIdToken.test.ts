@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { GOOGLE_CLIENT_ID, GOOGLE_ISSUERS } from "./config";
+import { GOOGLE_CLIENT_ID } from "#/core/auth/config";
 
 const jwtVerify = vi.hoisted(() => vi.fn());
 
@@ -8,7 +8,7 @@ vi.mock("jose", () => ({
   jwtVerify,
 }));
 
-import { verifyGoogleIdToken } from "./server";
+import { GOOGLE_ISSUERS, verifyGoogleIdToken } from "./googleIdToken";
 
 beforeEach(() => {
   jwtVerify.mockReset();

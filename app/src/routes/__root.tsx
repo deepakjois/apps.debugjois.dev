@@ -1,6 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { HeadContent, Link, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
-import "../styles/global.css";
+import "#/core/global.css";
 
 export type RouterContext = { queryClient: QueryClient };
 

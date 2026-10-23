@@ -3,8 +3,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AdminSessionContext } from "../auth/adminSession";
-import { handleLoggerUrlPaste, Logger } from ".";
+import { AdminSessionContext } from "#/core/auth/adminSession";
+import { handleLoggerUrlPaste, Logger } from "./Logger";
 
 vi.mock("@uiw/react-codemirror", async () => {
   const React = await import("react");

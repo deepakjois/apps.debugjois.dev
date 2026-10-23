@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { AdminSession } from "../../../lib/auth/server";
+import type { AdminSession } from "./contract";
 
 export type AdminSessionContextValue = {
   session: AdminSession;

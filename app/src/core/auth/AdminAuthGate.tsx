@@ -6,13 +6,9 @@ import type {
 } from "@react-oauth/google";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { LAST_ADMIN_EMAIL_STORAGE_KEY } from "../../../lib/auth/config";
-import type { AdminSession } from "../../../lib/auth/server";
 import { AdminSessionContext } from "./adminSession";
-
-type SessionResponse = {
-  session: AdminSession | null;
-};
+import { LAST_ADMIN_EMAIL_STORAGE_KEY } from "./config";
+import type { AdminSession, SessionResponse } from "./contract";
 
 const SESSION_URL = "/api/admin/session";
 const SESSION_QUERY_KEY = ["admin", "session"];

@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import CodeMirror, { basicSetup, EditorView } from "@uiw/react-codemirror";
 import { githubDark } from "@uiw/codemirror-theme-github";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { useAdminSession } from "../auth/adminSession";
+import { useAdminSession } from "#/core/auth/adminSession";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 

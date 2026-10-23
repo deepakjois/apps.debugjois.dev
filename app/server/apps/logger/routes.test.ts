@@ -1,7 +1,7 @@
 import { H3Event } from "nitro/h3";
 import { describe, expect, it, vi } from "vitest";
-import { handleGetLogger } from "../../../../server/routes/api/admin/logger.get";
-import { handleSaveLogger } from "../../../../server/routes/api/admin/logger.post";
+import { handleGetLogger } from "../../routes/api/admin/logger.get";
+import { handleSaveLogger } from "../../routes/api/admin/logger.post";
 
 const note = { title: "2026-09-10.md", contents: "### 2026-09-10\n" };
 

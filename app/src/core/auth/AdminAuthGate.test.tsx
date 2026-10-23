@@ -3,8 +3,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { IdConfiguration } from "@react-oauth/google";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { LAST_ADMIN_EMAIL_STORAGE_KEY } from "../../../lib/auth/config";
-import type { AdminSession } from "../../../lib/auth/server";
+import { LAST_ADMIN_EMAIL_STORAGE_KEY } from "./config";
+import type { AdminSession } from "./contract";
 import { AdminAuthGate } from "./AdminAuthGate";
 import { useAdminSession } from "./adminSession";
 

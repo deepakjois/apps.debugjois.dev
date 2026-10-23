@@ -1,9 +1,9 @@
 import { H3Event } from "nitro/h3";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { handleLogout } from "../../../server/routes/api/admin/session.delete";
-import { handleGetSession } from "../../../server/routes/api/admin/session.get";
-import { handleLogin } from "../../../server/routes/api/admin/session.post";
-import { AUTH_COOKIE_NAME } from "./config";
+import { handleLogout } from "../routes/api/admin/session.delete";
+import { handleGetSession } from "../routes/api/admin/session.get";
+import { handleLogin } from "../routes/api/admin/session.post";
+import { AUTH_COOKIE_NAME } from "./adminSession";
 
 const session = { email: "deepak.jois@gmail.com", name: "Deepak", picture: null };
 
