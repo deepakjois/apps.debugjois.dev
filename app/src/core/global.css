@@ -7,3 +7,24 @@
 body {
   margin: 0;
 }
+
+.site-status {
+  display: grid;
+  gap: 12px;
+  place-content: center;
+  justify-items: start;
+  min-height: 100vh;
+  padding: 24px;
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+.site-status h1,
+.site-status p {
+  margin: 0;
+}
+
+.site-status button {
+  font: inherit;
+  cursor: pointer;
+}

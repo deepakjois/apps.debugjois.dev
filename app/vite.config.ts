@@ -1,28 +1,12 @@
-import { defineConfig } from "vite";
-import { devtools } from "@tanstack/devtools-vite";
-
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
-
 import viteReact from "@vitejs/plugin-react";
-import rsc from "@vitejs/plugin-rsc";
 import { nitro } from "nitro/vite";
+import { defineConfig } from "vite";
 
-const config = defineConfig({
+export default defineConfig({
   optimizeDeps: {
     exclude: ["@tanstack/react-query"],
   },
   resolve: { tsconfigPaths: true },
-  plugins: [
-    devtools(),
-    nitro({ rollupConfig: { external: [/^@sentry\//] } }),
-    tanstackStart({
-      rsc: {
-        enabled: true,
-      },
-    }),
-    rsc(),
-    viteReact(),
-  ],
+  plugins: [nitro(), tanstackStart(), viteReact()],
 });
-
-export default config;

@@ -1,8 +1,7 @@
 # Frontend
 
 The TanStack Start application for `apps.debugjois.dev`. It uses React,
-TanStack Router and Query, Vite, Nitro, and experimental React Server
-Components. Run the commands below from `app/` unless noted.
+TanStack Router and Query, Vite, and Nitro. Run the commands below from `app/` unless noted.
 
 ## Pages
 

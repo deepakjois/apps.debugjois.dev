@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { HeadContent, Link, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
+import { HeadContent, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import "#/core/global.css";
 
 export type RouterContext = { queryClient: QueryClient };
@@ -19,12 +19,6 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     ],
   }),
   shellComponent: RootDocument,
-  notFoundComponent: () => (
-    <main>
-      <h1>Page not found</h1>
-      <Link to="/">Return home</Link>
-    </main>
-  ),
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {

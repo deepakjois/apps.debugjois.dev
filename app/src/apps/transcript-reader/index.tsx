@@ -1,5 +1,3 @@
-"use client";
-
 import { Link, useCanGoBack, useRouter } from "@tanstack/react-router";
 import type { MouseEvent } from "react";
 import TranscriptArticle from "./TranscriptArticle";
