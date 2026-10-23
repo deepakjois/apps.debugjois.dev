@@ -31,6 +31,7 @@ export const Route = createFileRoute("/transcript-reader")({
     links: [
       ...(loaderData ? [{ rel: "canonical", href: `${SITE_ORIGIN}${loaderData.pagePath}` }] : []),
       { rel: "stylesheet", href: transcriptReaderStylesHref },
+      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
@@ -40,6 +41,7 @@ export const Route = createFileRoute("/transcript-reader")({
     ],
     meta: [
       { title: loaderData?.pageTitle ?? "Transcript Reader" },
+      { name: "theme-color", content: "#121239" },
       ...(loaderData
         ? [
             { name: "description", content: loaderData.pageDescription },

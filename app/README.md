@@ -43,7 +43,10 @@ completely different and move at their own pace. The core changes together.
 | `server/apps/<app>/` | One app's server logic and its tests                                          |
 | `server/routes/api/` | Nitro route files                                                             |
 
-An app imports from `src/core/` but never from another app. Use the `#/`
+An app imports from `src/core/` but never from another app. It owns its look:
+it loads its stylesheet through its route `head` and scopes its selectors, and
+it sets its own `theme-color` and manifest. The root route sets only the
+site-wide favicons. Use the `#/`
 alias (`#/core/...`, `#/apps/...`) for imports across these folders. Server
 code may import types and client-safe constants from `src/`, but `src/` never
 imports from `server/`.

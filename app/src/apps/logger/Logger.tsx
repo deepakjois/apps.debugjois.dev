@@ -126,13 +126,13 @@ function LoggerEditor({ initialNote }: { initialNote: LoggerNote }) {
     saveState === "saving" ? "Saving..." : saveState === "saved" ? "Saved" : "Save";
 
   return (
-    <div className="admin-logger-page">
-      <header className="admin-logger-toolbar">
-        <h1 className="admin-logger-title">{title}</h1>
-        <div className="admin-logger-actions">
-          {saveMessage ? <p className="admin-logger-save-message">{saveMessage}</p> : null}
+    <div className="logger-page">
+      <header className="logger-toolbar">
+        <h1 className="logger-title">{title}</h1>
+        <div className="logger-actions">
+          {saveMessage ? <p className="logger-save-message">{saveMessage}</p> : null}
           <button
-            className={`admin-logger-save-button is-${saveState}`}
+            className={`logger-save-button is-${saveState}`}
             disabled={!isDirty || isSaving}
             onClick={() => saveMutation.mutate()}
             type="button"
@@ -140,7 +140,7 @@ function LoggerEditor({ initialNote }: { initialNote: LoggerNote }) {
             {saveButtonLabel}
           </button>
           <button
-            className="admin-logger-sign-out-button"
+            className="logger-sign-out-button"
             disabled={isSigningOut}
             onClick={signOut}
             title={session.email}
@@ -150,10 +150,10 @@ function LoggerEditor({ initialNote }: { initialNote: LoggerNote }) {
           </button>
         </div>
       </header>
-      <main className="admin-logger-editor-pane">
+      <main className="logger-editor-pane">
         <CodeMirror
           basicSetup={false}
-          className="admin-logger-codemirror"
+          className="logger-codemirror"
           extensions={editorExtensions}
           height="100%"
           onChange={setValue}
@@ -269,9 +269,9 @@ type LoggerStatusScreenProps = { title: string; message?: string };
 
 function LoggerStatusScreen({ title, message }: LoggerStatusScreenProps) {
   return (
-    <main className="admin-logger-status">
-      <section className="admin-logger-status-card">
-        <p className="admin-logger-status-label">Logger</p>
+    <main className="logger-status">
+      <section className="logger-status-card">
+        <p className="logger-status-label">Logger</p>
         <h1>{title}</h1>
         {message ? <p>{message}</p> : null}
       </section>

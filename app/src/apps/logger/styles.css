@@ -1,4 +1,4 @@
-.admin-logger-page {
+.logger-page {
   display: grid;
   grid-template-rows: 56px minmax(0, 1fr);
   width: 100vw;
@@ -9,7 +9,7 @@
   color: #c9d1d9;
 }
 
-.admin-logger-toolbar {
+.logger-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -19,7 +19,7 @@
   background: #0d1117;
 }
 
-.admin-logger-title {
+.logger-title {
   min-width: 0;
   margin: 0;
   overflow: hidden;
@@ -30,20 +30,20 @@
   white-space: nowrap;
 }
 
-.admin-logger-actions {
+.logger-actions {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
   gap: 12px;
 }
 
-.admin-logger-save-message {
+.logger-save-message {
   margin: 0;
   color: #ff7b72;
   font-size: 13px;
 }
 
-.admin-logger-save-button {
+.logger-save-button {
   min-width: 80px;
   height: 32px;
   padding: 0 14px;
@@ -57,21 +57,21 @@
   cursor: pointer;
 }
 
-.admin-logger-save-button:hover:not(:disabled) {
+.logger-save-button:hover:not(:disabled) {
   border-color: #8b949e;
 }
 
-.admin-logger-save-button:focus-visible {
+.logger-save-button:focus-visible {
   outline: 2px solid #58a6ff;
   outline-offset: 2px;
 }
 
-.admin-logger-save-button:disabled {
+.logger-save-button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-.admin-logger-sign-out-button {
+.logger-sign-out-button {
   height: 32px;
   padding: 0 4px;
   border: 0;
@@ -82,62 +82,62 @@
   cursor: pointer;
 }
 
-.admin-logger-sign-out-button:hover:not(:disabled) {
+.logger-sign-out-button:hover:not(:disabled) {
   color: #f0f6fc;
 }
 
-.admin-logger-sign-out-button:focus-visible {
+.logger-sign-out-button:focus-visible {
   outline: 2px solid #58a6ff;
   outline-offset: 2px;
 }
 
-.admin-logger-sign-out-button:disabled {
+.logger-sign-out-button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-.admin-logger-save-button.is-saved {
+.logger-save-button.is-saved {
   border-color: #238636;
   color: #7ee787;
 }
 
-.admin-logger-save-button.is-error {
+.logger-save-button.is-error {
   border-color: #da3633;
   color: #ff7b72;
 }
 
-.admin-logger-editor-pane,
-.admin-logger-codemirror,
-.admin-logger-codemirror .cm-editor {
+.logger-editor-pane,
+.logger-codemirror,
+.logger-codemirror .cm-editor {
   min-height: 0;
   height: 100%;
 }
 
-.admin-logger-codemirror .cm-editor {
+.logger-codemirror .cm-editor {
   width: 100%;
   background: #0d1117;
 }
 
-.admin-logger-codemirror .cm-scroller {
+.logger-codemirror .cm-scroller {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: 15px;
   line-height: 1.65;
 }
 
-.admin-logger-codemirror .cm-content {
+.logger-codemirror .cm-content {
   min-height: 100%;
   padding: 32px 28px 64px;
 }
 
-.admin-logger-codemirror .cm-gutters {
+.logger-codemirror .cm-gutters {
   min-height: 100%;
 }
 
-.admin-logger-codemirror .cm-focused {
+.logger-codemirror .cm-focused {
   outline: none;
 }
 
-.admin-logger-status {
+.logger-status {
   display: grid;
   place-items: center;
   width: 100vw;
@@ -147,7 +147,7 @@
   color: #c9d1d9;
 }
 
-.admin-logger-status-card {
+.logger-status-card {
   width: min(100%, 520px);
   padding: 28px;
   border: 1px solid #30363d;
@@ -155,7 +155,7 @@
   background: #161b22;
 }
 
-.admin-logger-status-label {
+.logger-status-label {
   margin: 0 0 12px;
   color: #8b949e;
   font-size: 12px;
@@ -164,25 +164,25 @@
   text-transform: uppercase;
 }
 
-.admin-logger-status-card h1 {
+.logger-status-card h1 {
   margin: 0;
   color: #f0f6fc;
 }
 
-.admin-logger-status-card p:last-child {
+.logger-status-card p:last-child {
   color: #ff7b72;
 }
 
 @media (max-width: 720px) {
-  .admin-logger-toolbar {
+  .logger-toolbar {
     padding: 0 14px;
   }
 
-  .admin-logger-save-message {
+  .logger-save-message {
     display: none;
   }
 
-  .admin-logger-codemirror .cm-content {
+  .logger-codemirror .cm-content {
     padding-right: 18px;
     padding-left: 18px;
   }

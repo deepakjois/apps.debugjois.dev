@@ -51,9 +51,9 @@ describe("feature routing", () => {
   });
 
   it.each([
-    ["/transcript-reader?t=1111111111111111", "/transcript-reader"],
-    ["/admin/logger", "/admin"],
-  ])("loads only the stylesheet owned by %s", async (path, ownerRouteId) => {
+    ["/transcript-reader?t=1111111111111111", ["/transcript-reader"]],
+    ["/admin/logger", ["/admin", "/admin/logger"]],
+  ])("loads only the stylesheets owned by %s", async (path, ownerRouteIds) => {
     const router = getSeededRouter();
     router.update({
       context: router.options.context,
@@ -67,7 +67,7 @@ describe("feature routing", () => {
         ),
       ),
     ];
-    expect(stylesheetOwners).toEqual([ownerRouteId]);
+    expect(stylesheetOwners).toEqual(ownerRouteIds);
   });
 
   it("does not share cached data across router instances", () => {

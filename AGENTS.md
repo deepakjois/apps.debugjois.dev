@@ -106,6 +106,14 @@ stack outputs with `aws cloudformation describe-stacks`, not from memory.
   `app/server/routes/api/admin/`. Every private route calls
   `requireAdminSession` first. TanStack server functions are for SSR data only.
   Do not propose moving admin endpoints to server functions.
+- **Frontend apps.** Each app lives in `app/src/apps/<app>/` and imports only
+  from `app/src/core/`, never from another app. The root route stays neutral.
+  An app sets its own theme, `theme-color`, and manifest in its route `head`.
+- **App styles.** Load an app's stylesheet with a `?url` import and a route
+  `head` link, so it loads only on that app's pages. A side-effect CSS import
+  in a route lands in the global bundle that every page loads. Scope every
+  selector under the app's root class or a unique prefix, and prefix
+  `@keyframes` names too.
 - **AWS from the app.** Nitro server code invokes the backend Lambda. AWS
   credentials never reach the browser.
 - **Generated files.** TanStack Router writes `app/src/routeTree.gen.ts`. Never
