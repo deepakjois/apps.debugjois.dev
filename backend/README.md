@@ -274,6 +274,14 @@ After the index is written, the deleted transcripts' JSON objects are removed
 from the bucket, so a later rebuild does not list them again. Consumers treat
 `archived` as optional. Unarchived items omit it.
 
+Index fields are modeled explicitly in `transcripts.Index` and
+`transcripts.ListItem`; unrecognized JSON fields are not preserved. When adding
+fields, update the writers and use a targeted backfill for existing entries.
+Reinstall `transcript-reader` with `go install ./cmd/transcript-reader` from
+the updated `backend/` directory before using `--edit`: an older installed
+binary can discard fields it does not know. Updating the server does not
+update local CLIs.
+
 ## Lambda runtime
 
 `main.go` starts the Lambda runtime, not a local HTTP server. Use the CLIs for

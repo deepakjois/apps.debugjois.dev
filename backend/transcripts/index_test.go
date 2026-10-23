@@ -469,7 +469,20 @@ var editChanges = map[string]ItemState{
 }
 
 func TestEditIndexArchivesUnarchivesAndDeletes(t *testing.T) {
-	client, snapshot := editFixture()
+	client, _ := editFixture()
+	client.objects[IndexObjectKey] = fakeObject{
+		body: `{"transcripts":[
+			{"title":"Keep","location":"` + LocationPrefix + `keep.json","source_type":"youtube"},
+			{"title":"Archive","location":"` + LocationPrefix + `archive.json","source_type":"miniflux","podcast_name":"The LRB Podcast"},
+			{"title":"Unarchive","location":"` + LocationPrefix + `unarchive.json","source_type":"podcast_addict","podcast_name":"Overthink","archived":true},
+			{"title":"Delete","location":"` + LocationPrefix + `delete.json","source_type":"audio_url","archived":true}
+		]}`,
+		etag: `"etag-1"`,
+	}
+	snapshot, err := ReadIndex(context.Background(), client, "debugjois-dev-site")
+	if err != nil {
+		t.Fatalf("ReadIndex returned error: %v", err)
+	}
 
 	if _, err := EditIndex(context.Background(), client, "debugjois-dev-site", snapshot, editChanges); err != nil {
 		t.Fatalf("EditIndex returned error: %v", err)
@@ -482,9 +495,17 @@ func TestEditIndexArchivesUnarchivesAndDeletes(t *testing.T) {
 	if err := json.Unmarshal([]byte(client.objects[IndexObjectKey].body), &index); err != nil {
 		t.Fatalf("unmarshal written index: %v", err)
 	}
+	wantSources := map[string][2]string{
+		"Keep":      {"youtube", ""},
+		"Archive":   {"miniflux", "The LRB Podcast"},
+		"Unarchive": {"podcast_addict", "Overthink"},
+	}
 	got := map[string]bool{}
 	for _, item := range index.Transcripts {
 		got[item.Title] = item.Archived
+		if source := [2]string{item.SourceType, item.PodcastName}; source != wantSources[item.Title] {
+			t.Fatalf("source metadata for %s = %v, want %v", item.Title, source, wantSources[item.Title])
+		}
 	}
 	want := map[string]bool{"Keep": false, "Archive": true, "Unarchive": false}
 	if fmt.Sprint(got) != fmt.Sprint(want) {
