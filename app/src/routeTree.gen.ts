@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as TranscriptReaderRouteImport } from './routes/transcript-reader'
+import { Route as TvShowMemesRouteImport } from './routes/tv-show-memes'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminLoggerRouteImport } from './routes/admin.logger'
 
@@ -30,6 +31,11 @@ const TranscriptReaderRoute = TranscriptReaderRouteImport.update({
   path: '/transcript-reader',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TvShowMemesRoute = TvShowMemesRouteImport.update({
+  id: '/tv-show-memes',
+  path: '/tv-show-memes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -45,12 +51,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/transcript-reader': typeof TranscriptReaderRoute
+  '/tv-show-memes': typeof TvShowMemesRoute
   '/admin/logger': typeof AdminLoggerRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/transcript-reader': typeof TranscriptReaderRoute
+  '/tv-show-memes': typeof TvShowMemesRoute
   '/admin/logger': typeof AdminLoggerRoute
   '/admin': typeof AdminIndexRoute
 }
@@ -59,19 +67,27 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/transcript-reader': typeof TranscriptReaderRoute
+  '/tv-show-memes': typeof TvShowMemesRoute
   '/admin/logger': typeof AdminLoggerRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/transcript-reader' | '/admin/logger' | '/admin/'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/transcript-reader'
+    | '/tv-show-memes'
+    | '/admin/logger'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/transcript-reader' | '/admin/logger' | '/admin'
+  to: '/' | '/transcript-reader' | '/tv-show-memes' | '/admin/logger' | '/admin'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/transcript-reader'
+    | '/tv-show-memes'
     | '/admin/logger'
     | '/admin/'
   fileRoutesById: FileRoutesById
@@ -80,6 +96,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   TranscriptReaderRoute: typeof TranscriptReaderRoute
+  TvShowMemesRoute: typeof TvShowMemesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -103,6 +120,13 @@ declare module '@tanstack/react-router' {
       path: '/transcript-reader'
       fullPath: '/transcript-reader'
       preLoaderRoute: typeof TranscriptReaderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tv-show-memes': {
+      id: '/tv-show-memes'
+      path: '/tv-show-memes'
+      fullPath: '/tv-show-memes'
+      preLoaderRoute: typeof TvShowMemesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -138,6 +162,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   TranscriptReaderRoute: TranscriptReaderRoute,
+  TvShowMemesRoute: TvShowMemesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

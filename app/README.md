@@ -10,6 +10,10 @@ TanStack Router and Query, Vite, and Nitro. Run the commands below from `app/` u
   transcript. Transcripts marked `archived` in the index are hidden behind a
   Show archived toggle, which sets `?archived=true`. Their permalinks still
   work. It needs no credentials and no backend. `/` redirects here.
+- `/tv-show-memes` lays images out in a borderless contact-sheet grid and
+  exports it as one PNG. Images come from the file picker, drag and drop, or
+  paste, and drag to reorder. Everything runs in the browser with no network
+  calls.
 - `/admin/logger` edits today's Berlin-date Markdown note in Google Drive.
   `/admin` redirects here. The toolbar has the admin Sign out button.
 

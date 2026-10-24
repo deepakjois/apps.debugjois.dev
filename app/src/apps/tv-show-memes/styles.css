@@ -1,0 +1,398 @@
+.tv-show-memes {
+  --bg: #141318;
+  --sheet: #1c1b21;
+  --raised: #26242c;
+  --line: #35323d;
+  --ink: #eceaf2;
+  --dim: #8a8694;
+  --amber: #e8a33d;
+  --amber-soft: rgb(232 163 61 / 16%);
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+
+  button {
+    font: inherit;
+  }
+
+  /* ---- header / controls ---- */
+  header {
+    flex: 0 0 auto;
+    padding: 14px 18px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .titlerow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .title {
+    margin: 0;
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+  }
+
+  .sub {
+    color: var(--dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+
+  /* sprocket strip — the contact-sheet signature */
+  .sprockets {
+    display: flex;
+    gap: 7px;
+    height: 9px;
+    margin: 12px 0 0;
+    overflow: hidden;
+  }
+
+  .sprockets i {
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    background: var(--line);
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0 14px;
+  }
+
+  .ctl {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 6px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--sheet);
+  }
+
+  .ctl .label {
+    padding-left: 4px;
+    color: var(--dim);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .step {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--raised);
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .step:hover {
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+
+  .step:active {
+    transform: translateY(1px);
+  }
+
+  .val {
+    min-width: 30px;
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 14px;
+    text-align: center;
+  }
+
+  .seg {
+    display: flex;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--raised);
+  }
+
+  .seg button {
+    padding: 7px 11px;
+    border: 0;
+    background: transparent;
+    color: var(--dim);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .seg button[aria-pressed="true"] {
+    background: var(--amber-soft);
+    color: var(--amber);
+  }
+
+  .btn {
+    padding: 9px 14px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--sheet);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .btn:hover {
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+
+  .btn.ghost {
+    color: var(--dim);
+  }
+
+  .spacer {
+    flex: 1 1 auto;
+  }
+
+  /* ---- the sheet (preview / drop zone) ---- */
+  main {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 18px;
+    overflow: auto;
+  }
+
+  .sheet {
+    position: relative;
+    max-width: 1100px;
+    min-height: 240px;
+    margin: 0 auto;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--sheet);
+  }
+
+  .sheet.fileover {
+    border-color: var(--amber);
+    box-shadow: 0 0 0 1px var(--amber) inset;
+  }
+
+  .grid {
+    display: grid;
+    gap: 0;
+    overflow: hidden;
+    border-radius: 6px;
+  }
+
+  .cell {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: var(--cell-ar, 1);
+    background: #0d0c10;
+    cursor: grab;
+  }
+
+  .cell img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+  }
+
+  .cell.stretch img {
+    object-fit: fill;
+  }
+
+  .cell.dragging {
+    opacity: 0.35;
+    cursor: grabbing;
+  }
+
+  .cell.over::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--amber-soft);
+    box-shadow: 0 0 0 2px var(--amber) inset;
+  }
+
+  .frame {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgb(0 0 0 / 55%);
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    opacity: 0.55;
+    pointer-events: none;
+    transition: opacity 0.12s;
+  }
+
+  .cell:hover .frame {
+    opacity: 0.95;
+  }
+
+  .kill {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: rgb(0 0 0 / 55%);
+    color: #fff;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.12s;
+  }
+
+  .cell:hover .kill,
+  .kill:focus-visible {
+    opacity: 1;
+  }
+
+  .kill:hover {
+    background: var(--amber);
+    color: #111;
+  }
+
+  .empty {
+    display: grid;
+    place-items: center;
+    aspect-ratio: var(--cell-ar, 1);
+    border: 1px dashed var(--line);
+    color: var(--dim);
+    font-family: var(--mono);
+    font-size: 18px;
+  }
+
+  .empty.over {
+    border-color: var(--amber);
+    background: var(--amber-soft);
+    color: var(--amber);
+  }
+
+  /* first-run empty state */
+  .blank {
+    display: grid;
+    place-content: center;
+    width: 100%;
+    min-height: 300px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  .blank .big {
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 15px;
+    letter-spacing: 0.06em;
+  }
+
+  .blank .small {
+    margin-top: 8px;
+    color: var(--dim);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+  }
+
+  /* ---- footer / export ---- */
+  footer {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 18px;
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+  }
+
+  .count {
+    color: var(--dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+  }
+
+  .export {
+    padding: 11px 20px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--amber);
+    color: #1a1206;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .export:disabled {
+    background: var(--raised);
+    color: var(--dim);
+    cursor: not-allowed;
+  }
+
+  .export:not(:disabled):hover {
+    filter: brightness(1.06);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      transition: none !important;
+    }
+  }
+}
