@@ -1,0 +1,30 @@
+{
+  "id": "/tv-show-memes",
+  "name": "TV Show Memes · apps.debugjois.dev",
+  "short_name": "TV Memes",
+  "start_url": "/tv-show-memes",
+  "scope": "/tv-show-memes",
+  "display": "standalone",
+  "background_color": "#141318",
+  "theme_color": "#141318",
+  "icons": [
+    {
+      "src": "/icons/tv-show-memes/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/tv-show-memes/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/tv-show-memes/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

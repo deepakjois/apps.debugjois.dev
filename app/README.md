@@ -19,13 +19,38 @@ TanStack Router and Query, Vite, and Nitro. Run the commands below from `app/` u
 
 Transcript reader pages emit Open Graph and Twitter card tags, so pasted links
 unfurl in Slack, X, and similar apps. Each permalink uses the episode title, a
-byline, and a show-notes excerpt, with the shared card image
-`public/icons/og-card.png`. Tag URLs use the production origin
+byline, and a show-notes excerpt, with the app's card image. `/tv-show-memes`
+emits the same tags with its own card. Tag URLs use the production origin
 `https://apps.debugjois.dev`.
 
-Favicons, touch icons, and the web manifest live in `public/`, from the Signal
-Archive icon kit. CloudFront serves `public/` from S3 only on the paths listed
-in the [infra README](../infra/README.md#routing).
+## App icons and cards
+
+Each app has its own favicon, touch icon, web manifest, and link-preview card.
+Two files in `src/apps/<app>/` are the source:
+
+- `icon.svg` is the square icon. It is served as-is as the SVG favicon and
+  rasterized for everything else.
+- `brand.ts` exports the app's name, start URL, `theme-color`, and optional
+  card text and colors. The route reads it through the `#/core/appBrand`
+  helpers, so the page and the generated files share one definition.
+
+After changing either file, or adding an app, regenerate and commit the
+output:
+
+```sh
+npm run icons
+```
+
+`scripts/app-icons/generate.ts` renders with resvg and the fonts bundled in
+`scripts/app-icons/fonts/`. It writes `favicon.svg`, `favicon.ico`,
+`apple-touch-icon.png`, the 192, 512, and maskable PNGs, `manifest.webmanifest`,
+and, for apps with card text, a 1200×630 `og-card.png`, all into
+`public/icons/<slug>/`. It also copies the transcript reader's `favicon.ico`
+and `apple-touch-icon.png` to the top of `public/`, because browsers request
+those paths for pages that link no icons, such as 404s. A test fails when the
+committed output no longer matches an app's `icon.svg` or `brand.ts`.
+CloudFront serves `public/` from S3 only on the paths listed in the
+[infra README](../infra/README.md#routing).
 
 The admin page calls Nitro routes under `server/routes/api/admin/`. Those
 routes invoke the deployed backend Lambda. The
@@ -48,8 +73,8 @@ completely different and move at their own pace. The core changes together.
 
 An app imports from `src/core/` but never from another app. It owns its look:
 it loads its stylesheet through its route `head` and scopes its selectors, and
-it sets its own `theme-color` and manifest. The root route sets only the
-site-wide favicons. Use the `#/`
+it sets its own icons, manifest, and `theme-color`. The root route sets no
+icons. Use the `#/`
 alias (`#/core/...`, `#/apps/...`) for imports across these folders. Server
 code may import types and client-safe constants from `src/`, but `src/` never
 imports from `server/`.

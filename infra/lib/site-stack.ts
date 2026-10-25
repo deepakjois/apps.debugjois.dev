@@ -166,9 +166,7 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
       "/assets/*": createStaticBehavior(staticOrigin),
       "/icons/*": createStaticBehavior(staticOrigin),
       "/favicon.ico": createStaticBehavior(staticOrigin),
-      "/favicon.svg": createStaticBehavior(staticOrigin),
       "/apple-touch-icon.png": createStaticBehavior(staticOrigin),
-      "/manifest.webmanifest": createStaticBehavior(staticOrigin),
       "/robots.txt": createStaticBehavior(staticOrigin),
     };
 

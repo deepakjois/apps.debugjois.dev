@@ -110,7 +110,9 @@ stack outputs with `aws cloudformation describe-stacks`, not from memory.
   endpoints to server functions.
 - **Frontend apps.** Each app lives in `app/src/apps/<app>/` and imports only
   from `app/src/core/`, never from another app. The root route stays neutral.
-  An app sets its own theme, `theme-color`, and manifest in its route `head`.
+  An app sets its own theme in its route `head`, and its icons, manifest, and
+  `theme-color` through the `#/core/appBrand` helpers. After changing an app's
+  `icon.svg` or `brand.ts`, run `npm run icons` and commit the output.
 - **App styles.** Load an app's stylesheet with a `?url` import and a route
   `head` link, so it loads only on that app's pages. A side-effect CSS import
   in a route lands in the global bundle that every page loads. Scope every

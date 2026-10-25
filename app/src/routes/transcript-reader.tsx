@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { TranscriptList, TranscriptReader } from "#/apps/transcript-reader";
+import { brand } from "#/apps/transcript-reader/brand";
 import TranscriptArticleSkeleton from "#/apps/transcript-reader/TranscriptArticleSkeleton";
 import { getTranscriptTitle, normalizeTranscriptHash } from "#/apps/transcript-reader/data";
 import {
@@ -7,8 +8,7 @@ import {
   loadTranscriptReaderData,
 } from "#/apps/transcript-reader/loader";
 import transcriptReaderStylesHref from "#/apps/transcript-reader/styles.css?url";
-
-const SITE_ORIGIN = "https://apps.debugjois.dev";
+import { appCardMeta, appIconLinks, appThemeMeta, SITE_ORIGIN } from "#/core/appBrand";
 
 type TranscriptReaderSearch = {
   t?: string;
@@ -31,7 +31,7 @@ export const Route = createFileRoute("/transcript-reader")({
     links: [
       ...(loaderData ? [{ rel: "canonical", href: `${SITE_ORIGIN}${loaderData.pagePath}` }] : []),
       { rel: "stylesheet", href: transcriptReaderStylesHref },
-      { rel: "manifest", href: "/manifest.webmanifest" },
+      ...appIconLinks(brand),
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
@@ -40,12 +40,12 @@ export const Route = createFileRoute("/transcript-reader")({
       },
     ],
     meta: [
-      { title: loaderData?.pageTitle ?? "Transcript Reader" },
-      { name: "theme-color", content: "#121239" },
+      { title: loaderData?.pageTitle ?? brand.name },
+      appThemeMeta(brand),
       ...(loaderData
         ? [
             { name: "description", content: loaderData.pageDescription },
-            { property: "og:site_name", content: "Transcript Reader" },
+            { property: "og:site_name", content: brand.name },
             {
               property: "og:type",
               content: "transcript" in loaderData ? "article" : "website",
@@ -59,11 +59,7 @@ export const Route = createFileRoute("/transcript-reader")({
             },
             { property: "og:description", content: loaderData.pageDescription },
             { property: "og:url", content: `${SITE_ORIGIN}${loaderData.pagePath}` },
-            { property: "og:image", content: `${SITE_ORIGIN}/icons/og-card.png` },
-            { property: "og:image:width", content: "1200" },
-            { property: "og:image:height", content: "630" },
-            { property: "og:image:alt", content: "Transcript Reader pixel-art logo" },
-            { name: "twitter:card", content: "summary_large_image" },
+            ...appCardMeta(brand),
           ]
         : []),
     ],
