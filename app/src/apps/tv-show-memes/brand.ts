@@ -7,9 +7,9 @@ export const brand: AppBrand = {
   startUrl: "/tv-show-memes",
   themeColor: "#141318",
   card: {
-    eyebrow: "Contact sheets",
+    eyebrow: "Now airing",
     title: ["TV Show", "Memes"],
-    tagline: ["Lay out stills in a grid and", "export them as one image."],
+    tagline: ["Drop in screenshots, stack", "the scenes, make the meme."],
     accent: "#e8a33d",
     highlight: "#eceaf2",
   },

@@ -2,20 +2,16 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import type { CSSProperties, DragEvent, Dispatch } from "react";
 import {
   cellAspect,
+  exportCellSize,
   initialSheetState,
   renderSheetPng,
   sheetReducer,
-  type Fit,
   type SheetAction,
 } from "./sheet";
 
-const SPROCKET_COUNT = 46;
-const FITS: { fit: Fit; label: string }[] = [
-  { fit: "cover", label: "Cover" },
-  { fit: "stretch", label: "Stretch" },
-];
-
 let nextImageId = 1;
+
+type Preview = { url: string; width: number; height: number };
 
 function loadFile(file: File | null, dispatch: Dispatch<SheetAction>) {
   if (!file || !file.type.startsWith("image/")) return;
@@ -33,10 +29,12 @@ function loadFile(file: File | null, dispatch: Dispatch<SheetAction>) {
 
 export function ContactSheet() {
   const [state, dispatch] = useReducer(sheetReducer, initialSheetState);
-  const { images, cols, rows, fit } = state;
+  const { images, cols, rows } = state;
   const [dragFrom, setDragFrom] = useState(-1);
   const [overSlot, setOverSlot] = useState(-1);
   const [fileOver, setFileOver] = useState(false);
+  const [rendering, setRendering] = useState(false);
+  const [preview, setPreview] = useState<Preview | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const imagesRef = useRef(images);
 
@@ -81,16 +79,20 @@ export function ContactSheet() {
   }
 
   async function exportPng() {
-    if (!images.length) return;
-    const blob = await renderSheetPng(state);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "contact-sheet.png";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    if (!images.length || rendering) return;
+    setRendering(true);
+    try {
+      const blob = await renderSheetPng(state);
+      const cell = exportCellSize(images);
+      setPreview({ url: URL.createObjectURL(blob), width: cols * cell.w, height: rows * cell.h });
+    } finally {
+      setRendering(false);
+    }
+  }
+
+  function closePreview() {
+    if (preview) URL.revokeObjectURL(preview.url);
+    setPreview(null);
   }
 
   function endDrag() {
@@ -137,13 +139,9 @@ export function ContactSheet() {
     <div className="tv-show-memes">
       <header>
         <div className="titlerow">
-          <h1 className="title">Contact Sheet</h1>
-          <span className="sub">borderless image grid · runs offline</span>
-        </div>
-        <div className="sprockets" aria-hidden="true">
-          {Array.from({ length: SPROCKET_COUNT }, (_, i) => (
-            <i key={i} />
-          ))}
+          <h1 className="title">TV Memes</h1>
+          <span className={`onair${has ? " live" : ""}`}>{has ? "On air" : "Off air"}</span>
+          <span className="sub">screenshots in, meme out · nothing leaves your device</span>
         </div>
         <div className="controls">
           <Stepper
@@ -158,116 +156,123 @@ export function ContactSheet() {
             noun="rows"
             onChange={(n) => dispatch({ type: "setRows", rows: n })}
           />
-          <fieldset className="seg" aria-label="Fit mode">
-            {FITS.map((option) => (
-              <button
-                key={option.fit}
-                type="button"
-                aria-pressed={fit === option.fit}
-                onClick={() => dispatch({ type: "setFit", fit: option.fit })}
-              >
-                {option.label}
-              </button>
-            ))}
-          </fieldset>
-          <button type="button" className="btn" onClick={browse}>
-            Add images
+          <button type="button" className="btn add" onClick={browse}>
+            + Add stills
           </button>
           <div className="spacer" />
-          <button type="button" className="btn ghost" onClick={clear}>
-            Clear
+          <button
+            type="button"
+            className="btn ghost"
+            title="Remove every still"
+            disabled={!has}
+            onClick={clear}
+          >
+            Cancel show
           </button>
         </div>
       </header>
 
       <main>
-        <div
-          className={`sheet${fileOver ? " fileover" : ""}`}
-          onDragEnter={sheetDragOver}
-          onDragOver={sheetDragOver}
-          onDragLeave={(e) => {
-            if (e.target === e.currentTarget) setFileOver(false);
-          }}
-          onDrop={sheetDrop}
-        >
-          {has ? (
-            <div
-              className="grid"
-              style={
-                {
-                  gridTemplateColumns: `repeat(${cols}, 1fr)`,
-                  "--cell-ar": cellAspect(images),
-                } as CSSProperties
-              }
-            >
-              {images.map((im, i) => (
-                <div
-                  key={im.id}
-                  className={[
-                    "cell",
-                    fit === "stretch" && "stretch",
-                    dragFrom === i && "dragging",
-                    overSlot === i && "over",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  draggable
-                  onDragStart={(e) => {
-                    setDragFrom(i);
-                    e.dataTransfer.effectAllowed = "move";
-                    e.dataTransfer.setData("text/cs-reorder", "1");
-                  }}
-                  onDragEnd={endDrag}
-                  onDragOver={(e) => slotDragOver(e, i)}
-                  onDrop={(e) => slotDrop(e, i)}
-                >
-                  <img src={im.url} alt="" />
-                  <span className="frame">{String(i + 1).padStart(2, "0")}</span>
-                  <button
-                    type="button"
-                    className="kill"
-                    title="Remove"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeAt(i);
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-              {Array.from({ length: emptySlots }, (_, k) => {
-                const slot = images.length + k;
-                return (
+        <div className="tv">
+          <div
+            className={`sheet${fileOver ? " fileover" : ""}`}
+            onDragEnter={sheetDragOver}
+            onDragOver={sheetDragOver}
+            onDragLeave={(e) => {
+              if (e.target === e.currentTarget) setFileOver(false);
+            }}
+            onDrop={sheetDrop}
+          >
+            {has ? (
+              <div
+                className="grid"
+                style={
+                  {
+                    gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                    "--cell-ar": cellAspect(images),
+                  } as CSSProperties
+                }
+              >
+                {images.map((im, i) => (
                   <div
-                    key={`empty-${slot}`}
-                    className={`empty${overSlot === slot ? " over" : ""}`}
-                    onDragOver={(e) => slotDragOver(e, slot)}
-                    onDrop={(e) => slotDrop(e, images.length)}
+                    key={im.id}
+                    className={["cell", dragFrom === i && "dragging", overSlot === i && "over"]
+                      .filter(Boolean)
+                      .join(" ")}
+                    draggable
+                    onDragStart={(e) => {
+                      setDragFrom(i);
+                      e.dataTransfer.effectAllowed = "move";
+                      e.dataTransfer.setData("text/cs-reorder", "1");
+                    }}
+                    onDragEnd={endDrag}
+                    onDragOver={(e) => slotDragOver(e, i)}
+                    onDrop={(e) => slotDrop(e, i)}
                   >
-                    +
+                    <img src={im.url} alt="" />
+                    <span className="frame">E{String(i + 1).padStart(2, "0")}</span>
+                    <button
+                      type="button"
+                      className="kill"
+                      title="Cut this scene"
+                      aria-label={`Remove still ${i + 1}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeAt(i);
+                      }}
+                    >
+                      ×
+                    </button>
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <button type="button" className="blank" onClick={browse}>
-              <span className="big">Drop images here</span>
-              <span className="small">or click to browse · or paste from clipboard</span>
-            </button>
-          )}
+                ))}
+                {Array.from({ length: emptySlots }, (_, k) => {
+                  const slot = images.length + k;
+                  return (
+                    <button
+                      type="button"
+                      key={`empty-${slot}`}
+                      className={`empty${overSlot === slot ? " over" : ""}`}
+                      aria-label="Add stills"
+                      title="Add stills"
+                      onClick={browse}
+                      onDragOver={(e) => slotDragOver(e, slot)}
+                      onDrop={(e) => slotDrop(e, images.length)}
+                    >
+                      <span className="plus">+</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <button type="button" className="blank" onClick={browse}>
+                <span className="nosignal">No signal</span>
+                <span className="big">Drop your screenshots here</span>
+                <span className="small">click to browse · or paste from clipboard</span>
+              </button>
+            )}
+          </div>
+          <div className="tvbase" aria-hidden="true">
+            <span className="led" />
+            <span className="plate">Meme-o-Vision</span>
+            <span className="knobs">
+              <i />
+              <i />
+            </span>
+          </div>
         </div>
       </main>
 
       <footer>
         <span className="count">
-          {images.length} image{images.length === 1 ? "" : "s"}
+          {images.length} still{images.length === 1 ? "" : "s"} in this episode
         </span>
         <div className="spacer" />
-        <button type="button" className="export" disabled={!has} onClick={exportPng}>
-          Export PNG
+        <button type="button" className="export" disabled={!has || rendering} onClick={exportPng}>
+          {rendering ? "Rolling…" : "▶ Make the meme"}
         </button>
       </footer>
+
+      {preview && <PreviewModal preview={preview} onClose={closePreview} />}
 
       <input
         ref={fileInput}
@@ -281,6 +286,58 @@ export function ContactSheet() {
         }}
       />
     </div>
+  );
+}
+
+function PreviewModal({ preview, onClose }: { preview: Preview; onClose: () => void }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const { url, width, height } = preview;
+
+  useEffect(() => {
+    if (!dialog.current?.open) dialog.current?.showModal();
+  }, []);
+
+  return (
+    <dialog ref={dialog} className="preview" aria-label="Your meme" onClose={onClose}>
+      <button
+        type="button"
+        className="scrim"
+        tabIndex={-1}
+        aria-hidden="true"
+        onClick={() => dialog.current?.close()}
+      />
+      <div className="card">
+        <div className="bar">
+          <span className="airing">Now airing</span>
+          <span className="dims">
+            {width} × {height}
+          </span>
+          <div className="spacer" />
+          <a className="iconbtn" href={url} download="tv-meme.png" title="Download PNG">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14" />
+            </svg>
+            <span className="sr">Download PNG</span>
+          </a>
+          <button
+            type="button"
+            className="iconbtn"
+            title="Close"
+            onClick={() => dialog.current?.close()}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+            <span className="sr">Close</span>
+          </button>
+        </div>
+        <img
+          src={url}
+          alt="Exported meme"
+          style={{ "--ar": width / height, "--w": `${width}px` } as CSSProperties}
+        />
+      </div>
+    </dialog>
   );
 }
 
@@ -306,7 +363,7 @@ function Stepper({
       >
         −
       </button>
-      <span className="val">{value}</span>
+      <span className="val">{String(value).padStart(2, "0")}</span>
       <button
         type="button"
         className="step"

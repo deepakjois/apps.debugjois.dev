@@ -1,5 +1,3 @@
-export type Fit = "cover" | "stretch";
-
 export type SheetImage = {
   id: number;
   el: HTMLImageElement;
@@ -12,7 +10,6 @@ export type SheetState = {
   images: SheetImage[];
   cols: number;
   rows: number;
-  fit: Fit;
 };
 
 export type SheetAction =
@@ -21,13 +18,12 @@ export type SheetAction =
   | { type: "reorder"; from: number; to: number }
   | { type: "clear" }
   | { type: "setCols"; cols: number }
-  | { type: "setRows"; rows: number }
-  | { type: "setFit"; fit: Fit };
+  | { type: "setRows"; rows: number };
 
 const MAX_GRID = 12;
 const EXPORT_CELL_CAP = 1600;
 
-export const initialSheetState: SheetState = { images: [], cols: 3, rows: 1, fit: "cover" };
+export const initialSheetState: SheetState = { images: [], cols: 3, rows: 1 };
 
 export function neededRows(count: number, cols: number) {
   return Math.max(1, Math.ceil(count / cols));
@@ -59,8 +55,6 @@ function applyAction(state: SheetState, action: SheetAction): SheetState {
           Math.min(MAX_GRID, action.rows),
         ),
       };
-    case "setFit":
-      return { ...state, fit: action.fit };
   }
 }
 
@@ -117,7 +111,7 @@ function drawCover(
   ctx.drawImage(im.el, (im.w - sw) / 2, (im.h - sh) / 2, sw, sh, dx, dy, dw, dh);
 }
 
-export function renderSheetPng({ images, cols, rows, fit }: SheetState): Promise<Blob> {
+export function renderSheetPng({ images, cols, rows }: SheetState): Promise<Blob> {
   const cell = exportCellSize(images);
   const canvas = document.createElement("canvas");
   canvas.width = cols * cell.w;
@@ -129,8 +123,7 @@ export function renderSheetPng({ images, cols, rows, fit }: SheetState): Promise
   images.forEach((im, i) => {
     const dx = (i % cols) * cell.w;
     const dy = Math.floor(i / cols) * cell.h;
-    if (fit === "stretch") ctx.drawImage(im.el, dx, dy, cell.w, cell.h);
-    else drawCover(ctx, im, dx, dy, cell.w, cell.h);
+    drawCover(ctx, im, dx, dy, cell.w, cell.h);
   });
 
   return new Promise((resolve, reject) => {

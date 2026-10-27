@@ -4,7 +4,7 @@ import { ContactSheet } from "#/apps/tv-show-memes/ContactSheet";
 import tvShowMemesStylesHref from "#/apps/tv-show-memes/styles.css?url";
 import { appCardMeta, appIconLinks, appThemeMeta, SITE_ORIGIN } from "#/core/appBrand";
 
-const description = "Lay out TV show stills in a contact-sheet grid and export them as one PNG.";
+const description = "Stack TV show screenshots into a meme grid and export it as one PNG.";
 
 export const Route = createFileRoute("/tv-show-memes")({
   head: () => ({
