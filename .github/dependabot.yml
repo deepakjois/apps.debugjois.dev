@@ -4,3 +4,10 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+  # Go Dependency Upgrades owns routine version bumps; a limit of 0 leaves
+  # Dependabot opening only security update PRs.
+  - package-ecosystem: "gomod"
+    directory: "/backend"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 0

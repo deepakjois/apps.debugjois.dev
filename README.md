@@ -137,3 +137,7 @@ The deploy workflows share one concurrency group, so deploys run one at a time.
 A flake change redeploys the backend because the image is built with the
 flake's Go. The app Lambda runs on the AWS-managed Node runtime, so it does not
 redeploy. Pull requests never deploy or write to production.
+
+Dependabot bumps GitHub Actions weekly. For `backend/` Go modules it opens only
+security update PRs, since Go Dependency Upgrades handles routine bumps. Those
+PRs need Dependabot security updates turned on in the repository settings.
