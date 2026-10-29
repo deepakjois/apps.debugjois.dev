@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Expects $GITHUB_OUTPUT to be set (standard in GitHub Actions).
+# Expects $GITHUB_OUTPUT to be set (standard in GitHub Actions) and
+# NCU_TARGET (see dep-upgrades-check.sh).
 #
 # Outputs written to $GITHUB_OUTPUT:
 #   has_updates: "true" if at least one project has upgrades, else "false"
@@ -45,7 +46,13 @@ EOF_MARKER=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
   echo "body<<$EOF_MARKER"
   echo "## Dependency Upgrades"
   echo ""
-  echo "Weekly npm dependency upgrades across the repo."
+  if [ "$NCU_TARGET" = "latest" ]; then
+    echo "Weekly npm upgrades including new major versions. This PR is not"
+    echo "merged automatically. Review the changelogs before merging."
+  else
+    echo "Weekly npm upgrades within current major versions. This PR merges"
+    echo "automatically once CI passes."
+  fi
   echo ""
 
   if [ "$APP_UPDATED" = "true" ]; then

@@ -1,16 +1,17 @@
 name: Go Dependency Upgrades
 
 on:
+  # Upgrade PRs merge on different days because the deploy concurrency group
+  # keeps only one pending run and cancels older pending ones.
   schedule:
-    - cron: "22 10 * * 1"
+    - cron: "22 10 * * 2"
   workflow_dispatch:
 
 jobs:
   upgrade:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -26,13 +27,13 @@ jobs:
         if: steps.upgrades.outputs.has_updates == 'true'
         uses: ./.github/actions/backend-go-lint-test-build
 
-      - name: Create Pull Request
+      - name: Open pull request
         if: steps.upgrades.outputs.has_updates == 'true'
-        uses: peter-evans/create-pull-request@v8
+        uses: ./.github/actions/upgrade-pr
         with:
+          client-id: ${{ secrets.DEPS_APP_CLIENT_ID }}
+          private-key: ${{ secrets.DEPS_APP_PRIVATE_KEY }}
           branch: deps/go-upgrades
           title: "go: upgrade module dependencies"
           body: ${{ steps.upgrades.outputs.body }}
-          commit-message: "go: upgrade module dependencies"
-          labels: dependencies
-          delete-branch: true
+          automerge: "true"

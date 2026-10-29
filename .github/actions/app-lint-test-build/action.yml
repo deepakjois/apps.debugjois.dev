@@ -28,6 +28,11 @@ runs:
       working-directory: app
       run: npm run lint
 
+    - name: Type-check
+      shell: bash
+      working-directory: app
+      run: npx tsc --noEmit
+
     - name: Run tests
       shell: bash
       working-directory: app

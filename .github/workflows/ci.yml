@@ -1,15 +1,9 @@
-name: Toolchain Validation
+name: CI
 
+# Required by the main ruleset, so it runs on every PR: a required check that a
+# path filter skips never reports, and the PR can never merge.
 on:
   pull_request:
-    paths:
-      - "flake.nix"
-      - "flake.lock"
-      - ".agents/**"
-      - "scripts/install-go-tools.sh"
-      - ".github/actions/**"
-      - ".github/scripts/setup-ci.sh"
-      - ".github/workflows/**"
   push:
     branches: [main]
     paths:
@@ -23,7 +17,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  validate:
+  checks:
     runs-on: ubuntu-latest
     permissions:
       contents: read

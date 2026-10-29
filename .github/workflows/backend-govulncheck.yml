@@ -4,7 +4,10 @@ on:
   pull_request:
     paths:
       - "backend/**"
+      - "flake.nix"
+      - "flake.lock"
       - ".github/workflows/backend-govulncheck.yml"
+      - ".github/scripts/govulncheck.sh"
   schedule:
     - cron: "22 10 * * *"
   workflow_dispatch:
@@ -14,11 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: write
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-tools
         with:
           go-tools: govulncheck
       - name: Run govulncheck
-        working-directory: backend
-        run: govulncheck ./...
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: .github/scripts/govulncheck.sh

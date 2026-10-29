@@ -26,7 +26,9 @@ Write plain commit messages. Do not add co-author or agent trailers.
 
 Merging to `main` deploys. A push to `main` that touches `app/` deploys the
 frontend, and one that touches `backend/` deploys the backend. Treat landing a
-change on `main` as a production deploy.
+change on `main` as a production deploy. Non-major dependency upgrade PRs
+merge automatically once CI passes, as described in
+[Dependency upgrades](README.md#dependency-upgrades).
 
 ## Environment
 

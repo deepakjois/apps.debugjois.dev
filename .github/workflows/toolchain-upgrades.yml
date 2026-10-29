@@ -1,0 +1,53 @@
+name: Toolchain Upgrades
+
+on:
+  # Upgrade PRs merge on different days because the deploy concurrency group
+  # keeps only one pending run and cancels older pending ones.
+  schedule:
+    - cron: "22 10 * * 3"
+  workflow_dispatch:
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      GO_TOOLS: gopls golangci-lint govulncheck go-mod-upgrade gomajor
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-tools
+        with:
+          go-tools: ${{ env.GO_TOOLS }}
+
+      - name: Upgrade flake inputs, npm, and Go helpers
+        id: upgrades
+        run: .github/scripts/toolchain-upgrades.sh
+
+      - name: Check flake
+        if: steps.upgrades.outputs.has_updates == 'true'
+        run: nix flake check
+
+      - name: Validate app
+        if: steps.upgrades.outputs.has_updates == 'true'
+        uses: ./.github/actions/app-lint-test-build
+
+      - name: Validate backend
+        if: steps.upgrades.outputs.has_updates == 'true'
+        uses: ./.github/actions/backend-go-lint-test-build
+
+      - name: Validate infra
+        if: steps.upgrades.outputs.has_updates == 'true'
+        uses: ./.github/actions/infra-lint-build
+
+      - name: Open pull request
+        if: steps.upgrades.outputs.has_updates == 'true'
+        uses: ./.github/actions/upgrade-pr
+        with:
+          client-id: ${{ secrets.DEPS_APP_CLIENT_ID }}
+          private-key: ${{ secrets.DEPS_APP_PRIVATE_KEY }}
+          branch: deps/toolchains
+          title: "deps: upgrade toolchains"
+          body: ${{ steps.upgrades.outputs.body }}
+          automerge: "true"

@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-# Usage: dep-upgrades-check.sh <project-dir> <report-file>
+# Usage: NCU_TARGET=minor|latest dep-upgrades-check.sh <project-dir> <report-file>
+#
+# ncurc.cjs holds the version policy. With NCU_TARGET=latest this reports
+# nothing unless some dependency has a new major, so the majors PR only exists
+# when there are majors to review.
 #
 # Semver ranges are bumped with npm-check-updates. Dependencies that track an
 # npm dist-tag (for example "latest" or "npm:nitro-nightly@latest") are skipped
@@ -17,6 +21,9 @@ PROJECT_DIR="$1"
 REPORT_FILE="$2"
 
 : >"$REPORT_FILE"
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+NCU=(npm-check-updates --configFilePath "$SCRIPT_DIR" --configFileName ncurc.cjs)
 
 cd "$PROJECT_DIR"
 
@@ -40,12 +47,21 @@ locked_tagged_versions() {
 
 TAGGED_BEFORE=$(locked_tagged_versions)
 
-NCU_REPORT=$(npm-check-updates 2>/dev/null || true)
+NCU_REPORT=$("${NCU[@]}" 2>/dev/null | grep -vE '^(Using config file|Run ncu )' || true)
 
-UPGRADES=$(npm-check-updates --jsonUpgraded 2>/dev/null || echo '{}')
+UPGRADES=$("${NCU[@]}" --jsonUpgraded 2>/dev/null || echo '{}')
+if [ "$NCU_TARGET" = "latest" ]; then
+  TAGGED=()
+  WITHIN_MAJOR=$(NCU_TARGET=minor "${NCU[@]}" --jsonUpgraded 2>/dev/null || echo '{}')
+  if [ "$UPGRADES" = "$WITHIN_MAJOR" ]; then
+    echo "No major upgrades available for $PROJECT_DIR."
+    exit 0
+  fi
+fi
+
 NCU_UPDATED=false
 if [ "$UPGRADES" != '{}' ] && [ -n "$UPGRADES" ]; then
-  npm-check-updates -u
+  "${NCU[@]}" -u
   npm install
   NCU_UPDATED=true
 fi

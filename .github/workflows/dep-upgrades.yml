@@ -9,8 +9,19 @@ jobs:
   upgrade:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: minor
+            branch: deps/upgrades
+            title: "deps: upgrade npm dependencies"
+            automerge: "true"
+          - target: latest
+            branch: deps/npm-majors
+            title: "deps: upgrade npm major versions"
+            automerge: "false"
     steps:
       - uses: actions/checkout@v7
 
@@ -26,27 +37,31 @@ jobs:
 
       - name: Check for upgrades and apply across projects
         id: upgrades
+        env:
+          NCU_TARGET: ${{ matrix.target }}
         run: ./.github/scripts/dep-upgrades.sh
 
+      # Major upgrades open a PR even when they break the build, so CI on the
+      # PR shows what needs fixing instead of the scheduled run failing weekly.
       - name: Validate app
-        if: steps.upgrades.outputs.app_updated == 'true'
+        if: matrix.automerge == 'true' && steps.upgrades.outputs.app_updated == 'true'
         uses: ./.github/actions/app-lint-test-build
         with:
           install: "false"
 
       - name: Validate infra
-        if: steps.upgrades.outputs.infra_updated == 'true'
+        if: matrix.automerge == 'true' && steps.upgrades.outputs.infra_updated == 'true'
         uses: ./.github/actions/infra-lint-build
         with:
           install: "false"
 
-      - name: Create Pull Request
+      - name: Open pull request
         if: steps.upgrades.outputs.has_updates == 'true'
-        uses: peter-evans/create-pull-request@v8
+        uses: ./.github/actions/upgrade-pr
         with:
-          branch: deps/upgrades
-          title: "deps: upgrade npm dependencies"
+          client-id: ${{ secrets.DEPS_APP_CLIENT_ID }}
+          private-key: ${{ secrets.DEPS_APP_PRIVATE_KEY }}
+          branch: ${{ matrix.branch }}
+          title: ${{ matrix.title }}
           body: ${{ steps.upgrades.outputs.body }}
-          commit-message: "deps: upgrade npm dependencies"
-          labels: dependencies
-          delete-branch: true
+          automerge: ${{ matrix.automerge }}

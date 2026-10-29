@@ -6,11 +6,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  check:
+  upgrade:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      issues: write
     steps:
       - uses: actions/checkout@v7
 
@@ -18,13 +17,18 @@ jobs:
         with:
           go-tools: gomajor
 
-      - name: Check for major version upgrades
+      - name: Apply major version upgrades
         id: upgrades
         run: .github/scripts/go-major-upgrades.sh
 
-      - name: Sync tracking issue
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HAS_UPGRADES: ${{ steps.upgrades.outputs.has_upgrades }}
-          UPGRADE_BODY: ${{ steps.upgrades.outputs.body }}
-        run: .github/scripts/go-major-upgrades-issue.sh
+      # No validation here: the PR opens even when imports need fixing by
+      # hand, and CI on the PR shows what broke.
+      - name: Open pull request
+        if: steps.upgrades.outputs.has_upgrades == 'true'
+        uses: ./.github/actions/upgrade-pr
+        with:
+          client-id: ${{ secrets.DEPS_APP_CLIENT_ID }}
+          private-key: ${{ secrets.DEPS_APP_PRIVATE_KEY }}
+          branch: deps/go-majors
+          title: "go: upgrade module major versions"
+          body: ${{ steps.upgrades.outputs.body }}

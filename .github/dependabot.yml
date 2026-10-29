@@ -4,10 +4,31 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-  # Go Dependency Upgrades owns routine version bumps; a limit of 0 leaves
+      day: "thursday"
+    cooldown:
+      default-days: 3
+    # Majors stay in their own PRs, which are not merged automatically.
+    groups:
+      github-actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+  # The upgrade workflows own routine npm and Go bumps; a limit of 0 leaves
   # Dependabot opening only security update PRs.
   - package-ecosystem: "gomod"
     directory: "/backend"
     schedule:
       interval: "daily"
     open-pull-requests-limit: 0
+    groups:
+      go-security:
+        applies-to: security-updates
+        patterns: ["*"]
+  - package-ecosystem: "npm"
+    directories: ["/app", "/infra"]
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 0
+    groups:
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]

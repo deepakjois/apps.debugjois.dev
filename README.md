@@ -121,23 +121,91 @@ they need, from the same version list local development uses. The CDK CLI
 comes from the infra lockfile, not a global install. AWS OIDC and Docker buildx
 stay GitHub Actions responsibilities.
 
-| Workflow                   | Trigger                                                     | Effect                                                  |
-| -------------------------- | ----------------------------------------------------------- | ------------------------------------------------------- |
-| App Test and Deploy        | Push to `main` touching `app/`                              | `infra/deploy.sh --with-artifact`                       |
-| Backend Test and Deploy    | Push to `main` touching `backend/` or the flake             | `infra/deploy.sh --with-backend-image`                  |
-| Infra Build                | Push to `main` touching `infra/`                            | Type-check and synth only                               |
-| Infra Deploy               | Manual                                                      | `infra/deploy.sh` reusing the deployed artifacts        |
-| Toolchain Validation       | Changes to the flake, `.agents/`, actions, or workflows     | `nix flake check` plus all three component check suites |
-| Backend Go Vulnerability   | PRs touching `backend/` and daily                           | `govulncheck ./...`                                     |
-| Dependency Upgrades        | Weekly                                                      | PR bumping npm dependencies in `app/` and `infra/`      |
-| Go Dependency Upgrades     | Weekly                                                      | PR bumping Go minor and patch versions                  |
-| Go Major Version Upgrades  | Weekly                                                      | Tracking issue listing available Go major versions      |
+| Workflow                  | Trigger                                              | Effect                                                         |
+| ------------------------- | ---------------------------------------------------- | -------------------------------------------------------------- |
+| App Test and Deploy       | Push to `main` touching `app/`                       | `infra/deploy.sh --with-artifact`                              |
+| Backend Test and Deploy   | Push to `main` touching `backend/` or the flake      | `infra/deploy.sh --with-backend-image`                         |
+| Infra Build               | Push to `main` touching `infra/`                     | Type-check and synth only                                      |
+| Infra Deploy              | Manual                                               | `infra/deploy.sh` reusing the deployed artifacts               |
+| CI                        | Every PR, and pushes changing the flake or workflows | `nix flake check` plus all three component check suites        |
+| Backend Go Vulnerability  | PRs touching `backend/` or the flake, and daily      | `govulncheck ./...`; on failure, dispatches the fixing upgrade |
+| Dependency Upgrades       | Mondays                                              | npm PRs for `app/` and `infra/`: within-major and majors       |
+| Go Major Version Upgrades | Mondays                                              | PR applying Go major versions with `gomajor`                   |
+| Go Dependency Upgrades    | Tuesdays                                             | PR bumping Go minor and patch versions                         |
+| Toolchain Upgrades        | Wednesdays                                           | PR running `nix flake update` and bumping npm and Go helpers   |
+| Dependabot Auto-merge     | Dependabot PRs                                       | Enables auto-merge on non-major updates                        |
 
 The deploy workflows share one concurrency group, so deploys run one at a time.
 A flake change redeploys the backend because the image is built with the
 flake's Go. The app Lambda runs on the AWS-managed Node runtime, so it does not
 redeploy. Pull requests never deploy or write to production.
 
-Dependabot bumps GitHub Actions weekly. For `backend/` Go modules it opens only
-security update PRs, since Go Dependency Upgrades handles routine bumps. Those
-PRs need Dependabot security updates turned on in the repository settings.
+### Dependency upgrades
+
+Every upgrade arrives as a PR, and CI runs on it. Low-risk PRs merge on their
+own once CI passes, which deploys them:
+
+| Source                                   | Auto-merges | Notes                                                            |
+| ---------------------------------------- | ----------- | ---------------------------------------------------------------- |
+| `deps/upgrades` (npm within major)       | Yes         | Versions must be 3 days old; see `.github/scripts/ncurc.cjs`     |
+| `deps/go-upgrades` (Go minor and patch)  | Yes         |                                                                  |
+| `deps/toolchains` (flake, npm, Go tools) | Yes         | Fails if Docker has not published the matching `golang` image    |
+| Dependabot GitHub Actions and security   | Non-major   | Actions are grouped weekly on Thursdays with a 3-day cooldown    |
+| `deps/npm-majors` and `deps/go-majors`   | No          | Opened even when the build breaks; fix on the branch, then merge |
+
+Dependabot opens only security PRs for npm and Go modules, since the upgrade
+workflows own routine bumps. The scheduled vulnerability check dispatches Go
+Dependency Upgrades for module findings and Toolchain Upgrades for standard
+library findings, so a fix is usually already on its way when it fails.
+
+Auto-merging workflows run on different days because the deploy concurrency
+group keeps only one pending run. A PR that fails CI stays open for you, and the
+next weekly run updates the same branch.
+
+#### One-time repository setup
+
+Upgrade PRs are opened and merged with a GitHub App token, because PRs and
+merges made with `GITHUB_TOKEN` trigger no workflows: CI would never run on the
+PR and the merge would never deploy.
+
+1. Create a GitHub App owned by your account with webhooks off and repository
+   permissions Contents, Pull requests, and Workflows set to read and write.
+   Install it on this repository only, and generate a private key.
+2. Store its client ID and key as both Actions and Dependabot secrets.
+   Workflows that Dependabot triggers can read only Dependabot secrets.
+
+   ```sh
+   for app in actions dependabot; do
+     gh secret set DEPS_APP_CLIENT_ID --app "$app" --body "<client id>"
+     gh secret set DEPS_APP_PRIVATE_KEY --app "$app" < path/to/private-key.pem
+   done
+   ```
+
+3. Allow auto-merge and delete merged branches:
+
+   ```sh
+   gh repo edit deepakjois/apps.debugjois.dev --enable-auto-merge --delete-branch-on-merge
+   ```
+
+4. Once CI has run on `main`, require its `checks` job on `main`. Repository
+   admins bypass the rule, so direct pushes still work. Without a required
+   check, auto-merge would merge before CI finishes.
+
+   ```sh
+   gh api repos/deepakjois/apps.debugjois.dev/rulesets --method POST --input - <<'JSON'
+   {
+     "name": "require-ci",
+     "target": "branch",
+     "enforcement": "active",
+     "conditions": { "ref_name": { "include": ["~DEFAULT_BRANCH"], "exclude": [] } },
+     "bypass_actors": [{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always" }],
+     "rules": [{
+       "type": "required_status_checks",
+       "parameters": {
+         "strict_required_status_checks_policy": false,
+         "required_status_checks": [{ "context": "checks", "integration_id": 15368 }]
+       }
+     }]
+   }
+   JSON
+   ```
