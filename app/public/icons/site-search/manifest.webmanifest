@@ -1,0 +1,30 @@
+{
+  "id": "/site-search",
+  "name": "Daily Log Search · apps.debugjois.dev",
+  "short_name": "Log Search",
+  "start_url": "/site-search",
+  "scope": "/site-search",
+  "display": "standalone",
+  "background_color": "#181a19",
+  "theme_color": "#181a19",
+  "icons": [
+    {
+      "src": "/icons/site-search/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/site-search/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/site-search/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

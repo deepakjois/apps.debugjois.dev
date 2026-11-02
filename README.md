@@ -134,11 +134,17 @@ stay GitHub Actions responsibilities.
 | Go Dependency Upgrades    | Tuesdays                                             | PR bumping Go minor and patch versions                         |
 | Toolchain Upgrades        | Wednesdays                                           | PR running `nix flake update` and bumping npm and Go helpers   |
 | Dependabot Auto-merge     | Dependabot PRs                                       | Enables auto-merge on non-major updates                        |
+| Site Search Index         | Hourly, manual, and pushes changing the indexer      | Indexes the daily log and publishes it for `/site-search`      |
 
 The deploy workflows share one concurrency group, so deploys run one at a time.
 A flake change redeploys the backend because the image is built with the
 flake's Go. The app Lambda runs on the AWS-managed Node runtime, so it does not
 redeploy. Pull requests never deploy or write to production.
+
+Site Search Index checks out `deepakjois/debugjois.dev`, indexes its daily
+notes, and syncs the index to `site-search/index/` in the static asset bucket.
+A scheduled run publishes only when that repo's `main` moved since the
+deployed index. `infra/deploy.sh` leaves that prefix alone.
 
 ### Dependency upgrades
 

@@ -1,0 +1,331 @@
+.site-search {
+  --ss-bg: hsl(150, 5%, 10%);
+  --ss-surface: hsl(150, 5%, 13%);
+  --ss-surface-hover: hsl(150, 5%, 16%);
+  --ss-border: hsl(150, 5%, 24%);
+  --ss-text: hsl(150, 10%, 80%);
+  --ss-muted: hsl(150, 6%, 55%);
+  --ss-link: #00a0d3;
+  --ss-date: #e1adc2;
+  --ss-mark: #f8f8f2;
+
+  min-height: 100vh;
+  background-color: var(--ss-bg);
+  color: var(--ss-text);
+  color-scheme: dark;
+  font-family: "IBM Plex Mono", Courier, monospace;
+  font-size: 15px;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.site-search main {
+  margin-inline: auto;
+  max-width: 70ch;
+  padding: 4vw;
+}
+
+.site-search a {
+  color: var(--ss-link);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.site-search .ss-header p {
+  margin: 1.5rem 0;
+}
+
+.site-search .ss-header p:first-child {
+  margin-top: 0;
+}
+
+.site-search a.ss-back {
+  text-decoration: none;
+}
+
+.site-search a.ss-back:hover {
+  text-decoration: underline;
+}
+
+.site-search .ss-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.site-search .ss-form {
+  display: block;
+  margin: 2.25rem 0 0.75rem;
+}
+
+.site-search .ss-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.site-search .ss-icon {
+  position: absolute;
+  left: 1rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  fill: none;
+  stroke: var(--ss-muted);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.site-search input[type="search"] {
+  width: 100%;
+  padding: 0.95rem 3rem 0.95rem 2.75rem;
+  border: 1px solid var(--ss-border);
+  border-radius: 0.5em;
+  background-color: var(--ss-surface);
+  color: var(--ss-text);
+  font: inherit;
+  font-size: 1.1rem;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.site-search input[type="search"]::placeholder {
+  color: var(--ss-muted);
+}
+
+.site-search input[type="search"]::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.site-search input[type="search"]:focus {
+  border-color: var(--ss-link);
+  box-shadow: 0 0 0 3px rgb(0 160 211 / 0.18);
+}
+
+.site-search .ss-kbd,
+.site-search .ss-clear {
+  position: absolute;
+  right: 0.85rem;
+  color: var(--ss-muted);
+  font: inherit;
+}
+
+.site-search .ss-kbd {
+  padding: 0 0.45em;
+  border: 1px solid var(--ss-border);
+  border-radius: 0.25em;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.site-search .ss-clear {
+  padding: 0 0.3rem;
+  border: none;
+  background: none;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.site-search .ss-clear:hover,
+.site-search .ss-clear:focus-visible {
+  color: var(--ss-text);
+}
+
+.site-search .ss-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  min-height: 1.6em;
+  color: var(--ss-muted);
+  font-size: 0.85rem;
+}
+
+.site-search .ss-sort {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.site-search .ss-sort button {
+  padding: 0 0.5em;
+  border: none;
+  border-radius: 0.25em;
+  background: none;
+  color: var(--ss-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.site-search .ss-sort button:hover {
+  color: var(--ss-text);
+}
+
+.site-search .ss-sort button[aria-pressed="true"] {
+  background-color: var(--ss-surface-hover);
+  color: var(--ss-text);
+}
+
+.site-search .ss-results,
+.site-search .ss-results ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-search .ss-results {
+  margin-top: 1.5rem;
+}
+
+.site-search .ss-month + .ss-month {
+  margin-top: 1rem;
+}
+
+.site-search .ss-month h2 {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0 0 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed var(--ss-border);
+  background-color: var(--ss-bg);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.site-search .ss-month h2 a {
+  color: var(--ss-muted);
+  text-decoration: none;
+}
+
+.site-search .ss-month h2 a:hover {
+  color: var(--ss-text);
+}
+
+.site-search .ss-result {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr;
+  gap: 0 1.25rem;
+  padding: 1rem 0;
+}
+
+.site-search .ss-result + .ss-result {
+  border-top: 1px solid hsl(150, 5%, 16%);
+}
+
+.site-search a.ss-date {
+  display: flex;
+  flex-direction: column;
+  align-self: start;
+  padding-top: 0.45rem;
+  color: var(--ss-date);
+  text-decoration: none;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.site-search a.ss-date span {
+  color: var(--ss-muted);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.site-search a.ss-date:hover time {
+  text-decoration: underline;
+}
+
+.site-search .ss-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.site-search a.ss-section {
+  display: block;
+  margin-inline: -0.75rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.5em;
+  color: var(--ss-text);
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+}
+
+.site-search a.ss-section:hover,
+.site-search a.ss-section:focus-visible {
+  background-color: var(--ss-surface);
+}
+
+.site-search .ss-section-title {
+  display: block;
+  color: var(--ss-text);
+  font-weight: 700;
+}
+
+.site-search a.ss-section:hover .ss-section-title {
+  color: var(--ss-link);
+}
+
+.site-search .ss-excerpt {
+  display: block;
+  color: var(--ss-muted);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.site-search .ss-excerpt mark {
+  padding: 0.05em 0.2em;
+  border-radius: 0.25em;
+  background-color: #272822;
+  color: var(--ss-mark);
+}
+
+.site-search a.ss-more {
+  align-self: start;
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+
+.site-search a.ss-more:hover {
+  text-decoration: underline;
+}
+
+.site-search .ss-more-results {
+  display: block;
+  margin: 2rem auto 0;
+  padding: 0.6rem 1.2rem;
+  border: 1px solid var(--ss-border);
+  border-radius: 0.5em;
+  background: none;
+  color: var(--ss-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.site-search .ss-more-results:hover {
+  background-color: var(--ss-surface);
+}
+
+@media (max-width: 600px) {
+  .site-search .ss-result {
+    grid-template-columns: 1fr;
+  }
+
+  .site-search a.ss-date {
+    flex-direction: row;
+    gap: 0.6rem;
+    align-items: baseline;
+    padding-top: 0;
+  }
+}

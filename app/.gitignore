@@ -76,3 +76,6 @@ todos.json
 .yarn-integrity
 .vscode-test
 .env
+
+# Daily log search index, built by npm run site-search-index and published by the hourly workflow
+public/site-search/

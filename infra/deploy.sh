@@ -227,7 +227,9 @@ if [[ "$WITH_ARTIFACT" == "1" ]]; then
 
   # Publish the static frontend files and clear the CloudFront cache.
   printf '==> Syncing static assets -> s3://%s\n' "$STATIC_ASSETS_BUCKET_NAME"
-  aws s3 sync "$APP_PUBLIC_DIR" "s3://$STATIC_ASSETS_BUCKET_NAME" --delete
+  # The Site Search Index workflow owns site-search/index/ and refreshes it hourly.
+  aws s3 sync "$APP_PUBLIC_DIR" "s3://$STATIC_ASSETS_BUCKET_NAME" --delete \
+    --exclude 'site-search/index/*'
   printf '==> Creating CloudFront invalidation (/*)\n'
   aws cloudfront create-invalidation \
     --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \

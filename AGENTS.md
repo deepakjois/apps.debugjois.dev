@@ -82,6 +82,9 @@ deploy or a publish, never as a verification step.
 
 - `infra/deploy.sh` with any flags.
 - `backend/build-and-push-image.sh`.
+- `.github/scripts/site-search-index.sh`, which syncs the search index to the
+  static asset bucket. Build a local index with `npm run site-search-index`
+  instead.
 - `podscriber -publish`, `podcast-index --write`, `miniflux queue-starred`
   without `-dry-run`, `miniflux unstar`, and `youtube-transcript` without
   `--no-publish`.

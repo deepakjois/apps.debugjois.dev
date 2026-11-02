@@ -113,6 +113,8 @@ CloudFront routes requests as follows:
 - `/assets/*`, `/icons/*`, `/favicon.ico`, `/apple-touch-icon.png`, and
   `/robots.txt` go to the static asset S3 bucket. Any new top-level file in `app/public/` needs a
   behavior here; put other static files under `app/public/icons/`.
+- `/site-search/index/*` goes to the same bucket. The Site Search Index
+  workflow, not `deploy.sh`, writes that prefix.
 - All other paths go to API Gateway and then the Nitro Lambda.
 
 All behaviors redirect HTTP to HTTPS. The API Gateway behavior uses a custom

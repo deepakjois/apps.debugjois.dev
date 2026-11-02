@@ -1,0 +1,52 @@
+name: Site Search Index
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "app/scripts/site-search-index/**"
+      - "app/src/apps/site-search/archive.ts"
+      - "app/src/apps/site-search/render.ts"
+      - ".github/scripts/site-search-index.sh"
+      - ".github/workflows/site-search-index.yml"
+
+concurrency:
+  group: site-search-index
+  cancel-in-progress: false
+
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check out daily notes
+        uses: actions/checkout@v7
+        with:
+          repository: deepakjois/debugjois.dev
+          path: debugjois.dev
+          sparse-checkout: site/content/daily-notes/*.md
+          sparse-checkout-cone-mode: false
+
+      - uses: ./.github/actions/setup-tools
+
+      - name: Install app dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-west-2
+
+      - name: Build and publish index
+        env:
+          FORCE: ${{ github.event_name == 'schedule' && '0' || '1' }}
+        run: .github/scripts/site-search-index.sh debugjois.dev/site/content/daily-notes

@@ -168,6 +168,7 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
       "/favicon.ico": createStaticBehavior(staticOrigin),
       "/apple-touch-icon.png": createStaticBehavior(staticOrigin),
       "/robots.txt": createStaticBehavior(staticOrigin),
+      "/site-search/index/*": createStaticBehavior(staticOrigin),
     };
 
     const distribution = new cloudfront.Distribution(this, "Distribution", {

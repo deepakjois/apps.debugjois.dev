@@ -14,6 +14,11 @@ TanStack Router and Query, Vite, and Nitro. Run the commands below from `app/` u
   exports it as one PNG. Images come from the file picker, drag and drop, or
   paste, and drag to reorder. Everything runs in the browser with no network
   calls.
+- `/site-search` searches every entry of the daily log on `www.debugjois.dev`
+  and lists matches by date, grouped by month, or by best match with
+  `?sort=relevance`. The query lives in `?q=`. Each match links to its heading
+  on the monthly archive page. It runs entirely in the browser on a
+  [Pagefind](https://pagefind.app) index served from `/site-search/index/`.
 - `/admin/logger` edits today's Berlin-date Markdown note in Google Drive.
   `/admin` redirects here. The toolbar has the admin Sign out button.
 
@@ -22,6 +27,30 @@ unfurl in Slack, X, and similar apps. Each permalink uses the episode title, a
 byline, and a show-notes excerpt, with the app's card image. `/tv-show-memes`
 emits the same tags with its own card. Tag URLs use the production origin
 `https://apps.debugjois.dev`.
+
+## Site search index
+
+`scripts/site-search-index/build.ts` renders each daily note to HTML with the
+heading IDs goldmark gives it on the archive page, then indexes it with the
+Pagefind Node API. It writes the bundle and a `status.json` with the entry
+count, date range, source commit, and build time. The
+[Site Search Index workflow](../README.md#github-actions) runs it hourly and
+publishes the result. For local development, index a checkout of
+`deepakjois/debugjois.dev` into the gitignored `public/site-search/index/`:
+
+```sh
+npm run site-search-index -- ../../debugjois.dev/site/content/daily-notes
+```
+
+To test search without the UI, query an index from the command line. It uses
+the page's Pagefind options, sort, and section links, and prints each entry
+with its matching sections, excerpts with `[matches]` marked, and archive URLs.
+Add `--sort relevance`, `--limit 0` for all entries, or `--json`:
+
+```sh
+npm run site-search -- "claude code"
+npm run site-search -- obsidian --index https://apps.debugjois.dev/site-search/index
+```
 
 ## App icons and cards
 
