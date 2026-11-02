@@ -26,6 +26,17 @@ function uniqueWithin(seen: Set<string>, id: string): string {
   }
 }
 
+type InlineParser = { parser: { parseInline(t: Tokens.Generic[]): string } };
+
+function linkHost(href: string): string | undefined {
+  try {
+    const url = new URL(href);
+    return /^https?:$/.test(url.protocol) ? url.hostname.replace(/^www\./, "") : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export type Note = { date: string; markdown: string };
 
 // Renders one note. `monthIds` holds the heading IDs of newer notes on the same archive page;
@@ -37,7 +48,7 @@ export function renderNote(note: Note, monthIds: Set<string>): { html: string; a
   const marked = new Marked({
     gfm: true,
     renderer: {
-      heading(this: { parser: { parseInline(t: Tokens.Generic[]): string } }, token) {
+      heading(this: InlineParser, token) {
         const id = uniqueWithin(noteIds, goldmarkId(plainText(token.tokens)));
         noteIds.add(id);
         const inner = this.parser.parseInline(token.tokens);
@@ -45,6 +56,14 @@ export function renderNote(note: Note, monthIds: Set<string>): { html: string; a
         monthIds.add(id);
         anchor ??= id;
         return `<h${token.depth} id="${id}">${inner}</h${token.depth}>\n`;
+      },
+      // Pagefind indexes only visible text, so a link's domain is searchable only when it is
+      // written out after the link text.
+      link(this: InlineParser, token) {
+        const inner = this.parser.parseInline(token.tokens);
+        const host = linkHost(token.href);
+        const label = host && !token.text.toLowerCase().includes(host) ? ` (${host})` : "";
+        return `<a>${inner}</a>${label}`;
       },
     },
   });

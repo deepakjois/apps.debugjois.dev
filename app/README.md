@@ -33,7 +33,14 @@ emits the same tags with its own card. Tag URLs use the production origin
 `scripts/site-search-index/build.ts` renders each daily note to HTML with the
 heading IDs goldmark gives it on the archive page, then indexes it with the
 Pagefind Node API. It writes the bundle and a `status.json` with the entry
-count, date range, source commit, and build time. The
+count, date range, source commit, and build time.
+
+Pagefind indexes only visible text, so the indexed copy writes each link's
+domain after its text, such as `(sashachapin.substack.com)`. A domain search
+then finds every entry that links to the site, and the domain shows in result
+excerpts. The archive pages are unchanged.
+
+The
 [Site Search Index workflow](../README.md#github-actions) runs it hourly and
 publishes the result. For local development, index a checkout of
 `deepakjois/debugjois.dev` into the gitignored `public/site-search/index/`:

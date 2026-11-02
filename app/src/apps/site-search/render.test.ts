@@ -46,4 +46,22 @@ describe("renderNote", () => {
     );
     expect(anchor).toBe("2025-07-10s");
   });
+
+  it("writes out each link's domain so it is searchable", () => {
+    const { html } = renderNote(
+      {
+        date: "2026-10-31",
+        markdown: [
+          "[What it means to let go](https://sashachapin.substack.com/p/let-go)",
+          "[Docs](https://www.example.com/a) and https://bare.example.org/b",
+          "[Home](/daily) and [[Wiki Link]]",
+        ].join("\n\n"),
+      },
+      new Set(),
+    );
+    expect(html).toContain("<a>What it means to let go</a> (sashachapin.substack.com)");
+    expect(html).toContain("<a>Docs</a> (example.com)");
+    expect(html).not.toContain("(bare.example.org)");
+    expect(html).not.toMatch(/Home<\/a> \(/);
+  });
 });
