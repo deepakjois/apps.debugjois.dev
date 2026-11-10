@@ -22,7 +22,7 @@ assets are not used.
 | `AppsDebugJoisDevArtifactStack`    | `us-west-2` | The versioned S3 bucket for Lambda zip artifacts and the ECR repository for backend images                         |
 | `AppsDebugJoisDevCertificateStack` | `us-east-1` | The ACM certificate for `apps.debugjois.dev`                                                                       |
 | `AppDebugJoisDevBackendStack`      | `us-west-2` | The Go backend Lambda, its role, the Deepgram API key secret, and the daily EventBridge rule for Miniflux          |
-| `AppsDebugJoisDevSiteStack`        | `us-west-2` | The static asset bucket, the Nitro Lambda, API Gateway, CloudFront, Route53 records, and the LinkPreview secret    |
+| `AppsDebugJoisDevSiteStack`        | `us-west-2` | The static asset bucket, Nitro Lambda, API Gateway, CloudFront, Route53 records, LinkPreview and session secrets   |
 
 The GitHub OIDC identity provider is managed outside the access stack, because
 an AWS account allows one provider per issuer. The stack references it by ARN.
@@ -217,6 +217,20 @@ that name.
 
   Redeploy the site stack afterward. The Lambda environment variable comes
   from a versionless dynamic reference, so it refreshes only on deploy.
+
+- The site stack also creates `apps-debugjois-dev/admin-session-secret` with a
+  generated 64-character value. The Nitro Lambda receives it as
+  `ADMIN_SESSION_SECRET` and signs admin session cookies with it. Rotating it
+  signs out every browser:
+
+  ```bash
+  aws secretsmanager put-secret-value \
+    --region us-west-2 \
+    --secret-id apps-debugjois-dev/admin-session-secret \
+    --secret-string "$(openssl rand -hex 32)"
+  ```
+
+  Redeploy the site stack afterward, for the same reason as above.
 
 - Frontend Lambda artifacts live in a versioned S3 bucket. The site stack is
   deployed with both the object key and the object version.

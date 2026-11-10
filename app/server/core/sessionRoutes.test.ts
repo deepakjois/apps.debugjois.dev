@@ -24,29 +24,21 @@ beforeEach(() => {
 });
 
 describe("session routes", () => {
-  it("GET reports the verified session", async () => {
-    const event = sessionEvent({ headers: { cookie: `${AUTH_COOKIE_NAME}=signed-google-token` } });
-    const verify = vi.fn().mockResolvedValue(session);
-
-    await expect(handleGetSession(event, verify)).resolves.toEqual({ session });
-  });
-
   it("GET reports no session without a cookie", async () => {
-    const verify = vi.fn();
-
-    await expect(handleGetSession(sessionEvent(), verify)).resolves.toEqual({ session: null });
-    expect(verify).not.toHaveBeenCalled();
+    await expect(handleGetSession(sessionEvent())).resolves.toEqual({ session: null });
   });
 
-  it("POST signs in with the Google credential and issues the cookie", async () => {
+  it("POST signs in with the Google credential, and GET reports that session", async () => {
     const event = loginEvent({ credential: "signed-google-token" });
     const verify = vi.fn().mockResolvedValue(session);
 
     await expect(handleLogin(event, verify)).resolves.toEqual({ session });
     expect(verify).toHaveBeenCalledWith("signed-google-token");
-    expect(event.res.headers.getSetCookie()).toEqual([
-      expect.stringMatching(new RegExp(`^${AUTH_COOKIE_NAME}=signed-google-token;`)),
-    ]);
+    const [cookie] = event.res.headers.getSetCookie();
+    expect(cookie).toMatch(new RegExp(`^${AUTH_COOKIE_NAME}=`));
+
+    const getEvent = sessionEvent({ headers: { cookie: cookie.split(";")[0] } });
+    await expect(handleGetSession(getEvent)).resolves.toEqual({ session });
   });
 
   it("POST rejects a missing credential without issuing a cookie", async () => {

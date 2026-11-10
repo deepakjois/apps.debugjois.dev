@@ -1,5 +1,5 @@
 import { H3Event, toResponse } from "nitro/h3";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AUTH_COOKIE_NAME,
   clearAdminSession,
@@ -7,13 +7,14 @@ import {
   readAdminSession,
   requireAdminSession,
 } from "./adminSession";
+import { signedInCookie, TEST_ADMIN_SESSION as session } from "./adminSessionTesting";
 
-const session = { email: "deepak.jois@gmail.com", name: "Deepak", picture: null };
+const FOREIGN_COOKIE = `${AUTH_COOKIE_NAME}=signed-google-token`;
 
 function apiEvent(cookie?: string, protocol: "http" | "https" = "https") {
   return new H3Event(
     new Request(`${protocol}://apps.debugjois.dev/api/admin/logger`, {
-      headers: cookie ? { cookie: `${AUTH_COOKIE_NAME}=${cookie}` } : {},
+      headers: cookie ? { cookie } : {},
     }),
   );
 }
@@ -26,8 +27,12 @@ beforeEach(() => {
   delete process.env.DEV_ADMIN_BYPASS;
 });
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe("createAdminSession", () => {
-  it("verifies the credential and issues it as a secure HttpOnly cookie", async () => {
+  it("verifies the Google credential and issues its own 30-day HttpOnly session", async () => {
     const event = apiEvent();
     const verify = vi.fn().mockResolvedValue(session);
 
@@ -36,13 +41,14 @@ describe("createAdminSession", () => {
     );
 
     expect(verify).toHaveBeenCalledWith("signed-google-token");
-    expect(issuedCookies(event)).toEqual([
-      expect.stringMatching(
-        new RegExp(
-          `^${AUTH_COOKIE_NAME}=signed-google-token;.*Max-Age=604800; Path=/; HttpOnly; Secure; SameSite=Lax$`,
-        ),
+    const [cookie] = issuedCookies(event);
+    expect(cookie).toMatch(
+      new RegExp(
+        `^${AUTH_COOKIE_NAME}=[^;]+;.*Max-Age=2592000; Path=/; HttpOnly; Secure; SameSite=Lax$`,
       ),
-    ]);
+    );
+    expect(cookie).not.toContain("signed-google-token");
+    await expect(readAdminSession(apiEvent(cookie.split(";")[0]))).resolves.toEqual(session);
   });
 
   it("omits Secure over local HTTP so the browser keeps the cookie", async () => {
@@ -66,7 +72,7 @@ describe("createAdminSession", () => {
 
 describe("clearAdminSession", () => {
   it("expires the cookie on the shared path", () => {
-    const event = apiEvent("signed-google-token");
+    const event = apiEvent(FOREIGN_COOKIE);
 
     clearAdminSession(event);
 
@@ -78,64 +84,78 @@ describe("clearAdminSession", () => {
 });
 
 describe("readAdminSession", () => {
-  it("returns the session for a cookie whose token verifies", async () => {
-    const event = apiEvent("signed-google-token");
-    const verify = vi.fn().mockResolvedValue(session);
+  it("returns null without a cookie", async () => {
+    const event = apiEvent();
 
-    await expect(readAdminSession(event, verify)).resolves.toEqual(session);
-    expect(verify).toHaveBeenCalledWith("signed-google-token");
+    await expect(readAdminSession(event)).resolves.toBeNull();
     expect(issuedCookies(event)).toEqual([]);
   });
 
-  it("returns null without a cookie and never contacts Google", async () => {
-    const verify = vi.fn();
+  it("expires a cookie this server did not sign, such as a raw Google token", async () => {
+    const event = apiEvent(FOREIGN_COOKIE);
 
-    await expect(readAdminSession(apiEvent(), verify)).resolves.toBeNull();
-    expect(verify).not.toHaveBeenCalled();
-  });
-
-  it("expires a cookie whose token no longer verifies", async () => {
-    const event = apiEvent("expired-token");
-    const verify = vi.fn().mockRejectedValue(new Error("JWT expired"));
-
-    await expect(readAdminSession(event, verify)).resolves.toBeNull();
+    await expect(readAdminSession(event)).resolves.toBeNull();
 
     const [cookie] = issuedCookies(event);
     expect(cookie).toMatch(new RegExp(`^${AUTH_COOKIE_NAME}=;`));
     expect(cookie).toContain("Max-Age=0");
   });
 
+  it("rejects a session whose email is not on the admin allowlist", async () => {
+    const cookie = await signedInCookie({
+      email: "someone@example.com",
+      name: null,
+      picture: null,
+    });
+    const event = apiEvent(cookie);
+
+    await expect(readAdminSession(event)).resolves.toBeNull();
+    expect(issuedCookies(event)[0]).toContain("Max-Age=0");
+  });
+
+  it("keeps a session that is used at least monthly alive by renewing it after a day", async () => {
+    vi.useFakeTimers({ now: new Date("2026-11-01T00:00:00Z"), toFake: ["Date"] });
+    const original = await signedInCookie();
+
+    vi.setSystemTime(new Date("2026-11-01T20:00:00Z"));
+    const sameDay = apiEvent(original);
+    await expect(readAdminSession(sameDay)).resolves.toEqual(session);
+    expect(issuedCookies(sameDay)).toEqual([]);
+
+    vi.setSystemTime(new Date("2026-11-20T00:00:00Z"));
+    const later = apiEvent(original);
+    await expect(readAdminSession(later)).resolves.toEqual(session);
+    const renewed = issuedCookies(later)[0].split(";")[0];
+
+    vi.setSystemTime(new Date("2026-12-15T00:00:00Z"));
+    await expect(readAdminSession(apiEvent(original))).resolves.toBeNull();
+    await expect(readAdminSession(apiEvent(renewed))).resolves.toEqual(session);
+  });
+
   it("provides an opt-in local session in development", async () => {
     process.env.DEV_ADMIN_BYPASS = "true";
-    const verify = vi.fn();
 
-    await expect(readAdminSession(apiEvent(), verify)).resolves.toEqual({
+    await expect(readAdminSession(apiEvent())).resolves.toEqual({
       email: "local-admin@localhost",
       name: "Local Admin",
       picture: null,
     });
-    expect(verify).not.toHaveBeenCalled();
   });
 });
 
 describe("requireAdminSession", () => {
-  it("returns the verified session", async () => {
-    const verify = vi.fn().mockResolvedValue(session);
-
-    await expect(requireAdminSession(apiEvent("signed-google-token"), verify)).resolves.toEqual(
-      session,
-    );
+  it("returns the signed-in session", async () => {
+    await expect(requireAdminSession(apiEvent(await signedInCookie()))).resolves.toEqual(session);
   });
 
   it("rejects a request without a cookie with 401", async () => {
-    await expect(requireAdminSession(apiEvent(), vi.fn())).rejects.toMatchObject({ status: 401 });
+    await expect(requireAdminSession(apiEvent())).rejects.toMatchObject({ status: 401 });
   });
 
   it("rejects a stale cookie with 401 and expires it on that response", async () => {
-    const event = apiEvent("expired-token");
-    const verify = vi.fn().mockRejectedValue(new Error("JWT expired"));
+    const event = apiEvent(FOREIGN_COOKIE);
 
-    const response = await toResponse(requireAdminSession(event, verify), event);
+    const response = await toResponse(requireAdminSession(event), event);
 
     expect(response.status).toBe(401);
     const [cookie] = response.headers.getSetCookie();

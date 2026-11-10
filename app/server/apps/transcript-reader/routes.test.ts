@@ -1,24 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import setTranscriptState from "../../routes/api/admin/transcript-reader/state.post";
-import { AUTH_COOKIE_NAME } from "../../core/adminSession";
+import { signedInCookie } from "../../core/adminSessionTesting";
 
 const backend = vi.hoisted(() => ({ invokeBackendLambda: vi.fn() }));
 vi.mock("../../core/backendLambda", () => backend);
-vi.mock("../../core/googleIdToken", () => ({
-  verifyGoogleIdToken: vi.fn().mockResolvedValue({
-    email: "admin@example.com",
-    name: null,
-    picture: null,
-  }),
-}));
 
 const location = "https://www.debugjois.dev/transcripts/episode--abc.json";
 
-function signedInRequest(body: unknown) {
+async function signedInRequest(body: unknown) {
   return new Request("https://apps.debugjois.dev/api/admin/transcript-reader/state", {
     method: "POST",
     headers: {
-      cookie: `${AUTH_COOKIE_NAME}=signed-google-token`,
+      cookie: await signedInCookie(),
       "content-type": "application/json",
     },
     body: JSON.stringify(body),
@@ -36,7 +29,7 @@ describe("transcript state Nitro route", () => {
     backend.invokeBackendLambda.mockResolvedValue(index);
 
     const response = await setTranscriptState.fetch(
-      signedInRequest({ location, state: "archived", extra: "dropped" }),
+      await signedInRequest({ location, state: "archived", extra: "dropped" }),
     );
 
     expect(response.status).toBe(200);
@@ -51,7 +44,7 @@ describe("transcript state Nitro route", () => {
   it.each([{ location }, { location, state: "Archived" }, { state: "deleted" }])(
     "rejects %j before invoking the backend",
     async (body) => {
-      const response = await setTranscriptState.fetch(signedInRequest(body));
+      const response = await setTranscriptState.fetch(await signedInRequest(body));
 
       expect(response.status).toBe(400);
       expect(backend.invokeBackendLambda).not.toHaveBeenCalled();

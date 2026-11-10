@@ -13,6 +13,7 @@ import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
 
 const linkPreviewAPIKeySecretName = "apps-debugjois-dev/linkpreview-api-key";
+const adminSessionSecretName = "apps-debugjois-dev/admin-session-secret";
 
 export interface AppsDebugJoisDevSiteStackProps extends cdk.StackProps {
   domainName: string;
@@ -73,6 +74,12 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
     });
     linkPreviewAPIKeySecret.applyRemovalPolicy(cdk.RemovalPolicy.RETAIN);
 
+    const adminSessionSecret = new secretsmanager.CfnSecret(this, "AdminSessionSecret", {
+      description: "Signing key for apps.debugjois.dev admin session cookies",
+      name: adminSessionSecretName,
+      generateSecretString: { excludePunctuation: true, passwordLength: 64 },
+    });
+
     const siteBucket = new s3.Bucket(this, "StaticAssetsBucket", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
@@ -90,6 +97,7 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
       description: "apps.debugjois.dev Nitro Lambda",
       environment: {
         BACKEND_LAMBDA_FUNCTION_NAME: backendLambdaFunctionName.valueAsString,
+        ADMIN_SESSION_SECRET: `{{resolve:secretsmanager:${adminSessionSecretName}}}`,
         LINKPREVIEW_API_KEY: `{{resolve:secretsmanager:${linkPreviewAPIKeySecretName}}}`,
       },
       handler: "server/index.handler",
@@ -99,6 +107,7 @@ export class AppsDebugJoisDevSiteStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30),
     });
     siteLambda.node.addDependency(linkPreviewAPIKeySecret);
+    siteLambda.node.addDependency(adminSessionSecret);
 
     siteLambda.addToRolePolicy(
       new iam.PolicyStatement({

@@ -17,8 +17,7 @@ TanStack Router and Query, Vite, and Nitro. Run the commands below from `app/` u
   `set-transcript-state` action, and the list re-renders from the index it
   returns. Delete asks first and also removes the transcript JSON. To keep the
   public page free of extra requests, only a browser that has signed in to
-  `/admin` before checks for a session. The session lasts as long as its
-  Google ID token, about an hour; opening `/admin` renews it.
+  `/admin` before checks for a session.
 
 - `/tv-show-memes` lays images out in a borderless contact-sheet grid and
   exports it as one PNG. Images come from the file picker, drag and drop, or
@@ -167,11 +166,22 @@ must already be configured on the deployed backend. See the
 All `/admin` pages require Google sign-in. The OAuth web client ID lives in
 `src/core/auth/config.ts` and the admin email allowlist in
 `server/core/googleIdToken.ts`. No client secret and no
-local Google environment variable is needed. The server verifies the signed
-Google ID token and the verified-email allowlist on every request, and keeps
-the token in an `HttpOnly` cookie. Every private Nitro endpoint is defined
-with `defineAdminHandler`, which checks the session first. The browser's page
-guard is not server authorization.
+local Google environment variable is needed. At sign-in the server verifies
+the signed Google ID token and the verified-email allowlist. Google's token
+expires after an hour, so the server then issues its own session: a JWT signed
+with `ADMIN_SESSION_SECRET`, kept in an `HttpOnly` cookie. It lasts 30 days and
+is renewed on the first request after it is a day old, so a session used at
+least monthly never expires. Every request checks its signature, expiry, and
+the allowlist. Every private Nitro endpoint is defined with
+`defineAdminHandler`, which checks the session first. The browser's page guard
+is not server authorization.
+
+Sign out ends the session in that browser only. To end every session, rotate
+the secret as described in the
+[infra README](../infra/README.md#notes). In development, leave
+`ADMIN_SESSION_SECRET` unset to sign sessions with a random key that lasts
+until the dev server restarts. A production build has no such fallback and
+fails admin requests without the secret.
 
 For real sign-in, add the development origin under **Authorized JavaScript
 origins** for that OAuth client in Google Cloud:
