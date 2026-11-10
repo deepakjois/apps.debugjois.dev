@@ -368,6 +368,9 @@ func (s *transcriptStore) PutObject(_ context.Context, in *s3.PutObjectInput, _ 
 func (s *transcriptStore) ListObjectsV2(context.Context, *s3.ListObjectsV2Input, ...func(*s3.Options)) (*s3.ListObjectsV2Output, error) {
 	return nil, s.listErr
 }
+func (s *transcriptStore) DeleteObject(context.Context, *s3.DeleteObjectInput, ...func(*s3.Options)) (*s3.DeleteObjectOutput, error) {
+	return nil, errors.New("unexpected delete")
+}
 func (s *transcriptStore) GetObject(context.Context, *s3.GetObjectInput, ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
 	return nil, s.listErr
 }
@@ -385,7 +388,7 @@ func TestLegacyPersistenceIdentity(t *testing.T) {
 	old := newTranscriptS3Client
 	t.Cleanup(func() { newTranscriptS3Client = old })
 	store := &transcriptStore{listErr: errors.New("index unavailable")}
-	newTranscriptS3Client = func(context.Context) (transcripts.S3Client, error) { return store, nil }
+	newTranscriptS3Client = func(context.Context) (transcripts.DeleteClient, error) { return store, nil }
 	err = persistTranscript(context.Background(), actionProcessPodcastTranscription, podcast, []byte(`{"unchanged":true}`))
 	if !errors.Is(err, store.listErr) || store.key != want || store.body != `{"unchanged":true}` {
 		t.Fatalf("store=%+v err=%v", store, err)

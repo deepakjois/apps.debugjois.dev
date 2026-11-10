@@ -272,7 +272,9 @@ deleted items. The index write is conditional on the ETag read at startup. If
 anything else wrote the index since then, nothing is saved, and you must rerun.
 After the index is written, the deleted transcripts' JSON objects are removed
 from the bucket, so a later rebuild does not list them again. Consumers treat
-`archived` as optional. Unarchived items omit it.
+`archived` as optional. Unarchived items omit it. The web reader makes the same
+edits one transcript at a time through the Lambda's `set-transcript-state`
+action, which rereads the index first instead of holding a snapshot.
 
 Index fields are modeled explicitly in `transcripts.Index` and
 `transcripts.ListItem`; unrecognized JSON fields are not preserved. When adding
@@ -302,6 +304,7 @@ Each direct request includes `"action":"<action-name>"`.
 | `queue-miniflux-starred`          | Takes optional `dry_run`. Sends each starred Miniflux entry with audio to `queue-podcast-transcription` by synchronous self-invocation with `skip_existing: true`, and returns `{"entries":[...],"counts":{...}}`. Per-entry failures are reported and logged, not raised                                                                          |
 | `process-podcast-transcription`   | Takes nested `podcast.source`, `podcast.podcast`, and `podcast.episode` including `audio_url`. Transcribes without re-fetching the episode page, publishes `{"podcast":{...},"deepgram":{...}}`, refreshes the index, unstars a Miniflux source entry, and returns that document                                                                 |
 | `publish-completed-transcription` | Takes `transcription`, the media-free completed result from `youtube-transcript`. Validates the schema, source, provider, and raw transcript JSON, publishes, refreshes the index, and returns `{"ok":true}`                                                                                                                                      |
+| `set-transcript-state`            | Takes `location`, a transcript URL from the index, and `state`: `active`, `archived`, or `deleted`. Rereads the index, unarchives, archives, or removes that item, and writes the index on its ETag, retrying once on a conflict. Then removes a deleted item's transcript object. Returns the updated `{"transcripts":[...]}`                    |
 
 The queue accepts only Podcast Addict and Miniflux entry URLs, not YouTube or
 direct audio URLs. Miniflux requires `MINIFLUX_API_TOKEN` in the Lambda

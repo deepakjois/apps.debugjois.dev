@@ -21,6 +21,8 @@ func TestDispatchEnvelopes(t *testing.T) {
 		{"malformed", `{`, "unmarshal direct invocation payload"},
 		{"wrong field type", `{"action":3}`, "unmarshal direct invocation payload"},
 		{"wrong action field type", `{"action":"post-daily-log","title":3}`, "unmarshal post-daily-log payload"},
+		{"transcript state missing", `{"action":"set-transcript-state","location":"https://www.debugjois.dev/transcripts/a.json"}`, `state must be active, archived, or deleted, not ""`},
+		{"transcript state unknown", `{"action":"set-transcript-state","location":"https://www.debugjois.dev/transcripts/a.json","state":"Archived"}`, "state must be active, archived, or deleted"},
 		{"malformed schedule", `{"source":"aws.events","detail-type":"Scheduled Event","time":"bad"}`, "unmarshal EventBridge event"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

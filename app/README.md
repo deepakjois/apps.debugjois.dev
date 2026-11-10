@@ -9,7 +9,17 @@ TanStack Router and Query, Vite, and Nitro. Run the commands below from `app/` u
   `www.debugjois.dev`. Each links to a `?t=<hash>` permalink that loads that
   transcript. Transcripts marked `archived` in the index are hidden behind a
   Show archived toggle, which sets `?archived=true`. Their permalinks still
-  work. It needs no credentials and no backend. `/` redirects here.
+  work. Reading needs no credentials and no backend. `/` redirects here.
+
+  With an admin session, each row also shows archive (unarchive in the
+  archived list) and delete buttons. They post to
+  `/api/admin/transcript-reader/state`, which invokes the backend's
+  `set-transcript-state` action, and the list re-renders from the index it
+  returns. Delete asks first and also removes the transcript JSON. To keep the
+  public page free of extra requests, only a browser that has signed in to
+  `/admin` before checks for a session. The session lasts as long as its
+  Google ID token, about an hour; opening `/admin` renews it.
+
 - `/tv-show-memes` lays images out in a borderless contact-sheet grid and
   exports it as one PNG. Images come from the file picker, drag and drop, or
   paste, and drag to reorder. Everything runs in the browser with no network

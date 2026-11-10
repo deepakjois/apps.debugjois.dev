@@ -1,6 +1,10 @@
 import { queryOptions } from "@tanstack/react-query";
+import { requestJSON } from "#/core/http";
 
 export const TRANSCRIPT_INDEX_URL = "https://www.debugjois.dev/transcripts/transcripts.json";
+export const TRANSCRIPT_STATE_URL = "/api/admin/transcript-reader/state";
+
+export type TranscriptState = "active" | "archived" | "deleted";
 
 export type TranscriptIndexItem = {
   title?: string;
@@ -11,8 +15,8 @@ export type TranscriptIndexItem = {
   archived?: boolean;
 };
 
-type TranscriptIndexResponse = {
-  transcripts?: TranscriptIndexItem[];
+export type TranscriptIndexResponse = {
+  transcripts?: TranscriptIndexItem[] | null;
 };
 
 type TranscriptSentence = {
@@ -92,6 +96,23 @@ export function transcriptIndexQueryOptions() {
     queryKey: ["transcripts", "index"],
     queryFn: fetchTranscriptIndex,
   });
+}
+
+export async function setTranscriptState(
+  location: string,
+  state: TranscriptState,
+): Promise<TranscriptIndexItem[]> {
+  const payload = await requestJSON<TranscriptIndexResponse>(
+    TRANSCRIPT_STATE_URL,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ location, state }),
+    },
+    "The transcript could not be updated",
+  );
+
+  return Array.isArray(payload.transcripts) ? payload.transcripts : [];
 }
 
 export async function fetchTranscript(location: string): Promise<TranscriptPayload> {

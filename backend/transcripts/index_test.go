@@ -532,6 +532,35 @@ func TestEditIndexWritesNothingWhenIndexChanged(t *testing.T) {
 	}
 }
 
+func TestSetItemStateRereadsIndexAfterConflict(t *testing.T) {
+	client, snapshot := editFixture()
+	body, err := MarshalIndex(snapshot.Index)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.objects[IndexObjectKey] = fakeObject{body: string(body), etag: `"etag-1"`}
+	client.conditionalFailures = 1
+
+	index, err := SetItemState(context.Background(), client, "debugjois-dev-site", LocationPrefix+"keep.json", Deleted)
+	if err != nil {
+		t.Fatalf("SetItemState returned error: %v", err)
+	}
+
+	if client.indexPutCalls != 2 || client.lastIfMatch != "etag-retry-1" {
+		t.Fatalf("expected a retry on the refreshed ETag, got %d writes, If-Match %q", client.indexPutCalls, client.lastIfMatch)
+	}
+	if fmt.Sprint(client.deletedKeys) != "[transcripts/keep.json]" {
+		t.Fatalf("unexpected deleted keys %v", client.deletedKeys)
+	}
+	var titles []string
+	for _, item := range index.Transcripts {
+		titles = append(titles, item.Title)
+	}
+	if fmt.Sprint(titles) != "[Archive Unarchive Delete]" {
+		t.Fatalf("returned index titles = %v", titles)
+	}
+}
+
 func mustMarshalDoc(t *testing.T, doc map[string]any) string {
 	t.Helper()
 	body, err := json.Marshal(doc)

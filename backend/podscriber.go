@@ -88,6 +88,18 @@ type publishCompletedTranscriptionRequest struct {
 	Transcription podscriber.TranscriptionResult `json:"transcription"`
 }
 
+type setTranscriptStateRequest struct {
+	Location string `json:"location"`
+	State    string `json:"state"`
+}
+
+// A missing state must not decode to the zero ItemState, which would unarchive.
+var transcriptStates = map[string]transcripts.ItemState{
+	"active":   transcripts.Active,
+	"archived": transcripts.Archived,
+	"deleted":  transcripts.Deleted,
+}
+
 type completedTranscriptPublisher interface {
 	Publish(context.Context, podscriber.TranscriptionResult) error
 }
@@ -133,7 +145,7 @@ var (
 	newCompletedPublisher    = func(ctx context.Context) (completedTranscriptPublisher, error) {
 		return s3publisher.New(ctx)
 	}
-	newTranscriptS3Client = func(ctx context.Context) (transcripts.S3Client, error) {
+	newTranscriptS3Client = func(ctx context.Context) (transcripts.DeleteClient, error) {
 		cfg, err := config.LoadDefaultConfig(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("load AWS config for transcript upload: %w", err)
@@ -391,4 +403,20 @@ func persistTranscript(ctx context.Context, action string, podcast podcastPayloa
 	}
 	_, err = transcripts.RefreshIndex(ctx, client, transcripts.BucketName)
 	return err
+}
+
+func handleSetTranscriptState(ctx context.Context, request setTranscriptStateRequest) (json.RawMessage, error) {
+	state, ok := transcriptStates[request.State]
+	if !ok {
+		return nil, fmt.Errorf("state must be active, archived, or deleted, not %q", request.State)
+	}
+	client, err := newTranscriptS3Client(ctx)
+	if err != nil {
+		return nil, err
+	}
+	index, err := transcripts.SetItemState(ctx, client, transcripts.BucketName, strings.TrimSpace(request.Location), state)
+	if err != nil {
+		return nil, err
+	}
+	return transcripts.MarshalIndex(index)
 }

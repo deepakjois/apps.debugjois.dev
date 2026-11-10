@@ -6,13 +6,17 @@ import type {
 } from "@react-oauth/google";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { AdminSessionContext } from "./adminSession";
+import {
+  AdminSessionContext,
+  adminSessionQueryOptions,
+  readLastAdminEmail,
+  SESSION_URL,
+} from "./adminSession";
 import { requestJSON } from "../http";
 import { LAST_ADMIN_EMAIL_STORAGE_KEY } from "./config";
 import type { AdminSession, SessionResponse } from "./contract";
 
-const SESSION_URL = "/api/admin/session";
-const SESSION_QUERY_KEY = ["admin", "session"];
+const SESSION_QUERY_KEY = adminSessionQueryOptions().queryKey;
 
 type GoogleIdentityInit = {
   clientId: string;
@@ -45,12 +49,7 @@ export function AdminAuthGate({ children }: AdminAuthGateProps) {
   const queryClient = useQueryClient();
   const [signedOutHere, setSignedOutHere] = useState(false);
 
-  const sessionQuery = useQuery({
-    queryKey: SESSION_QUERY_KEY,
-    queryFn: fetchAdminSession,
-    staleTime: Infinity,
-    retry: false,
-  });
+  const sessionQuery = useQuery(adminSessionQueryOptions());
 
   const loginMutation = useMutation({
     mutationFn: loginAdmin,
@@ -132,10 +131,6 @@ export function AdminAuthGate({ children }: AdminAuthGateProps) {
   );
 }
 
-async function fetchAdminSession(): Promise<SessionResponse> {
-  return requestSession(undefined, "Admin session could not be checked");
-}
-
 async function loginAdmin(credential: string): Promise<AdminSession> {
   const { session } = await requestSession(
     {
@@ -196,14 +191,6 @@ function ensureGoogleIdentityInitialized(clientId: string): GoogleIdentityInit |
   window.__appsDebugjoisGoogleInit = init;
 
   return init;
-}
-
-function readLastAdminEmail(): string | null {
-  try {
-    return window.localStorage.getItem(LAST_ADMIN_EMAIL_STORAGE_KEY);
-  } catch {
-    return null;
-  }
 }
 
 function rememberLastAdminEmail(email: string): void {

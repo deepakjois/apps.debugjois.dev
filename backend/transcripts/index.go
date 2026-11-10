@@ -272,6 +272,28 @@ func EditIndex(ctx context.Context, client DeleteClient, bucketName string, snap
 	return edited, nil
 }
 
+// SetItemState applies EditIndex to the one item at location, based on the
+// current index. It retries once if the index changes in between.
+func SetItemState(ctx context.Context, client DeleteClient, bucketName, location string, state ItemState) (Index, error) {
+	var lastErr error
+
+	for attempt := 0; attempt < 2; attempt++ {
+		snapshot, err := ReadIndex(ctx, client, bucketName)
+		if err != nil {
+			return Index{}, err
+		}
+
+		index, err := EditIndex(ctx, client, bucketName, snapshot, map[string]ItemState{location: state})
+		if !errors.Is(err, ErrIndexChanged) {
+			return index, err
+		}
+
+		lastErr = err
+	}
+
+	return Index{}, fmt.Errorf("set transcript state after retry: %w", lastErr)
+}
+
 func objectKeyForLocation(location string) (string, error) {
 	name, ok := strings.CutPrefix(location, LocationPrefix)
 	if !ok || name == "" || strings.Contains(name, "/") {

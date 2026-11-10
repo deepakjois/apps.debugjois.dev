@@ -20,6 +20,7 @@ const (
 	actionProcessPodcastTranscription = "process-podcast-transcription"
 	actionPublishCompletedTranscript  = "publish-completed-transcription"
 	actionQueueMinifluxStarred        = "queue-miniflux-starred"
+	actionSetTranscriptState          = "set-transcript-state"
 )
 
 type directRequest struct {
@@ -116,6 +117,12 @@ func handleDirectLambdaEvent(ctx context.Context, payload json.RawMessage) (json
 			return nil, fmt.Errorf("unmarshal %s payload: %w", actionPublishCompletedTranscript, err)
 		}
 		return handlePublishCompletedTranscription(ctx, publish.Transcription)
+	case actionSetTranscriptState:
+		var set setTranscriptStateRequest
+		if err := json.Unmarshal(payload, &set); err != nil {
+			return nil, fmt.Errorf("unmarshal %s payload: %w", actionSetTranscriptState, err)
+		}
+		return handleSetTranscriptState(ctx, set)
 	default:
 		return nil, errors.New("unknown direct invocation action")
 	}
