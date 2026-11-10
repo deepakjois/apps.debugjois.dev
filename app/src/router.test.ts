@@ -24,7 +24,8 @@ function getSeededRouter() {
 describe("feature routing", () => {
   it.each([
     ["/transcript-reader?t=1111111111111111", ["__root__", "/transcript-reader"]],
-    ["/admin/logger", ["__root__", "/admin", "/admin/logger"]],
+    ["/logger", ["__root__", "/logger"]],
+    ["/admin", ["__root__", "/admin"]],
     ["/tv-show-memes", ["__root__", "/tv-show-memes"]],
   ])("matches %s with its expected layout", async (path, routeIds) => {
     const router = getSeededRouter();
@@ -39,7 +40,7 @@ describe("feature routing", () => {
 
   it.each([
     ["/", "/transcript-reader"],
-    ["/admin", "/admin/logger"],
+    ["/admin/logger", "/logger"],
   ])("redirects %s to %s", async (path, destination) => {
     const router = getSeededRouter();
     router.update({
@@ -53,7 +54,8 @@ describe("feature routing", () => {
 
   it.each([
     ["/transcript-reader?t=1111111111111111", ["/transcript-reader"]],
-    ["/admin/logger", ["/admin", "/admin/logger"]],
+    ["/logger", ["/logger"]],
+    ["/admin", ["/admin"]],
     ["/tv-show-memes", ["/tv-show-memes"]],
   ])("loads only the stylesheets owned by %s", async (path, ownerRouteIds) => {
     const router = getSeededRouter();

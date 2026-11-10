@@ -1,9 +1,9 @@
 {
-  "id": "/admin/logger",
+  "id": "/logger",
   "name": "Logger · apps.debugjois.dev",
   "short_name": "Logger",
-  "start_url": "/admin/logger",
-  "scope": "/admin/logger",
+  "start_url": "/logger",
+  "scope": "/logger",
   "display": "standalone",
   "background_color": "#0d1117",
   "theme_color": "#0d1117",

@@ -26,7 +26,7 @@ const googleId = {
 
 const session: AdminSession = { email: "deepak.jois@gmail.com", name: "Deepak", picture: null };
 
-const SIGN_IN_HEADING = "Sign in to access admin routes.";
+const SIGN_IN_HEADING = "Sign in as admin.";
 
 beforeEach(() => {
   oauthState.scriptLoadedSuccessfully = false;
@@ -120,6 +120,7 @@ describe("AdminAuthGate", () => {
     expect(await screen.findByText("Private admin content")).toBeTruthy();
     expect(screen.queryByRole("heading", { name: SIGN_IN_HEADING })).toBeNull();
     expect(fetchSpy).toHaveBeenCalledWith("/api/admin/session", undefined);
+    expect(window.localStorage.getItem(LAST_ADMIN_EMAIL_STORAGE_KEY)).toBe("deepak.jois@gmail.com");
   });
 
   it("initializes Google with auto select and the remembered email, then shows One Tap", async () => {

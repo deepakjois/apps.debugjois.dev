@@ -54,7 +54,6 @@ export function AdminAuthGate({ children }: AdminAuthGateProps) {
   const loginMutation = useMutation({
     mutationFn: loginAdmin,
     onSuccess: (nextSession) => {
-      rememberLastAdminEmail(nextSession.email);
       setSignedOutHere(false);
       queryClient.setQueryData<SessionResponse>(SESSION_QUERY_KEY, { session: nextSession });
     },
@@ -71,6 +70,17 @@ export function AdminAuthGate({ children }: AdminAuthGateProps) {
     },
   });
 
+  const session = sessionQuery.data?.session ?? null;
+
+  // Public pages check for a session only in a browser that remembers an admin email, so an open
+  // /admin must restore it: Safari clears script-written storage after 7 days without a visit
+  // while the session cookie lasts 30, and DEV_ADMIN_BYPASS sessions never sign in.
+  useEffect(() => {
+    if (session) {
+      rememberLastAdminEmail(session.email);
+    }
+  }, [session]);
+
   const authError = loginMutation.error ?? sessionQuery.error;
   const authErrorMessage = authError instanceof Error ? authError.message : null;
 
@@ -84,8 +94,6 @@ export function AdminAuthGate({ children }: AdminAuthGateProps) {
       </main>
     );
   }
-
-  const session = sessionQuery.data?.session ?? null;
 
   if (session) {
     return (
@@ -105,8 +113,8 @@ export function AdminAuthGate({ children }: AdminAuthGateProps) {
     <main className="admin-auth-screen">
       <section className="admin-auth-card">
         <p className="admin-auth-label">Admin</p>
-        <h1>Sign in to access admin routes.</h1>
-        <p>Only allowed Google accounts can view this section.</p>
+        <h1>Sign in as admin.</h1>
+        <p>Signing in turns on admin actions across the site. Only allowed Google accounts can.</p>
         <div>
           <GoogleSignInButton
             disabled={loginMutation.isPending}

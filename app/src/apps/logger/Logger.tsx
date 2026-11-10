@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import CodeMirror, { basicSetup, EditorView } from "@uiw/react-codemirror";
 import { githubDark } from "@uiw/codemirror-theme-github";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { useAdminSession } from "#/core/auth/adminSession";
+import { adminSessionQueryOptions } from "#/core/auth/adminSession";
 import { requestJSON } from "#/core/http";
 import type { LoggerLinkPreview, LoggerNote } from "./contract";
 
@@ -44,34 +44,56 @@ const loggerEditorExtensions = [
 ];
 
 export function Logger() {
+  const sessionQuery = useQuery(adminSessionQueryOptions());
+  const session = sessionQuery.data?.session ?? null;
   const loggerQuery = useQuery({
     queryKey: ["admin", "logger"],
     queryFn: getLogger,
+    enabled: session !== null,
     retry: false,
     staleTime: Infinity,
   });
+
+  if (sessionQuery.isPending) {
+    return <LoggerStatusScreen title="Checking session..." />;
+  }
+
+  if (sessionQuery.isError || loggerQuery.isError) {
+    const error = sessionQuery.error ?? loggerQuery.error;
+    return (
+      <LoggerStatusScreen title="Could not open logger.">
+        <p className="logger-status-error">
+          {error instanceof Error ? error.message : "Could not load logger."}
+        </p>
+      </LoggerStatusScreen>
+    );
+  }
+
+  if (!session) {
+    return (
+      <LoggerStatusScreen title="Sign in to use the logger.">
+        <p>
+          The logger edits a private note. <a href="/admin">Sign in as admin</a>, then come back.
+        </p>
+      </LoggerStatusScreen>
+    );
+  }
 
   if (loggerQuery.isPending) {
     return <LoggerStatusScreen title="Loading logger..." />;
   }
 
-  if (loggerQuery.isError) {
-    return (
-      <LoggerStatusScreen
-        message={
-          loggerQuery.error instanceof Error ? loggerQuery.error.message : "Could not load logger."
-        }
-        title="Could not open logger."
-      />
-    );
-  }
-
-  return <LoggerEditor initialNote={loggerQuery.data} />;
+  return <LoggerEditor adminEmail={session.email} initialNote={loggerQuery.data} />;
 }
 
-function LoggerEditor({ initialNote }: { initialNote: LoggerNote }) {
+function LoggerEditor({
+  adminEmail,
+  initialNote,
+}: {
+  adminEmail: string;
+  initialNote: LoggerNote;
+}) {
   const queryClient = useQueryClient();
-  const { session, signOut, isSigningOut } = useAdminSession();
   const [title, setTitle] = useState(initialNote.title);
   const [value, setValue] = useState(initialNote.contents);
   const [savedValue, setSavedValue] = useState(initialNote.contents);
@@ -135,15 +157,9 @@ function LoggerEditor({ initialNote }: { initialNote: LoggerNote }) {
           >
             {saveButtonLabel}
           </button>
-          <button
-            className="logger-sign-out-button"
-            disabled={isSigningOut}
-            onClick={signOut}
-            title={session.email}
-            type="button"
-          >
-            Sign out
-          </button>
+          <a className="logger-admin-link" href="/admin" title={`Signed in as ${adminEmail}`}>
+            Admin
+          </a>
         </div>
       </header>
       <main className="logger-editor-pane">
@@ -253,15 +269,15 @@ function replacePlaceholder(view: PasteEditorView, placeholder: string, replacem
   view.dispatch({ changes: { from: index, to: index + placeholder.length, insert: replacement } });
 }
 
-type LoggerStatusScreenProps = { title: string; message?: string };
+type LoggerStatusScreenProps = { title: string; children?: React.ReactNode };
 
-function LoggerStatusScreen({ title, message }: LoggerStatusScreenProps) {
+function LoggerStatusScreen({ title, children }: LoggerStatusScreenProps) {
   return (
     <main className="logger-status">
       <section className="logger-status-card">
         <p className="logger-status-label">Logger</p>
         <h1>{title}</h1>
-        {message ? <p>{message}</p> : null}
+        {children}
       </section>
     </main>
   );

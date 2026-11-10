@@ -3,7 +3,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AdminSessionContext } from "#/core/auth/adminSession";
 import { handleLoggerUrlPaste, Logger } from "./Logger";
 
 vi.mock("@uiw/react-codemirror", async () => {
@@ -23,21 +22,16 @@ vi.mock("@uiw/react-codemirror", async () => {
   };
 });
 
-function renderLogger() {
+function renderLogger(email: string | null = "admin@example.com") {
   const queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
+  queryClient.setQueryData(["admin", "session"], {
+    session: email ? { email, name: null, picture: null } : null,
+  });
   return render(
     <QueryClientProvider client={queryClient}>
-      <AdminSessionContext.Provider
-        value={{
-          session: { email: "admin@example.com", name: null, picture: null },
-          signOut: () => {},
-          isSigningOut: false,
-        }}
-      >
-        <Logger />
-      </AdminSessionContext.Provider>
+      <Logger />
     </QueryClientProvider>,
   );
 }
@@ -70,6 +64,18 @@ describe("Logger", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ title: "2026-09-10.md", contents: "hello world" }),
     });
+  });
+
+  it("sends a visitor without an admin session to /admin without loading the note", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    renderLogger(null);
+
+    expect(screen.getByRole("heading", { name: "Sign in to use the logger." })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Sign in as admin" }).getAttribute("href")).toBe(
+      "/admin",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("turns a URL pasted over selected text into a Markdown link", () => {

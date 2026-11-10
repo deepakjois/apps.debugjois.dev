@@ -5,8 +5,8 @@ Frontend, Go backend, and AWS infrastructure for `apps.debugjois.dev`.
 ## What runs where
 
 - `app/` is a TanStack Start app on Nitro. It runs as a Node.js Lambda behind
-  API Gateway and CloudFront and serves the public transcript reader and the
-  admin pages. See [app/README.md](app/README.md).
+  API Gateway and CloudFront and serves the public apps, the admin-only
+  logger, and the admin sign-in. See [app/README.md](app/README.md).
 - `backend/` is a Go Lambda shipped as a container image, with no HTTP API.
   The app invokes it directly for daily-log and podcast transcription actions,
   and an EventBridge rule runs it daily. The same code builds CLIs for local

@@ -73,29 +73,23 @@
   cursor: not-allowed;
 }
 
-.logger-sign-out-button {
+.logger-admin-link {
+  display: inline-flex;
+  align-items: center;
   height: 32px;
   padding: 0 4px;
-  border: 0;
-  background: none;
   color: #8b949e;
-  font: inherit;
   font-size: 13px;
-  cursor: pointer;
+  text-decoration: none;
 }
 
-.logger-sign-out-button:hover:not(:disabled) {
+.logger-admin-link:hover {
   color: #f0f6fc;
 }
 
-.logger-sign-out-button:focus-visible {
+.logger-admin-link:focus-visible {
   outline: 2px solid #58a6ff;
   outline-offset: 2px;
-}
-
-.logger-sign-out-button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
 }
 
 .logger-save-button.is-saved {
@@ -173,7 +167,11 @@
   color: #f0f6fc;
 }
 
-.logger-status-card p:last-child {
+.logger-status-card a {
+  color: #58a6ff;
+}
+
+.logger-status-error {
   color: #ff7b72;
 }
 

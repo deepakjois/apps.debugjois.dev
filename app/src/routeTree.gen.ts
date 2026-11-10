@@ -11,10 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as LoggerRouteImport } from './routes/logger'
 import { Route as SiteSearchRouteImport } from './routes/site-search'
 import { Route as TranscriptReaderRouteImport } from './routes/transcript-reader'
 import { Route as TvShowMemesRouteImport } from './routes/tv-show-memes'
-import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminLoggerRouteImport } from './routes/admin.logger'
 
 const IndexRoute = IndexRouteImport.update({
@@ -25,6 +25,11 @@ const IndexRoute = IndexRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoggerRoute = LoggerRouteImport.update({
+  id: '/logger',
+  path: '/logger',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SiteSearchRoute = SiteSearchRouteImport.update({
@@ -42,11 +47,6 @@ const TvShowMemesRoute = TvShowMemesRouteImport.update({
   path: '/tv-show-memes',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminIndexRoute = AdminIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminLoggerRoute = AdminLoggerRouteImport.update({
   id: '/logger',
   path: '/logger',
@@ -56,62 +56,65 @@ const AdminLoggerRoute = AdminLoggerRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/logger': typeof LoggerRoute
   '/site-search': typeof SiteSearchRoute
   '/transcript-reader': typeof TranscriptReaderRoute
   '/tv-show-memes': typeof TvShowMemesRoute
   '/admin/logger': typeof AdminLoggerRoute
-  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/logger': typeof LoggerRoute
   '/site-search': typeof SiteSearchRoute
   '/transcript-reader': typeof TranscriptReaderRoute
   '/tv-show-memes': typeof TvShowMemesRoute
   '/admin/logger': typeof AdminLoggerRoute
-  '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/logger': typeof LoggerRoute
   '/site-search': typeof SiteSearchRoute
   '/transcript-reader': typeof TranscriptReaderRoute
   '/tv-show-memes': typeof TvShowMemesRoute
   '/admin/logger': typeof AdminLoggerRoute
-  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/admin'
+    | '/logger'
     | '/site-search'
     | '/transcript-reader'
     | '/tv-show-memes'
     | '/admin/logger'
-    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
+    | '/logger'
     | '/site-search'
     | '/transcript-reader'
     | '/tv-show-memes'
     | '/admin/logger'
-    | '/admin'
   id:
     | '__root__'
     | '/'
     | '/admin'
+    | '/logger'
     | '/site-search'
     | '/transcript-reader'
     | '/tv-show-memes'
     | '/admin/logger'
-    | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
+  LoggerRoute: typeof LoggerRoute
   SiteSearchRoute: typeof SiteSearchRoute
   TranscriptReaderRoute: typeof TranscriptReaderRoute
   TvShowMemesRoute: typeof TvShowMemesRoute
@@ -131,6 +134,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/logger': {
+      id: '/logger'
+      path: '/logger'
+      fullPath: '/logger'
+      preLoaderRoute: typeof LoggerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/site-search': {
@@ -154,13 +164,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TvShowMemesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/': {
-      id: '/admin/'
-      path: '/'
-      fullPath: '/admin/'
-      preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin/logger': {
       id: '/admin/logger'
       path: '/logger'
@@ -173,12 +176,10 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminLoggerRoute: typeof AdminLoggerRoute
-  AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminLoggerRoute: AdminLoggerRoute,
-  AdminIndexRoute: AdminIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
@@ -186,6 +187,7 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
+  LoggerRoute: LoggerRoute,
   SiteSearchRoute: SiteSearchRoute,
   TranscriptReaderRoute: TranscriptReaderRoute,
   TvShowMemesRoute: TvShowMemesRoute,

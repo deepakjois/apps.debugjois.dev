@@ -1,13 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { brand } from "#/apps/logger/brand";
-import { Logger } from "#/apps/logger/Logger";
-import loggerStylesHref from "#/apps/logger/styles.css?url";
-import { appIconLinks, appThemeMeta } from "#/core/appBrand";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
+// The logger lived here before it became its own app; bookmarks and home-screen icons still open it.
 export const Route = createFileRoute("/admin/logger")({
-  head: () => ({
-    meta: [{ title: brand.name }, appThemeMeta(brand)],
-    links: [{ rel: "stylesheet", href: loggerStylesHref }, ...appIconLinks(brand)],
-  }),
-  component: Logger,
+  beforeLoad: () => {
+    throw redirect({ to: "/logger", replace: true });
+  },
 });

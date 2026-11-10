@@ -16,8 +16,8 @@ TanStack Router and Query, Vite, and Nitro. Run the commands below from `app/` u
   `/api/admin/transcript-reader/state`, which invokes the backend's
   `set-transcript-state` action, and the list re-renders from the index it
   returns. Delete asks first and also removes the transcript JSON. To keep the
-  public page free of extra requests, only a browser that has signed in to
-  `/admin` before checks for a session.
+  public page free of extra requests, only a browser that has signed in at
+  `/admin` checks for a session.
 
 - `/tv-show-memes` lays images out in a borderless contact-sheet grid and
   exports it as one PNG. Images come from the file picker, drag and drop, or
@@ -28,8 +28,12 @@ TanStack Router and Query, Vite, and Nitro. Run the commands below from `app/` u
   `?sort=relevance`. The query lives in `?q=`. Each match links to its heading
   on the monthly archive page. It runs entirely in the browser on a
   [Pagefind](https://pagefind.app) index served from `/site-search/index/`.
-- `/admin/logger` edits today's Berlin-date Markdown note in Google Drive.
-  `/admin` redirects here. The toolbar has the admin Sign out button.
+- `/logger` edits today's Berlin-date Markdown note in Google Drive. It needs
+  an admin session and links to `/admin` without one. `/admin/logger`
+  redirects here.
+- `/admin` is where the admin signs in with Google. Signed in, it shows the
+  account, links to the pages that gain admin actions, and has the Sign out
+  button.
 
 Transcript reader pages emit Open Graph and Twitter card tags, so pasted links
 unfurl in Slack, X, and similar apps. Each permalink uses the episode title, a
@@ -97,7 +101,7 @@ committed output no longer matches an app's `icon.svg` or `brand.ts`.
 CloudFront serves `public/` from S3 only on the paths listed in the
 [infra README](../infra/README.md#routing).
 
-The admin page calls Nitro routes under `server/routes/api/admin/`. Those
+Admin actions call Nitro routes under `server/routes/api/admin/`. Those
 routes invoke the deployed backend Lambda. The
 [backend README](../backend/README.md#direct-invocation-actions) lists the
 actions.
@@ -163,7 +167,7 @@ must already be configured on the deployed backend. See the
 
 ### Admin sign-in
 
-All `/admin` pages require Google sign-in. The OAuth web client ID lives in
+Admins sign in with Google at `/admin`. The OAuth web client ID lives in
 `src/core/auth/config.ts` and the admin email allowlist in
 `server/core/googleIdToken.ts`. No client secret and no
 local Google environment variable is needed. At sign-in the server verifies
@@ -192,15 +196,16 @@ origins** for that OAuth client in Google Cloud:
 - Add the exact origin for any other port or public portal URL.
 
 Google sign-in and server verification need internet access. Leave the bypass
-unset when testing them. To inspect admin pages without Google sign-in:
+unset when testing them. To use admin actions without Google sign-in:
 
 ```sh
 DEV_ADMIN_BYPASS=true npm run dev
 ```
 
-This bypasses only the app's admin session in development. It does not bypass
-AWS permissions or backend authorization, and real requests can read and write
-Drive notes. Vite replaces the development flag at
+This bypasses only the app's admin session in development. Open `/admin` once
+so public pages pick up the session. It does not bypass AWS permissions or
+backend authorization, and real requests can read and write Drive notes. Vite
+replaces the development flag at
 build time, so a production build cannot enable the bypass.
 
 ### Amp orbs and tunnels

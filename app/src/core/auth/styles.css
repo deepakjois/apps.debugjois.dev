@@ -53,3 +53,59 @@
   opacity: 0.55;
   pointer-events: none;
 }
+
+.admin-auth-card a {
+  color: #58a6ff;
+}
+
+.admin-account {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-account > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-account-picture {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+}
+
+.admin-home-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.admin-sign-out-button {
+  height: 34px;
+  padding: 0 16px;
+  border: 1px solid #30363d;
+  border-radius: 999px;
+  background: #21262d;
+  color: #f0f6fc;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-sign-out-button:hover:not(:disabled) {
+  border-color: #8b949e;
+}
+
+.admin-sign-out-button:focus-visible {
+  outline: 2px solid #58a6ff;
+  outline-offset: 2px;
+}
+
+.admin-sign-out-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
