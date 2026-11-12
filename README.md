@@ -128,7 +128,7 @@ stay GitHub Actions responsibilities.
 | Infra Build               | Push to `main` touching `infra/`                     | Type-check and synth only                                      |
 | Infra Deploy              | Manual                                               | `infra/deploy.sh` reusing the deployed artifacts               |
 | CI                        | Every PR, and pushes changing the flake or workflows | `nix flake check` plus all three component check suites        |
-| Backend Go Vulnerability  | PRs touching `backend/` or the flake, and daily      | `govulncheck ./...`; on failure, dispatches the fixing upgrade |
+| Backend Go Vulnerability  | PRs touching `backend/` or the flake, and Thursdays  | `govulncheck ./...`; on failure, dispatches the fixing upgrade |
 | Dependency Upgrades       | Mondays                                              | npm PRs for `app/` and `infra/`: within-major and majors       |
 | Go Major Version Upgrades | Mondays                                              | PR applying Go major versions with `gomajor`                   |
 | Go Dependency Upgrades    | Tuesdays                                             | PR bumping Go minor and patch versions                         |

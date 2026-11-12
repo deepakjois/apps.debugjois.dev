@@ -9,7 +9,9 @@ on:
       - ".github/workflows/backend-govulncheck.yml"
       - ".github/scripts/govulncheck.sh"
   schedule:
-    - cron: "22 10 * * *"
+    # Thursdays, the day after Toolchain Upgrades, so each scan sees that
+    # week's Go from nixpkgs.
+    - cron: "22 10 * * 4"
   workflow_dispatch:
 
 jobs:
