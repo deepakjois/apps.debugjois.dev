@@ -21,10 +21,10 @@
           node = pkgs.nodejs-slim_latest;
           npm = pkgs.stdenvNoCC.mkDerivation rec {
             pname = "npm";
-            version = "12.2.2";
+            version = "12.2.3";
             src = pkgs.fetchurl {
               url = "https://registry.npmjs.org/npm/-/npm-${version}.tgz";
-              hash = "sha512-KglgbZyacf7jH+FHuNRqVuCzQi8VhI2a7J87Ix43FsPTuZoGWmIXXGdZtBUOA79vwL+IJREqURVzupA7PsQTcA==";
+              hash = "sha512-ovmNRRe76Jvcp1E6iOePQ6H9Zr4XMOrqgfaeGNhtRvP3XSl2Lo/a9C1N5/jRlLLrsqCem/omgGdZHpZ5a6yn1Q==";
             };
             nativeBuildInputs = [ pkgs.makeWrapper ];
             dontBuild = true;
